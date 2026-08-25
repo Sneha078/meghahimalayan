@@ -2,49 +2,84 @@ import mongoose from "mongoose";
 
 const couponSchema = new mongoose.Schema(
   {
+    // coupon code 
     code: {
       type: String,
       required: [true, "Please enter a coupon code"],
       unique: true,
       uppercase: true,
-      trim: true,
+      trim: true
     },
 
-    description: { type: String, default: "", trim: true },
+    // coupon description
+    description: {
+      type: String,
+      default: "",
+      trim: true
+    },
 
+    // coupon type
     type: {
       type: String,
       enum: ["percentage", "flat"],
-      default: "percentage",
+      default: "percentage"
     },
 
-    // Percentage value (e.g. 10 = 10%) or flat amount in NPR (e.g. 200)
+    // Actual discount value stored eg:10%
     value: {
       type: Number,
       required: [true, "Please enter a discount value"],
-      min: [1, "Discount value must be at least 1"],
+      min: [1, "Discount value must be atleast 1"], //discount value must not be negative
     },
 
-    // Minimum cart total required to redeem this coupon
-    minOrder: { type: Number, default: 0, min: 0 },
+    //minimum order(minimum amount required in cart to use coupon)
+    //default:0 means no minimum order requirement
+    minOrder: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
 
-    // Cap on how much can be discounted (useful for percentage coupons)
-    maxDiscount: { type: Number, default: null, min: 0 },
+    //maximum discount
+    //In %coupon how much maximum discount can be provided limit is set
+    maxDiscount: {
+      type: Number,
+      default: null,
+      min: 0
+    },
 
-    // null = unlimited
-    usageLimit: { type: Number, default: null },
-    usedCount: { type: Number, default: 0 },
+    // coupon usage limit
+    usageLimit: {
+      type: Number,
+      default: null
+    },
+    
+    //coupon used count( track times coupon has been used)
+    usedCount: {
+      type: Number,
+      default: 0
+    },
 
-    expiresAt: { type: Date, default: null },
+    // coupon expiry date field
+    expiresAt: {
+      type: Date,
+      default: null
+    },
 
-    isActive: { type: Boolean, default: true },
+    // tracks coupon is enabled or disabled
+    isActive: {
+      type: Boolean,
+      default: true
+    },
   },
-  { timestamps: true }
+  {
+      timestamps: true
+  }
 );
-
-// ── Indexes ───────────────────────────────────────────────────────────────
-// NOTE: code already has a unique index from the schema definition above.
-couponSchema.index({ isActive: 1, expiresAt: 1 });
+couponSchema.index({
+  isActive: 1,
+  expiresAt: 1
+});
 
 const Coupon = mongoose.model("Coupon", couponSchema);
 export default Coupon;

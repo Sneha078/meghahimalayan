@@ -196,7 +196,7 @@ export const getTopCustomers = handleAsyncError(async (req, res, next) => {
       orderCount: 0,
       totalSpent: 0,
     };
-    entry.orderCount++;
+    entry.orderCount++
     entry.totalSpent += order.totalPrice;
     customerMap.set(key, entry);
   }

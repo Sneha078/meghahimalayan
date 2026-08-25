@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
-import validator from "validator";
-import bcryptjs from "bcryptjs";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
+import validator from "validator"; // Email validation
+import bcryptjs from "bcryptjs"; // Password hashing
+import jwt from "jsonwebtoken"; // JWT token generation
+import crypto from "crypto"; // Password reset token generation
 
 const userSchema = new mongoose.Schema(
   {
+    // User's name
     name: {
       type: String,
       required: [true, "Please enter your name"],
@@ -14,6 +15,7 @@ const userSchema = new mongoose.Schema(
       maxlength: [50, "Name cannot exceed 50 characters"],
     },
 
+    // User's email address
     email: {
       type: String,
       required: [true, "Please enter your email"],
@@ -23,20 +25,22 @@ const userSchema = new mongoose.Schema(
       validate: [validator.isEmail, "Please enter a valid email address"],
     },
 
+    // User's password
     password: {
       type: String,
       required: [true, "Please enter a password"],
       minlength: [8, "Password must be at least 8 characters"],
-      select: false, // never returned in queries unless explicitly requested
+      select: false, // Do not return password in normal queries
     },
 
+    // User's phone number
     phone: {
       type: String,
       default: "",
       trim: true,
     },
 
-    // Saved shipping addresses (stored on user for quick checkout)
+    // Store multiple shipping addresses
     addresses: [
       {
         name: { type: String, required: true, trim: true },
@@ -49,7 +53,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    // Wishlist — array of Product references
+    // Store product IDs added to the user's wishlist
     wishlist: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -57,66 +61,74 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    // Cloudinary avatar
+    // User's profile picture stored in Cloudinary
     avatar: {
       public_id: { type: String, default: "" },
       url: { type: String, default: "" },
     },
 
+    // Role-based authorization
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
 
-    // Password reset
-    resetPasswordToken: { type: String, default: null },
-    resetPasswordExpire: { type: Date, default: null },
+    // Password reset information
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpire: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-// ── Hash password before every save (only when modified) ──────────────────
+// Hash the password before saving the user
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
+
   this.password = await bcryptjs.hash(this.password, 12);
   next();
 });
 
-// ── Instance methods ──────────────────────────────────────────────────────
-
-// Sign and return a JWT for this user
+// Generate JWT token after successful login
 userSchema.methods.getJWTToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
-// Bcrypt comparison for login
+// Compare entered password with the hashed password in the database
 userSchema.methods.verifyPassword = async function (enteredPassword) {
   return bcryptjs.compare(enteredPassword, this.password);
 };
 
-// Generate a plain-text reset token, store its hash on the document,
-// and return the plain-text token (sent in the email link).
+// Generate a secure reset token for forgot-password functionality
 userSchema.methods.generatePasswordResetToken = function () {
+  // Generate a random reset token
   const resetToken = crypto.randomBytes(32).toString("hex");
 
+  // Hash the reset token before storing it in the database
   this.resetPasswordToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
 
-  // Token valid for 30 minutes
+  // Set reset token expiry to 30 minutes
   this.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
 
+  // Return the plain token to send in the email
   return resetToken;
 };
 
-// ── Indexes ───────────────────────────────────────────────────────────────
-// NOTE: email already has a unique index from the schema definition above.
-// Only add the reset token index here — do not duplicate the email index.
-userSchema.index({ resetPasswordToken: 1 }); // fast lookup on password reset
+// Create an index for faster password-reset token lookup
+userSchema.index({ resetPasswordToken: 1 });
 
+// Create the User model from the schema
 const User = mongoose.model("User", userSchema);
+
 export default User;

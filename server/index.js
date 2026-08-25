@@ -14,6 +14,7 @@ import errorMiddleware from "./middleware/error.js";
 import userRoutes      from "./routes/userRoutes.js";
 import productRoutes   from "./routes/productRoutes.js";
 import orderRoutes     from "./routes/orderRoutes.js";
+import cartRoutes      from "./routes/cartRoutes.js";
 import couponRoutes    from "./routes/couponRoutes.js";
 import contactRoutes   from "./routes/contactRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
@@ -136,6 +137,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1", userRoutes);
 app.use("/api/v1", productRoutes);
 app.use("/api/v1", orderRoutes);
+app.use("/api/v1", cartRoutes);
 app.use("/api/v1", couponRoutes);
 app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);

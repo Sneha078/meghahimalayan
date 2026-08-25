@@ -7,10 +7,9 @@ import { sendToken } from "../utils/jwtToken.js";
 import sendEmail from "../utils/sendEmail.js";
 import cloudinary from "../config/cloudinary.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AUTH
-// ─────────────────────────────────────────────────────────────────────────────
+// Authentication
 
+//Register user
 // POST /api/v1/register
 export const registerUser = handleAsyncError(async (req, res, next) => {
   const { name, email, password, phone } = req.body;
@@ -34,6 +33,7 @@ export const registerUser = handleAsyncError(async (req, res, next) => {
   sendToken(user, 201, res);
 });
 
+//Login
 // POST /api/v1/login
 export const loginUser = handleAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
@@ -59,6 +59,7 @@ export const loginUser = handleAsyncError(async (req, res, next) => {
   sendToken(user, 200, res);
 });
 
+//Logout
 // POST /api/v1/logout
 export const logout = handleAsyncError(async (req, res, next) => {
   res.cookie("token", "", {
@@ -71,10 +72,8 @@ export const logout = handleAsyncError(async (req, res, next) => {
   res.status(200).json({ success: true, message: "Logged out successfully" });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // PASSWORD RESET FLOW
-// ─────────────────────────────────────────────────────────────────────────────
-
+//Forgot password
 // POST /api/v1/password/forgot
 export const forgotPassword = handleAsyncError(async (req, res, next) => {
   const { email } = req.body;
@@ -121,6 +120,7 @@ export const forgotPassword = handleAsyncError(async (req, res, next) => {
   }
 });
 
+//Reset password
 // PUT /api/v1/password/reset/:token
 export const resetPassword = handleAsyncError(async (req, res, next) => {
   // Hash the URL token to compare with the stored hash
@@ -156,10 +156,8 @@ export const resetPassword = handleAsyncError(async (req, res, next) => {
   sendToken(user, 200, res);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CURRENT USER
-// ─────────────────────────────────────────────────────────────────────────────
 
+// GET CURRENT USER
 // GET /api/v1/me
 export const getUserDetails = handleAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user.id);
@@ -171,6 +169,7 @@ export const getUserDetails = handleAsyncError(async (req, res, next) => {
   res.status(200).json({ success: true, user });
 });
 
+//Update password
 // PUT /api/v1/password/update
 export const updatePassword = handleAsyncError(async (req, res, next) => {
   const { oldPassword, newPassword, confirmPassword } = req.body;
@@ -201,6 +200,7 @@ export const updatePassword = handleAsyncError(async (req, res, next) => {
   sendToken(user, 200, res);
 });
 
+//Update Profile
 // PUT /api/v1/me/update
 export const updateProfile = handleAsyncError(async (req, res, next) => {
   const { name, email, phone, avatar } = req.body;
@@ -246,10 +246,8 @@ export const updateProfile = handleAsyncError(async (req, res, next) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADDRESSES
-// ─────────────────────────────────────────────────────────────────────────────
 
+// ADDRESSES
 // POST /api/v1/addresses
 export const addAddress = handleAsyncError(async (req, res, next) => {
   const { name, phone, street, city, province, postalCode, isDefault } = req.body;
@@ -282,6 +280,7 @@ export const addAddress = handleAsyncError(async (req, res, next) => {
   });
 });
 
+//Update address
 // PUT /api/v1/address/:addressId
 export const updateAddress = handleAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user.id);
@@ -315,6 +314,7 @@ export const updateAddress = handleAsyncError(async (req, res, next) => {
   });
 });
 
+//Delete address
 // DELETE /api/v1/address/:addressId
 export const deleteAddress = handleAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user.id);
@@ -344,10 +344,7 @@ export const deleteAddress = handleAsyncError(async (req, res, next) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // WISHLIST
-// ─────────────────────────────────────────────────────────────────────────────
-
 // GET /api/v1/wishlist
 export const getWishlist = handleAsyncError(async (req, res, next) => {
   const user = await User.findById(req.user.id).populate(
@@ -358,6 +355,7 @@ export const getWishlist = handleAsyncError(async (req, res, next) => {
   res.status(200).json({ success: true, wishlist: user.wishlist });
 });
 
+//Add to wishlist
 // POST /api/v1/wishlist
 export const addToWishlist = handleAsyncError(async (req, res, next) => {
   const { productId } = req.body;
@@ -400,6 +398,7 @@ export const addToWishlist = handleAsyncError(async (req, res, next) => {
   });
 });
 
+//Delete wishlist
 // DELETE /api/v1/wishlist/:productId
 export const removeFromWishlist = handleAsyncError(async (req, res, next) => {
   const { productId } = req.params;
@@ -433,9 +432,8 @@ export const removeFromWishlist = handleAsyncError(async (req, res, next) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // ADMIN — USER MANAGEMENT
-// ─────────────────────────────────────────────────────────────────────────────
 
 // GET /api/v1/admin/users
 export const getUsersList = handleAsyncError(async (req, res, next) => {

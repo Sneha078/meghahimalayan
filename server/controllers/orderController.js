@@ -11,7 +11,7 @@ import handleAsyncError from "../middleware/handleAsyncError.js";
 // Generates a human-readable order reference like "MH-831924"
 const generateOrderNumber = () => {
   const digits = Math.floor(100000 + Math.random() * 900000);
-  return `MH-${digits}`;
+  return ` MH-${digits}`;
 };
 
 // Deducts stock for every item in the order.

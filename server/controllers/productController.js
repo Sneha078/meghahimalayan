@@ -337,7 +337,7 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     delete req.body.image;
   }
 
-  //update product in momgodb
+  //update product in mongodb
   product = await Product.findByIdAndUpdate(
     product._id,
     req.body,
