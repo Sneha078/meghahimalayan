@@ -4,6 +4,7 @@ import CategorySection from '../components/CategorySection'
 import FeaturedCollection from '../components/FeaturedCollection'
 import OffersBanner from '../components/OffersBanner'
 import NewArrivals from '../components/NewArrivals'
+import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
 function Home() {
   return (
     <main>
@@ -13,6 +14,7 @@ function Home() {
       <FeaturedCollection />
       <OffersBanner />
       <NewArrivals />
+      <FloatingAssistant />
     </main>
   )
 }

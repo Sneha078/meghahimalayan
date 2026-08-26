@@ -163,13 +163,13 @@ def detect_category(text: str) -> Optional[str]:
     text = text.lower()
  
     if any(_word_in_text(word, text) for word in _WATCH_KEYWORDS):
-        return "watch"
+        return "watches"
  
     if any(_word_in_text(word, text) for word in _EYEGLASSES_KEYWORDS):
         return "eyeglasses"
  
     if any(_word_in_text(word, text) for word in _PERFUME_KEYWORDS):
-        return "perfume"
+        return "perfumes"
  
     return None
  

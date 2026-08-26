@@ -1,13 +1,18 @@
 import { useRef } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation } from 'swiper/modules'
-import products from '../data/products'
+import { useProducts } from '../hooks/useProducts'
 import ProductCard from './ProductCard'
 
 function NewArrivals() {
   const prevRef = useRef(null)
   const nextRef = useRef(null)
-  const newProducts = products.filter((p) => p.isNew)
+
+  // Ask the backend to filter server-side (new=true) instead of fetching
+  // a partial page and filtering in JS — getAllProducts defaults to only
+  // 12 results/page, so client-side filtering would silently miss most
+  // of the catalog otherwise.
+  const { products: newProducts, loading, error } = useProducts({ new: true, limit: 8 })
 
   return (
     <section style={{
@@ -103,34 +108,47 @@ function NewArrivals() {
         </div>
       </div>
 
+      {/* Loading / error states */}
+      {loading && (
+        <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>Loading new arrivals…</p>
+      )}
+      {error && (
+        <p style={{ color: '#e74c3c' }}>Couldn't load products: {error}</p>
+      )}
+      {!loading && !error && newProducts.length === 0 && (
+        <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>No new arrivals right now.</p>
+      )}
+
       {/* Swiper */}
-      <Swiper
-        modules={[Navigation]}
-        navigation={{
-          prevEl: prevRef.current,
-          nextEl: nextRef.current,
-        }}
-        onBeforeInit={(swiper) => {
-          swiper.params.navigation.prevEl = prevRef.current
-          swiper.params.navigation.nextEl = nextRef.current
-        }}
-        slidesPerView={4}
-        spaceBetween={20}
-        grabCursor={true}
-        breakpoints={{
-          0: { slidesPerView: 1, spaceBetween: 12 },
-          640: { slidesPerView: 2, spaceBetween: 16 },
-          1024: { slidesPerView: 3, spaceBetween: 20 },
-          1280: { slidesPerView: 4, spaceBetween: 20 },
-        }}
-        style={{ width: '100%' }}
-      >
-        {newProducts.map((product) => (
-          <SwiperSlide key={product.id} style={{ height: 'auto' }}>
-            <ProductCard product={product} />
-          </SwiperSlide>
-        ))}
-      </Swiper>
+      {!loading && !error && newProducts.length > 0 && (
+        <Swiper
+          modules={[Navigation]}
+          navigation={{
+            prevEl: prevRef.current,
+            nextEl: nextRef.current,
+          }}
+          onBeforeInit={(swiper) => {
+            swiper.params.navigation.prevEl = prevRef.current
+            swiper.params.navigation.nextEl = nextRef.current
+          }}
+          slidesPerView={4}
+          spaceBetween={20}
+          grabCursor={true}
+          breakpoints={{
+            0: { slidesPerView: 1, spaceBetween: 12 },
+            640: { slidesPerView: 2, spaceBetween: 16 },
+            1024: { slidesPerView: 3, spaceBetween: 20 },
+            1280: { slidesPerView: 4, spaceBetween: 20 },
+          }}
+          style={{ width: '100%' }}
+        >
+          {newProducts.map((product) => (
+            <SwiperSlide key={product._id} style={{ height: 'auto' }}>
+              <ProductCard product={product} />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      )}
 
     </section>
   )

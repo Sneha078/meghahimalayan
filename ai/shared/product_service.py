@@ -133,7 +133,7 @@ def filter_products(
 ) -> list[dict]:
     query = {}
     if category:
-        query["category"] = category
+        query["category"] = {"$regex": f"^{category}$", "$options": "i"}
     price_filter = {}
     if min_price is not None:
         price_filter["$gte"] = min_price

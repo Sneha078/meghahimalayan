@@ -3,16 +3,29 @@
 function ProductCard({ product }) {
 const [wishlisted, setWishlisted] = useState(false)
 const [added, setAdded] = useState(false)
-const [hovered, setHovered] = useState(false)   
+const [hovered, setHovered] = useState(false)
 
   const handleAddToCart = () => {
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  // Backend stores images as [{ public_id, url }], discountPrice as the sale price,
+  // and originalPrice doesn't exist — price is always the base price.
+  const imageUrl = product.image?.[0]?.url ?? null
+  const originalPrice = product.discountPrice ? product.price : null
+  const sellingPrice  = product.discountPrice ?? product.price
+
+  const discount = originalPrice
+    ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100)
     : null
+
+  // Backend uses isNewArrival / isBestSeller (camelCase with capital letters)
+  const isNew        = product.isNewArrival  ?? product.isNew        ?? false
+  const isBestseller = product.isBestSeller  ?? product.isBestseller ?? false
+  // Backend uses `ratings` (not `rating`) and `numOfReviews` (not `reviews`)
+  const rating     = product.ratings      ?? product.rating      ?? 0
+  const reviewCount = product.numOfReviews ?? product.reviews     ?? 0
 
   return (
     <div
@@ -35,43 +48,54 @@ onMouseLeave={(e) => {
   setHovered(false)
 }}
     >
-   {/* Image / Placeholder */}
+   {/* Image */}
 <div style={{ position: 'relative', overflow: 'hidden' }}>
   <div
     style={{
-      background: product.gradient,
-      height: '200px',
+      backgroundColor: '#f3f4f6',
+      height: '220px',
+      overflow: 'hidden',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
     }}
   >
-    <div style={{
-      opacity: 0.25,
-      color: '#fff',
-      transition: 'transform 0.4s ease',
-      transform: hovered ? 'scale(1.15)' : 'scale(1)',
-    }}>
-      {product.category === 'watches' ? (
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-          <circle cx="12" cy="12" r="7" />
-          <polyline points="12 9 12 12 13.5 13.5" />
-          <path d="M9 3h6l1 3H8L9 3z" />
-          <path d="M9 21h6l1-3H8l1 3z" />
-        </svg>
-      ) : (
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
-          <path d="M2 8c0-1.1.9-2 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8z" />
-          <path d="M7 10h10" />
-        </svg>
-      )}
-    </div>
+    {imageUrl ? (
+      <img
+        src={imageUrl}
+        alt={product.name}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.4s ease',
+          transform: hovered ? 'scale(1.08)' : 'scale(1)',
+          display: 'block',
+        }}
+      />
+    ) : (
+      /* Fallback SVG when no image is available */
+      <div style={{ opacity: 0.25, color: '#6b7280' }}>
+        {product.category === 'watches' ? (
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <circle cx="12" cy="12" r="7" />
+            <polyline points="12 9 12 12 13.5 13.5" />
+            <path d="M9 3h6l1 3H8L9 3z" />
+            <path d="M9 21h6l1-3H8l1 3z" />
+          </svg>
+        ) : (
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <path d="M2 8c0-1.1.9-2 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8z" />
+            <path d="M7 10h10" />
+          </svg>
+        )}
+      </div>
+    )}
   </div>
 
   {/* Badges */}
   <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-    {product.isNew && (
+    {isNew && (
       <span style={{
         backgroundColor: '#C9A84C',
         color: '#0d1a2a',
@@ -82,7 +106,7 @@ onMouseLeave={(e) => {
         borderRadius: '4px',
       }}>NEW</span>
     )}
-    {product.isBestseller && (
+    {isBestseller && (
       <span style={{
         backgroundColor: '#0d1a2a',
         color: '#C9A84C',
@@ -204,24 +228,24 @@ onMouseLeave={(e) => {
           <div style={{ display: 'flex', gap: '2px' }}>
             {[1, 2, 3, 4, 5].map((star) => (
               <svg key={star} width="11" height="11" viewBox="0 0 24 24"
-                fill={star <= Math.round(product.rating) ? '#C9A84C' : 'none'}
+                fill={star <= Math.round(rating) ? '#C9A84C' : 'none'}
                 stroke="#C9A84C" strokeWidth="2"
               >
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             ))}
           </div>
-          <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>({product.reviews})</span>
+          <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>({reviewCount})</span>
         </div>
 
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '1rem', fontWeight: '700', color: '#0d2031' }}>
-            Rs. {product.price.toLocaleString()}
+            Rs. {sellingPrice.toLocaleString()}
           </span>
-          {product.originalPrice && (
+          {originalPrice && (
             <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>
-              Rs. {product.originalPrice.toLocaleString()}
+              Rs. {originalPrice.toLocaleString()}
             </span>
           )}
         </div>

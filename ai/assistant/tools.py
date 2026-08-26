@@ -51,6 +51,7 @@ def search_products(query: str, top_k: int = 5) -> list[dict[str, Any]]:
             exc_info=True,
         )
         products = product_service.get_all_products()
+        print({p["category"] for p in products})
         query_lower = query.lower()
         matches = []
         for product in products:
