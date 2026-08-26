@@ -65,6 +65,7 @@ function Footer() {
         gap: '3rem',
         padding: '4rem 5rem',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
+        alignItems: 'flex-start',
       }}>
 
        
@@ -97,6 +98,7 @@ function Footer() {
             lineHeight:'1.75',
             marginBottom: '1.25rem',
             maxWidth: '260px',
+            textAlign: 'justify',
           }}>
             Pokhara's premier destination for international eyewear, watches and fragrances founded by{' '}
             <span style={{ color: 'var(--color-taupe)', fontWeight: '500' }}>Mr. Suraj Singh</span>{' '}
@@ -105,25 +107,28 @@ function Footer() {
 
         
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.82rem' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)', marginTop: '2px' }}>📍</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', marginTop: '1px', flexShrink: 0, width: '16px', textAlign: 'center' }}>📍</span>
               <span>Mahendra Pool, Pokhara 33700, Nepal</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>📞</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>📞</span>
               <span>984-0604668</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>✉️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>✉️</span>
               <span>mail@megahimalaya.com</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>🕐</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>🕐</span>
               <span>Sun–Fri: 10:00 AM – 6:00 PM</span>
             </div>
-            <span style={{ fontSize: '0.75rem', opacity: 0.45, paddingLeft: '1.5rem' }}>
-              Closed on Saturdays
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>🚫</span>
+              <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>
+                Closed on Saturdays
+              </span>
+            </div>
           </div>
 
         
@@ -167,9 +172,6 @@ function Footer() {
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <FooterLink to="/shop">All Products</FooterLink>
-            <FooterLink to="/shop?category=eyeglasses">Eyeglasses</FooterLink>
-            <FooterLink to="/shop?category=watches">Watches</FooterLink>
-            <FooterLink to="/shop?category=perfumes">Perfumes</FooterLink>
             <FooterLink to="/shop?filter=new">New Arrivals</FooterLink>
             <FooterLink to="/shop?filter=sale">Sale</FooterLink>
             <FooterLink to="/brands">Brands</FooterLink>
@@ -193,8 +195,6 @@ function Footer() {
             <FooterLink to="/account/orders">My Orders</FooterLink>
             <FooterLink to="/wishlist">Wishlist</FooterLink>
             <FooterLink to="/cart">My Cart</FooterLink>
-            <FooterLink to="/contact">Contact Us</FooterLink>
-            <FooterLink to="/faq">FAQ</FooterLink>
           </ul>
         </div>
 
@@ -215,6 +215,8 @@ function Footer() {
             <FooterLink to="/returns">Return & Refund</FooterLink>
             <FooterLink to="/privacy">Privacy Policy</FooterLink>
             <FooterLink to="/terms">Terms of Service</FooterLink>
+            <FooterLink to="/contact">Contact Us</FooterLink>
+            <FooterLink to="/faq">FAQ</FooterLink>
           </ul>
 
          
@@ -257,7 +259,7 @@ function Footer() {
       }}>
         {[
           { icon: '🔒', text: 'Secure Payments' },
-          { icon: '🚚', text: 'Free Shipping Over Rs5k' },
+          { icon: '🚚', text: 'Free Shipping Over Rs 5k' },
           { icon: '✅', text: 'Genuine Products' },
           { icon: '🎁', text: 'Daily Discounts' },
         ].map(item => (

@@ -187,7 +187,9 @@ function Shop() {
           padding: '24px',
           border: '1px solid var(--color-border)',
           position: 'sticky',
-          top: '88px',
+          top: '80px',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
         }}>
 
           

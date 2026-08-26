@@ -1,3 +1,4 @@
+import logo from '../assets/hoh_logo.png'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -26,15 +27,18 @@ function Navbar() {
        
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <Link to="/">
-            <span
-              className={`font-heading font-bold text-xl tracking-widest select-none ${
-                scrolled ? 'text-[#0d1a2a]' : 'text-[#C9A84C]'
-              }`}
-            >
-              HΩH
-            </span>
-          </Link>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+  <img
+    src={logo}
+    alt="Mega Himalaya"
+    style={{
+      height: '48px',
+      width: 'auto',
+      objectFit: 'contain',
+      
+    }}
+  />
+</Link>
 
           
           <div className="flex items-center gap-6">

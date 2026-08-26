@@ -25,8 +25,8 @@ function NewArrivals() {
         <div>
           <p style={{
             color: 'var(--color-taupe)',
-            fontSize: '0.72rem',
-            fontWeight: '700',
+            fontSize: '0.85rem',
+            fontWeight: '800',
             letterSpacing: '0.2em',
             textTransform: 'uppercase',
             marginBottom: '10px',

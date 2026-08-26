@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 function ProductCard({ product }) {
 const [wishlisted, setWishlisted] = useState(false)
@@ -36,6 +37,7 @@ onMouseLeave={(e) => {
 }}
     >
    {/* Image / Placeholder */}
+   <Link to={`/product/${product.id}`} style={{textDecoration: 'none', display: 'block'}}>
 <div style={{ position: 'relative', overflow: 'hidden' }}>
   <div
     style={{
@@ -170,10 +172,13 @@ onMouseLeave={(e) => {
       {added ? '✓ Added!' : '🛒 Add to Cart'}
     </button>
   </div>
+ 
 
 
 </div> 
+</Link>
       {/* Card Body */}
+      <Link to={`/product/${product.id}`} style={{textDecoration: 'none', display: 'block'}}>
       <div style={{ padding: '16px' }}>
 
         {/* Brand */}
@@ -227,6 +232,7 @@ onMouseLeave={(e) => {
         </div>
 
       </div>
+      </Link>
 
     </div>
   )
