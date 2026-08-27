@@ -2,12 +2,10 @@ import ContactMessage from "../models/contactModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PUBLIC
-// ─────────────────────────────────────────────────────────────────────────────
 
+// PUBLIC API 
 // POST /api/v1/contact
-// Open to everyone — guests and logged-in users alike.
+// Open to everyone — guests and logged-in users 
 export const createContactMessage = handleAsyncError(async (req, res, next) => {
   const { name, email, phone, subject, message } = req.body;
 
@@ -34,10 +32,8 @@ export const createContactMessage = handleAsyncError(async (req, res, next) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADMIN
-// ─────────────────────────────────────────────────────────────────────────────
 
+// ADMIN API 
 // GET /api/v1/admin/messages
 export const getAllContactMessages = handleAsyncError(async (req, res, next) => {
   // Optional filter by status: ?status=New

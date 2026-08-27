@@ -31,7 +31,7 @@ router.post("/logout",   logout);
 router.post("/password/forgot",          forgotPassword);
 router.put("/password/reset/:token",     resetPassword);
 
-// ── Authenticated ─────────────────────────────────────────────────────────────
+// Authenticated 
 router.get("/me",              verifyUserAuth, getUserDetails);
 router.put("/me/update",       verifyUserAuth, updateProfile);
 router.put("/password/update", verifyUserAuth, updatePassword);
@@ -46,7 +46,7 @@ router.get("/wishlist",              verifyUserAuth, getWishlist);
 router.post("/wishlist",             verifyUserAuth, addToWishlist);
 router.delete("/wishlist/:productId", verifyUserAuth, removeFromWishlist);
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
+// Admin 
 router.get(
   "/admin/users",
   verifyUserAuth, roleBasedAccess("admin"),

@@ -15,13 +15,14 @@ const router = express.Router();
 // All cart routes require authentication
 // A cart belongs to a user — guests use localStorage on the frontend
 
-router.get("/cart",             verifyUserAuth, getCart);         // GET  full cart with totals
-router.post("/cart",            verifyUserAuth, addToCart);       // POST add item
-router.put("/cart/:itemId",     verifyUserAuth, updateCartItem);  // PUT  change quantity
-router.delete("/cart/:itemId",  verifyUserAuth, removeCartItem);  // DEL  remove one item
-router.delete("/cart",          verifyUserAuth, clearCart);       // DEL  clear entire cart
-
-router.post("/cart/coupon",     verifyUserAuth, applyCoupon);     // POST apply coupon
-router.delete("/cart/coupon",   verifyUserAuth, removeCoupon);    // DEL  remove coupon
+router.get("/cart", verifyUserAuth, getCart);
+router.post("/cart", verifyUserAuth, addToCart);
+router.put("/cart/:itemId", verifyUserAuth, updateCartItem);
+// Specific route FIRST
+router.delete("/cart/coupon", verifyUserAuth, removeCoupon);
+// Dynamic route AFTER
+router.delete("/cart/:itemId", verifyUserAuth, removeCartItem);
+router.delete("/cart", verifyUserAuth, clearCart);
+router.post("/cart/coupon", verifyUserAuth, applyCoupon); // DEL  remove coupon
 
 export default router;

@@ -4,7 +4,7 @@
  * Creates:
  *   - 1 admin user
  *   - 1 demo customer (with saved address + 2 sample orders)
- *   - 32 products (from products.json)
+ *   - 150 products (from products.json)
  *   - 3 coupons
  *
  * Run:  npm run seed
@@ -31,9 +31,11 @@ import Coupon  from "../models/couponModel.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const rawProducts = JSON.parse(
+// products.json is shaped as { "products": [ ...150 items ] }
+const rawFile = JSON.parse(
   readFileSync(path.join(__dirname, "products.json"), "utf8")
 );
+const rawProducts = rawFile.products;
 
 // ─────────────────────────────────────────────────────────────────────────────
 async function seed() {
@@ -59,22 +61,24 @@ async function seed() {
   await Product.deleteMany({});
 
   const products = rawProducts.map((p) => ({
-    name:         p.name,
-    slug:         p.id,
-    description:  p.description,
-    brand:        p.brand,
-    category:     p.category,
-    subcategory:  p.subcategory || "",
-    gender:       p.gender      || "Unisex",
-    price:        p.price,
+    name:          p.name,
+    slug:          p.slug,
+    description:   p.description,
+    brand:         p.brand,
+    category:      p.category,
+    subcategory:   p.subcategory   || "",
+    gender:        p.gender        || "Unisex",
+    price:         p.price,
     discountPrice: p.discountPrice ?? null,
-    ratings:      p.rating       || 0,
-    numOfReviews: p.reviewCount  || 0,
-    stock:        p.stock        || 10,
-    isFeatured:   !!p.isFeatured,
-    isBestSeller: !!p.isBestSeller,
-    isNewArrival: !!p.isNew,
-    image: (p.images || []).map((url) => ({ public_id: "", url })),
+    ratings:       p.ratings       || 0,
+    numOfReviews:  p.numOfReviews  || 0,
+    stock:         p.stock         ?? 10,
+    isFeatured:    !!p.isFeatured,
+    isBestSeller:  !!p.isBestSeller,
+    isNewArrival:  !!p.isNewArrival,
+    // image is already [{ public_id, url }, ...] in products.json — use as-is.
+    // (isOutOfStock is recalculated automatically by the Product pre-save hook.)
+    image: Array.isArray(p.image) ? p.image : [],
     // Eyeglasses
     frameShape:    p.frameShape    || "",
     frameMaterial: p.frameMaterial || "",

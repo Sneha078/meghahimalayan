@@ -10,10 +10,10 @@ import { verifyUserAuth, roleBasedAccess } from "../middleware/userAuth.js";
 
 const router = express.Router();
 
-// ── Customer — preview discount before checkout ───────────────────────────────
+//  Customer — preview discount before checkout 
 router.post("/coupon/validate", verifyUserAuth, validateCoupon);
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
+//  Admin 
 router
   .route("/admin/coupons")
   .get(verifyUserAuth,  roleBasedAccess("admin"), getCoupons)

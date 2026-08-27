@@ -30,7 +30,6 @@ const contactSchema = new mongoose.Schema(
     enum: [
       "Product Inquiry",
       "Return & Refund",
-      "Prescription Eyewear",
       "Wholesale / Bulk Order",
       "Other"
     ],

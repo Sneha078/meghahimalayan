@@ -13,13 +13,13 @@ import { verifyUserAuth, roleBasedAccess } from "../middleware/userAuth.js";
 
 const router = express.Router();
 
-// ── Customer ──────────────────────────────────────────────────────────────────
+//  Customer 
 router.post("/order/new",             verifyUserAuth, createNewOrder);
 router.get("/orders/me",              verifyUserAuth, getMyOrders);
 router.get("/order/:id",              verifyUserAuth, getMySingleOrder);
 router.put("/order/:id/cancel",       verifyUserAuth, cancelMyOrder);
 
-// ── Admin ─────────────────────────────────────────────────────────────────────
+//  Admin 
 router.get(
   "/admin/orders",
   verifyUserAuth, roleBasedAccess("admin"),

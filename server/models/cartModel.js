@@ -27,7 +27,7 @@ const cartItemSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
-      min: 0,
+      min: [0, "Price cannot be negative"],
     },
   },
 
@@ -50,7 +50,16 @@ const cartSchema = new mongoose.Schema(
     },
 
     //single cart contain multiple cart items
-    items: [cartItemSchema],
+     items: {
+      type: [cartItemSchema],
+      default: [],
+      validate: {
+        validator: function (items) {
+          return items.length <= 50;
+        },
+        message: "A cart cannot contain more than 50 products",
+      },
+    },
 
     //Coupon applied to the cart
     //coupon validition is ensured during checkout
@@ -60,6 +69,7 @@ const cartSchema = new mongoose.Schema(
       default: "",
       uppercase: true,
       trim: true,
+      maxlength: [50, "Coupon code is too long"],
     },
   },
 
