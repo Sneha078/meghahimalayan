@@ -187,7 +187,9 @@ function Shop() {
           padding: '24px',
           border: '1px solid var(--color-border)',
           position: 'sticky',
-          top: '88px',
+          top: '80px',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
         }}>
 
           
@@ -229,8 +231,8 @@ function Shop() {
           {/* Gender Filter */}
           <div style={{ marginBottom: '24px' }}>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',
@@ -267,8 +269,8 @@ function Shop() {
           
           <div style={{ marginBottom: '24px' }}>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',
@@ -318,8 +320,8 @@ function Shop() {
                  
           <div>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',

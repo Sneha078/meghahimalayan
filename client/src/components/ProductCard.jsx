@@ -1,11 +1,15 @@
 ﻿import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useCart } from '../context/CartContext'
 
 function ProductCard({ product }) {
 const [wishlisted, setWishlisted] = useState(false)
 const [added, setAdded] = useState(false)
-const [hovered, setHovered] = useState(false)   
+const [hovered, setHovered] = useState(false)
+const { addItem } = useCart()
 
   const handleAddToCart = () => {
+    addItem(product)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
@@ -25,18 +29,19 @@ const [hovered, setHovered] = useState(false)
         cursor: 'pointer',
       }}
       onMouseEnter={(e) => {
-  e.currentTarget.style.transform = 'translateY(-4px)'
-  e.currentTarget.style.boxShadow = '0 12px 32px rgba(13,32,49,0.1)'
-  setHovered(true)
-}}
-onMouseLeave={(e) => {
-  e.currentTarget.style.transform = 'translateY(0)'
-  e.currentTarget.style.boxShadow = 'none'
-  setHovered(false)
-}}
+        e.currentTarget.style.transform = 'translateY(-4px)'
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(13,32,49,0.1)'
+        setHovered(true)
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
+        setHovered(false)
+      }}
     >
-   {/* Image / Placeholder */}
-<div style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Image wrapped in Link */}
+      <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
   <div
     style={{
       background: product.gradient,
@@ -172,9 +177,12 @@ onMouseLeave={(e) => {
   </div>
 
 
-</div> 
-      {/* Card Body */}
-      <div style={{ padding: '16px' }}>
+</div>
+      </Link>
+
+      {/* Card Body wrapped in Link */}
+      <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+        <div style={{ padding: '16px' }}>
 
         {/* Brand */}
         <p style={{
@@ -227,13 +235,13 @@ onMouseLeave={(e) => {
         </div>
 
       </div>
+      </Link>
 
     </div>
   )
 }
 
 export default ProductCard
-  
 
 
 
