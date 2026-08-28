@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-//stores order status change history
+// Stores order status change history
 const orderStatusHistorySchema = new mongoose.Schema(
   {
     status: {
@@ -14,15 +14,58 @@ const orderStatusHistorySchema = new mongoose.Schema(
       ],
       required: true,
     },
-
     changedAt: {
       type: Date,
       default: Date.now,
     },
   },
+  { _id: false }
+);
+
+const orderItemSchema = new mongoose.Schema(
   {
-    _id: false,
-  }
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
+
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 100,
+    },
+
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 100,
+    },
+
+    image: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+
+    // Server-verified price at the time of purchase
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  { _id: false }
 );
 
 const orderSchema = new mongoose.Schema(
@@ -36,9 +79,7 @@ const orderSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Order destination/Delivery address
-    // Shipping info is stored inside the order
-    // because the user may change their address in the future
+    // Snapshot of delivery information
     shippingInfo: {
       name: {
         type: String,
@@ -83,50 +124,17 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Order items purchased by the customer
-    // Array is used because one order may contain multiple items
-    orderItems: [
-      {
-        // Purchased product name
-        name: {
-          type: String,
-          required: true,
-          trim: true,
-          maxlength: 200,
-        },
-
-        // Quantity purchased
-        // At least one product
-        quantity: {
-          type: Number,
-          required: true,
-          min: 1,
-          max: 100,
-        },
-
-        image: {
-          type: String,
-          default: "",
-          trim: true,
-        },
-
-        // Connect order item with Product collection
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-
-        // server le verify gareko product ko price
-        price: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
+    // Snapshot of purchased products
+    orderItems: {
+      type: [orderItemSchema],
+      required: true,
+      validate: {
+        validator: (items) => items.length > 0,
+        message: "Order must contain at least one item",
       },
-    ],
+    },
 
-    // Current Order status
+    // Current order status
     orderStatus: {
       type: String,
       enum: [
@@ -140,11 +148,10 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Order status history
-    // Keeps a record of every important order status change
+    // Complete order status history
     statusHistory: {
       type: [orderStatusHistorySchema],
-      default: [
+      default: () => [
         {
           status: "Processing",
           changedAt: new Date(),
@@ -152,30 +159,28 @@ const orderSchema = new mongoose.Schema(
       ],
     },
 
-    // User information who made the order
+    // Customer who placed the order
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
     // Payment information
     paymentInfo: {
-      // Store payment ID received from payment gateway
       id: {
         type: String,
         default: null,
         trim: true,
       },
 
-      // Payment method
       method: {
         type: String,
         enum: ["COD", "eSewa", "Khalti", "Card", "Other"],
         default: "COD",
       },
 
-      // Payment status
       status: {
         type: String,
         enum: ["Pending", "Paid", "Failed", "Refunded"],
@@ -183,32 +188,43 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Date when payment was completed
+    // Payment completion date
     paidAt: {
       type: Date,
       default: null,
     },
 
-    // Date when order was confirmed
+    // Order confirmation date
     confirmedAt: {
       type: Date,
       default: null,
     },
 
-    // Date when order was shipped
+    // Shipping date
     shippedAt: {
       type: Date,
       default: null,
     },
 
-    // Date when order was cancelled
+    // Cancellation date
     cancelledAt: {
       type: Date,
       default: null,
     },
 
-    // Financial fields (Server calculated)
-    // Total price before tax, shipping and discount
+    // Delivery date
+    deliveredAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Refund date
+    refundedAt: {
+      type: Date,
+      default: null,
+    },
+
+    // Financial fields calculated by server
     itemsPrice: {
       type: Number,
       required: true,
@@ -216,7 +232,6 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Tax amount
     taxPrice: {
       type: Number,
       required: true,
@@ -224,7 +239,6 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Shipping cost
     shippingPrice: {
       type: Number,
       required: true,
@@ -232,22 +246,20 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Discount amount
     discount: {
       type: Number,
       default: 0,
       min: 0,
     },
 
-    // Coupon used for the order
     couponCode: {
       type: String,
       default: "",
       trim: true,
       uppercase: true,
+      maxlength: 50,
     },
 
-    // Final order price
     totalPrice: {
       type: Number,
       required: true,
@@ -255,15 +267,7 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Date when order was delivered
-    deliveredAt: {
-      type: Date,
-      default: null,
-    },
-
     // Soft delete
-    // Orders are business records and should not normally be
-    // permanently deleted from the database.
     isDeleted: {
       type: Boolean,
       default: false,
@@ -275,10 +279,29 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Query indexes
+// ─────────────────────────────────────────────────────────────────────────────
+// INDEXES
+// ─────────────────────────────────────────────────────────────────────────────
+
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ isDeleted: 1, createdAt: -1 });
+orderSchema.index({
+  isDeleted: 1,
+  orderStatus: 1,
+  createdAt: -1,
+});
+orderSchema.index({
+  isDeleted: 1,
+  "paymentInfo.status": 1,
+  createdAt: -1,
+});
+orderSchema.index({
+  isDeleted: 1,
+  "paymentInfo.method": 1,
+  orderStatus: 1,
+  createdAt: -1,
+});
 
 const Order = mongoose.model("Order", orderSchema);
 
