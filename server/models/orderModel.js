@@ -22,6 +22,7 @@ const orderStatusHistorySchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Stores snapshot of items purchased
 const orderItemSchema = new mongoose.Schema(
   {
     name: {
@@ -58,7 +59,7 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Server-verified price at the time of purchase
+    // Server-verified price at time of purchase
     price: {
       type: Number,
       required: true,
@@ -70,7 +71,7 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
-    // Customer-friendly order ID
+    // Customer-friendly unique order ID (e.g. MH-12345678)
     orderNumber: {
       type: String,
       required: true,
@@ -79,7 +80,7 @@ const orderSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Snapshot of delivery information
+    // Snapshot of delivery address
     shippingInfo: {
       name: {
         type: String,
@@ -87,35 +88,30 @@ const orderSchema = new mongoose.Schema(
         trim: true,
         maxlength: 100,
       },
-
       address: {
         type: String,
         required: true,
         trim: true,
         maxlength: 300,
       },
-
       city: {
         type: String,
         required: true,
         trim: true,
         maxlength: 100,
       },
-
       state: {
         type: String,
         required: true,
         trim: true,
         maxlength: 100,
       },
-
       pincode: {
         type: String,
         required: true,
         trim: true,
         maxlength: 20,
       },
-
       phoneNo: {
         type: String,
         required: true,
@@ -124,7 +120,7 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Snapshot of purchased products
+    // Purchased items
     orderItems: {
       type: [orderItemSchema],
       required: true,
@@ -148,7 +144,7 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Complete order status history
+    // Complete status audit history
     statusHistory: {
       type: [orderStatusHistorySchema],
       default: () => [
@@ -159,7 +155,7 @@ const orderSchema = new mongoose.Schema(
       ],
     },
 
-    // Customer who placed the order
+    // Customer who placed order
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -167,20 +163,18 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Payment information
+    // Payment info
     paymentInfo: {
       id: {
         type: String,
         default: null,
         trim: true,
       },
-
       method: {
         type: String,
         enum: ["COD", "eSewa", "Khalti", "Card", "Other"],
         default: "COD",
       },
-
       status: {
         type: String,
         enum: ["Pending", "Paid", "Failed", "Refunded"],
@@ -188,70 +182,56 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    // Payment completion date
+    // Timestamps
     paidAt: {
       type: Date,
       default: null,
     },
-
-    // Order confirmation date
     confirmedAt: {
       type: Date,
       default: null,
     },
-
-    // Shipping date
     shippedAt: {
       type: Date,
       default: null,
     },
-
-    // Cancellation date
     cancelledAt: {
       type: Date,
       default: null,
     },
-
-    // Delivery date
     deliveredAt: {
       type: Date,
       default: null,
     },
-
-    // Refund date
     refundedAt: {
       type: Date,
       default: null,
     },
 
-    // Financial fields calculated by server
+    // Financial calculations
     itemsPrice: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
     },
-
     taxPrice: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
     },
-
     shippingPrice: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
     },
-
     discount: {
       type: Number,
       default: 0,
       min: 0,
     },
-
     couponCode: {
       type: String,
       default: "",
@@ -259,7 +239,6 @@ const orderSchema = new mongoose.Schema(
       uppercase: true,
       maxlength: 50,
     },
-
     totalPrice: {
       type: Number,
       required: true,
