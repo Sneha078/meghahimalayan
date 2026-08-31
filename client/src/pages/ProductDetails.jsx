@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getProductById, getProductReviews, submitReview } from '../api/productClient'
+import { useCart } from '../context/CartContext'
 import RecommendedProducts from '../components/RecommendedProducts'
 import SentimentSummary from '../components/SentimentSummary'
 
@@ -46,6 +47,7 @@ function SpecRow({ label, value }) {
 function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { addItem } = useCart()
 
   const [product, setProduct]             = useState(null)
   const [loading, setLoading]             = useState(true)
@@ -148,6 +150,7 @@ function ProductDetail() {
   }
 
   const handleAddToCart = () => {
+    addItem(product)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }

@@ -87,7 +87,7 @@ function Cart() {
         </h1>
       </div>
 
-      
+      {/* Main Content */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 380px',
@@ -96,10 +96,10 @@ function Cart() {
         alignItems: 'flex-start',
       }}>
 
-       
+        {/* Left — Cart Items */}
         <div>
 
-          
+          {/* Header Row */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '2fr 1fr 1fr 1fr',
@@ -120,7 +120,7 @@ function Cart() {
             ))}
           </div>
 
-         
+          {/* Cart Items */}
           {cartItems.map((item) => (
             <div
               key={item.id}
@@ -133,7 +133,7 @@ function Cart() {
                 gap: '16px',
               }}
             >
-           
+              {/* Product Info */}
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 {/* Image */}
                 <div style={{
@@ -152,7 +152,7 @@ function Cart() {
                     : item.category === 'perfumes' ? '🧴' : '👓'}
                 </div>
 
-              
+                {/* Name & Brand */}
                 <div>
                   <p style={{
                     fontSize: '0.68rem',
@@ -196,7 +196,7 @@ function Cart() {
                 </div>
               </div>
 
-             
+              {/* Price */}
               <div>
                 <p style={{
                   fontSize: '0.95rem',
@@ -217,7 +217,7 @@ function Cart() {
                 )}
               </div>
 
-              
+              {/* Quantity Controls */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -245,7 +245,7 @@ function Cart() {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-sbg)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-white)'}
                 >
-                  -
+                  −
                 </button>
                 <span style={{
                   width: '40px',
@@ -284,7 +284,7 @@ function Cart() {
                 </button>
               </div>
 
-              
+              {/* Item Total */}
               <p style={{
                 fontSize: '1rem',
                 fontWeight: '700',
@@ -296,7 +296,7 @@ function Cart() {
             </div>
           ))}
 
-
+          {/* Continue Shopping */}
           <div style={{ marginTop: '24px' }}>
             <Link
               to="/shop"
@@ -318,7 +318,7 @@ function Cart() {
           </div>
         </div>
 
-        
+        {/* Right — Order Summary */}
         <div style={{
           backgroundColor: 'var(--color-white)',
           borderRadius: '16px',
@@ -340,7 +340,7 @@ function Cart() {
             Order Summary
           </h2>
 
-        
+          {/* Summary Rows */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -380,10 +380,10 @@ function Cart() {
 
           </div>
 
-         
+          {/* Divider */}
           <div style={{ borderTop: '1px solid var(--color-border)', margin: '20px 0' }} />
 
-        
+          {/* Total */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -407,7 +407,7 @@ function Cart() {
             </span>
           </div>
 
-         
+          {/* Checkout Button */}
           <Link
             to="/checkout"
             style={{
@@ -431,7 +431,7 @@ function Cart() {
             PROCEED TO CHECKOUT
           </Link>
 
-         
+          {/* Trust badges */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',

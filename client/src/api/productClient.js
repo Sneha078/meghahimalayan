@@ -8,6 +8,15 @@ async function handleResponse(res) {
   }
   return res.json();
 }
+
+// Backend (Mongoose) sends _id, but the frontend (CartContext, ProductCard,
+// ProductDetails, etc.) reads product.id everywhere. This copies _id -> id
+// right at the API boundary so nothing downstream has to change.
+function normalizeProduct(product) {
+  if (!product) return product;
+  return { ...product, id: product.id ?? product._id };
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -22,13 +31,14 @@ export async function getProducts(params = {}) {
   const url = `${API_URL}/products${query ? `?${query}` : ""}`;
   const res = await fetch(url);
   const data = await handleResponse(res);
-  return data.products ?? data;
+  const products = data.products ?? data;
+  return products.map(normalizeProduct);
 }
 
 export async function getProductById(id) {
   const res = await fetch(`${API_URL}/product/${id}`);
   const data = await handleResponse(res);
-  return data.product ?? data;
+  return normalizeProduct(data.product ?? data);
 }
 
 export async function getFilterOptions() {

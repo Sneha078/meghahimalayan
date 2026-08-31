@@ -136,7 +136,7 @@ function ProductCard({ product }) {
 
           {/* Wishlist */}
           <button
-            onClick={(e) => { e.stopPropagation(); setWishlisted(!wishlisted) }}
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setWishlisted(!wishlisted) }}
             style={{
               position: 'absolute',
               top: '10px',
@@ -177,7 +177,7 @@ function ProductCard({ product }) {
             justifyContent: 'center',
           }}>
             <button
-              onClick={(e) => { e.stopPropagation(); handleAddToCart() }}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleAddToCart() }}
               style={{
                 width: '100%',
                 padding: '8px',

@@ -432,61 +432,53 @@ function Navbar() {
           </button>
 
           {/* Cart */}
-          <Link
-            to="/cart"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-              scrolled
-                ? "bg-[#0d1a2a] text-white border-[#0d1a2a] hover:bg-[#162436]"
-                : "bg-transparent text-white border-white/25 hover:bg-white/5"
-            }`}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-
-              <line
-                x1="3"
-                y1="6"
-                x2="21"
-                y2="6"
-              />
-
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-
-            Cart
-
-            {/* Cart Count */}
-            {totalItems > 0 && (
-              <span
-                style={{
-                  backgroundColor: "var(--color-error)",
-                  color: "#ffffff",
-                  fontSize: "0.65rem",
-                  fontWeight: "700",
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "absolute",
-                  top: "-6px",
-                  right: "-6px",
-                }}
-              >
-                {totalItems}
-              </span>
-            )}
-          </Link>
+ <Link
+  to="/cart"
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '9px 20px',
+    borderRadius: '8px',
+    backgroundColor: scrolled ? 'var(--color-navy)' : 'transparent',
+    border: scrolled ? 'none' : '1px solid rgba(255,255,255,0.3)',
+    color: 'var(--color-white)',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+  }}
+>
+  <svg width="16" height="16" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round"
+  >
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+  Cart
+  {totalItems > 0 && (
+    <span style={{
+      backgroundColor: 'var(--color-error)',
+      color: '#ffffff',
+      fontSize: '0.65rem',
+      fontWeight: '700',
+      width: '18px',
+      height: '18px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'absolute',
+      top: '-6px',
+      right: '-6px',
+    }}>
+      {totalItems}
+    </span>
+  )}
+</Link>        
         </div>
       </div>
     </nav>
