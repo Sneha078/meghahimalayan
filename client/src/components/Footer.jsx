@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 
-// ── Link hover helper ────────────────────────────────────────────────────────
+
 function FooterLink({ to, children }) {
   const [hovered, setHovered] = useState(false)
   return (
@@ -12,8 +12,8 @@ function FooterLink({ to, children }) {
           color: hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.5)',
           textDecoration: 'none',
           fontSize: '0.85rem',
-          transition:'color 0.25s ease',
-          display:'inline-block',
+          transition: 'color 0.25s ease',
+          display: 'inline-block',
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -35,14 +35,14 @@ function SocialBtn({ href, label, children }) {
       aria-label={label}
       style={{
         width: '38px',
-        height:'38px',
-        borderRadius:'50%',
+        height: '38px',
+        borderRadius: '50%',
         border:`1px solid ${hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.30)'}`,
-        display:'flex',
-        alignItems: 'center',
+        display: 'flex',
+        alignItems:'center',
         justifyContent: 'center',
-        color: hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.80)',
-        transition:'all 0.25s ease',
+        color:   hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.80)',
+        transition:     'all 0.25s ease',
         textDecoration: 'none',
       }}
       onMouseEnter={() => setHovered(true)}
@@ -63,70 +63,76 @@ function Footer() {
         display: 'grid',
         gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
         gap: '3rem',
-        padding: '4rem 5rem',
+        padding:  '4rem 5rem',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
+        alignItems:'flex-start',
       }}>
 
-       
+    
         <div>
-      
+         
           <div style={{ marginBottom: '1.2rem' }}>
             <span style={{
               fontFamily: 'var(--font-serif)',
-              color:'var(--color-taupe)',
-              fontSize:'1.4rem',
-              fontWeight:'700',
+              color: 'var(--color-taupe)',
+              fontSize: '1.4rem',
+              fontWeight: '700',
               letterSpacing: '0.06em',
             }}>
               Mega Himalaya
             </span>
             <p style={{
-              color: 'rgba(255,255,255,0.3)',
-              fontSize:'0.68rem',
+              color:         'rgba(255,255,255,0.3)',
+              fontSize:      '0.68rem',
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
-              marginTop:'2px',
+              marginTop:     '2px',
             }}>
               Optical House
             </p>
           </div>
 
+     
           <p style={{
             color: 'rgba(255,255,255,0.45)',
             fontSize: '0.85rem',
-            lineHeight:'1.75',
+            lineHeight: '1.75',
             marginBottom: '1.25rem',
             maxWidth: '260px',
+            textAlign:'justify',
           }}>
             Pokhara's premier destination for international eyewear, watches and fragrances founded by{' '}
             <span style={{ color: 'var(--color-taupe)', fontWeight: '500' }}>Mr. Suraj Singh</span>{' '}
             in 2001.
           </p>
 
-        
+          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.82rem' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)', marginTop: '2px' }}>📍</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center', marginTop: '1px' }}>📍</span>
               <span>Mahendra Pool, Pokhara 33700, Nepal</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>📞</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>📞</span>
               <span>984-0604668</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>✉️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>✉️</span>
               <span>mail@megahimalaya.com</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--color-taupe)' }}>🕐</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>🕐</span>
               <span>Sun–Fri: 10:00 AM – 6:00 PM</span>
             </div>
-            <span style={{ fontSize: '0.75rem', opacity: 0.45, paddingLeft: '1.5rem' }}>
-              Closed on Saturdays
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ flexShrink: 0, width: '16px', textAlign: 'center' }}>🚫</span>
+              <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>
+                Closed on Saturdays
+              </span>
+            </div>
           </div>
 
-        
+         
           <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1.5rem' }}>
             <SocialBtn href="https://facebook.com" label="Facebook">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -159,17 +165,14 @@ function Footer() {
             color: 'var(--color-taupe)',
             fontSize: '0.72rem',
             fontWeight:'700',
-            letterSpacing:'0.18em',
-            textTransform:'uppercase',
-            marginBottom:'1.4rem',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            marginBottom:  '1.4rem',
           }}>
             Shop
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <FooterLink to="/shop">All Products</FooterLink>
-            <FooterLink to="/shop?category=eyeglasses">Eyeglasses</FooterLink>
-            <FooterLink to="/shop?category=watches">Watches</FooterLink>
-            <FooterLink to="/shop?category=perfumes">Perfumes</FooterLink>
             <FooterLink to="/shop?filter=new">New Arrivals</FooterLink>
             <FooterLink to="/shop?filter=sale">Sale</FooterLink>
             <FooterLink to="/brands">Brands</FooterLink>
@@ -181,10 +184,10 @@ function Footer() {
           <h4 style={{
             color:'var(--color-taupe)',
             fontSize: '0.72rem',
-            fontWeight:'700',
-            letterSpacing:'0.18em',
-            textTransform:'uppercase',
-            marginBottom:'1.4rem',
+            fontWeight: '700',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            marginBottom:  '1.4rem',
           }}>
             Account
           </h4>
@@ -193,20 +196,18 @@ function Footer() {
             <FooterLink to="/account/orders">My Orders</FooterLink>
             <FooterLink to="/wishlist">Wishlist</FooterLink>
             <FooterLink to="/cart">My Cart</FooterLink>
-            <FooterLink to="/contact">Contact Us</FooterLink>
-            <FooterLink to="/faq">FAQ</FooterLink>
           </ul>
         </div>
 
-        
+       
         <div>
           <h4 style={{
             color:'var(--color-taupe)',
-            fontSize:'0.72rem',
-            fontWeight:'700',
-            letterSpacing:'0.18em',
-            textTransform:'uppercase',
-            marginBottom: '1.4rem',
+            fontSize: '0.72rem',
+            fontWeight: '700',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            marginBottom:  '1.4rem',
           }}>
             Information
           </h4>
@@ -215,28 +216,30 @@ function Footer() {
             <FooterLink to="/returns">Return & Refund</FooterLink>
             <FooterLink to="/privacy">Privacy Policy</FooterLink>
             <FooterLink to="/terms">Terms of Service</FooterLink>
+            <FooterLink to="/contact">Contact Us</FooterLink>
+            <FooterLink to="/faq">FAQ</FooterLink>
           </ul>
 
-         
+      
           <div style={{
-            marginTop: '2rem',
-            padding:'1rem',
-            border:'1px solid rgba(165,152,135,0.25)',
-            textAlign:'center',
+            marginTop:'2rem',
+            padding: '1rem',
+            border: '1px solid rgba(165,152,135,0.25)',
+            textAlign:  'center',
           }}>
             <p style={{
               fontFamily:'var(--font-serif)',
-              color:'var(--color-taupe)',
-              fontSize:'1.8rem',
-              fontWeight:'700',
+              color: 'var(--color-taupe)',
+              fontSize: '1.8rem',
+              fontWeight: '700',
               lineHeight:'1',
               marginBottom: '4px',
             }}>
               50+
             </p>
             <p style={{
-              color:'rgba(255,255,255,0.4)',
-              fontSize:'0.7rem',
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: '0.7rem',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
             }}>
@@ -247,13 +250,13 @@ function Footer() {
 
       </div>
 
-      {/* ── Trust badges bar ── */}
+      
       <div style={{
-        borderBottom:        '1px solid rgba(255,255,255,0.08)',
-        padding:             '1.25rem 5rem',
-        display:             'grid',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        padding:'1.25rem 5rem',
+        display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gap:                 '1rem',
+        gap:'1rem',
       }}>
         {[
           { icon: '🔒', text: 'Secure Payments' },
@@ -270,7 +273,7 @@ function Footer() {
         ))}
       </div>
 
-      {/* ── Bottom bar ── */}
+
       <div style={{
         display:        'flex',
         justifyContent: 'space-between',

@@ -190,7 +190,9 @@ function Shop() {
           padding: '24px',
           border: '1px solid var(--color-border)',
           position: 'sticky',
-          top: '88px',
+          top: '80px',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{
@@ -214,7 +216,14 @@ function Shop() {
 
           {/* Gender */}
           <div style={{ marginBottom: '24px' }}>
-            <p style={{ fontSize: '0.72rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: '10px' }}>
+            <p style={{
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-muted)',
+              marginBottom: '10px',
+            }}>
               Gender
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -244,7 +253,14 @@ function Shop() {
 
           {/* Brand */}
           <div style={{ marginBottom: '24px' }}>
-            <p style={{ fontSize: '0.72rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: '10px' }}>
+            <p style={{
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-muted)',
+              marginBottom: '10px',
+            }}>
               Brand
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
@@ -272,7 +288,14 @@ function Shop() {
 
           {/* Price Range */}
           <div>
-            <p style={{ fontSize: '0.72rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: '10px' }}>
+            <p style={{
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-muted)',
+              marginBottom: '10px',
+            }}>
               Price Range
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

@@ -1,8 +1,14 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import logo from "../assets/hoh_logo.png";
 
 import SearchDropdown from "./SearchDropdown";
-import { fetchAutocomplete, fetchSearchResults } from "../services/searchClient";
+import {
+  fetchAutocomplete,
+  fetchSearchResults,
+} from "../services/searchClient";
 
 const SEARCH_MIN_CHARS = 2;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -12,12 +18,13 @@ function Navbar() {
   const [searchValue, setSearchValue] = useState("");
   const [scrolled, setScrolled] = useState(false);
 
+  const { totalItems } = useCart();
+
   const [suggestions, setSuggestions] = useState([]);
   const [results, setResults] = useState([]);
-
   const [searchLoading, setSearchLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [highlightedIndex, setHightlightedIndex] = useState(-1)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const searchContainerRef = useRef(null);
   const debounceRef = useRef(null);
@@ -83,7 +90,7 @@ function Navbar() {
 
         setSuggestions(autocompleteData.suggestions ?? []);
         setResults(searchData.results ?? []);
-        setHightlightedIndex(-1)
+        setHighlightedIndex(-1);
       } catch (error) {
         console.error("Search request failed:", error);
 
@@ -114,27 +121,39 @@ function Navbar() {
 
   // Handle keyboard actions
   const handleKeyDown = (e) => {
-    const visibleResults = results.slice(0, 6)
-    const combinedLength = suggestions.length + visibleResults.length
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      if (!combinedLength) return
-      setHightlightedIndex((prev) => (prev + 1) % combinedLength)
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      if (!combinedLength) return
-      setHightlightedIndex((prev) => (prev -1 + combinedLength) % combinedLength)
-    }
-    else if (e.key === "Enter") {
-      e.preventDefault();
-      if (highlightedIndex === -1) {
+    const visibleResults = results.slice(0, 6);
+    const combinedLength = suggestions.length + visibleResults.length;
 
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+
+      if (!combinedLength) return;
+
+      setHighlightedIndex(
+        (prev) => (prev + 1) % combinedLength
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+
+      if (!combinedLength) return;
+
+      setHighlightedIndex(
+        (prev) => (prev - 1 + combinedLength) % combinedLength
+      );
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+
+      if (highlightedIndex === -1) {
         goToFullResults();
       } else if (highlightedIndex < suggestions.length) {
-        handleSuggestionClick(suggestions[highlightedIndex])
+        handleSuggestionClick(suggestions[highlightedIndex]);
       } else {
-        const product = visibleResults[highlightedIndex - suggestions.length]
-        if (product) handleResultSelect(product)
+        const product =
+          visibleResults[highlightedIndex - suggestions.length];
+
+        if (product) {
+          handleResultSelect(product);
+        }
       }
     } else if (e.key === "Escape") {
       setDropdownOpen(false);
@@ -162,60 +181,71 @@ function Navbar() {
     dropdownOpen &&
     searchValue.trim().length >= SEARCH_MIN_CHARS;
 
+  const textColor = scrolled ? "#0d1a2a" : "#ffffff";
+
   return (
     <nav
-      className={`w-full px-10 sticky top-0 z-50 transition-all duration-300 ${
+      className={`w-full sticky top-0 z-50 transition-all duration-300 ${
         scrolled ? "bg-white shadow-sm" : "bg-[#0d1a2a]"
       }`}
       style={{ padding: "20px 40px" }}
     >
       <div className="flex items-center justify-between gap-6">
 
-        {/* Logo */}
+        {/* Logo + Navigation */}
         <div className="flex items-center gap-8">
-          <Link to="/">
-            <span
-              className={`font-heading font-bold text-xl tracking-widest select-none ${
-                scrolled ? "text-[#0d1a2a]" : "text-[#C9A84C]"
-              }`}
-            >
-              HΩH
-            </span>
+          <Link to="/" style={{ textDecoration: "none" }}>
+            <img
+              src={logo}
+              alt="Mega Himalaya"
+              style={{
+                height: "48px",
+                width: "auto",
+                objectFit: "contain",
+              }}
+            />
           </Link>
 
           <div className="flex items-center gap-6">
+
+            {/* Home */}
             <Link
               to="/"
-              className={`text-sm font-medium transition-opacity hover:opacity-70 ${
-                scrolled ? "text-[#0d1a2a]" : "text-white"
-              }`}
+              style={{
+                color: textColor,
+                textDecoration: "none",
+                fontSize: "0.875rem",
+                fontWeight: "500",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.opacity = "0.7")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.opacity = "1")
+              }
             >
               Home
             </Link>
 
+            {/* Products */}
             <Link
               to="/shop"
-              className={`text-sm font-semibold transition-opacity hover:opacity-70 flex items-center gap-1 ${
-                scrolled ? "text-[#0d1a2a]" : "text-white"
-              }`}
+              style={{
+                color: textColor,
+                textDecoration: "none",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.opacity = "0.7")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.opacity = "1")
+              }
             >
               Products
-
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 12 12"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2 4L6 8L10 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
             </Link>
           </div>
         </div>
@@ -236,6 +266,7 @@ function Navbar() {
               height: "48px",
             }}
           >
+            {/* Search Icon */}
             <svg
               width="18"
               height="18"
@@ -262,6 +293,7 @@ function Navbar() {
               />
             </svg>
 
+            {/* Search Input */}
             <input
               type="text"
               placeholder="Search products, brands..."
@@ -282,28 +314,49 @@ function Navbar() {
               }`}
             />
 
+            {/* Clear Search */}
             {searchValue && (
               <button
-              type = "button"
-              onClick={() => {
-                setSearchValue("")
-                setSuggestions([])
-                setResults([])
-                setDropdownOpen(false)
-              }}
-              aria-label="Clear search"
-              className={`flex-shrink-0 ${scrolled ? "text-gray-400": "text-white/60"}`}
-              style={{ background: "none", border: "none", cursor: "pointer", padding:0}} >
-                
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-
+                type="button"
+                onClick={() => {
+                  setSearchValue("");
+                  setSuggestions([]);
+                  setResults([]);
+                  setDropdownOpen(false);
+                }}
+                aria-label="Clear search"
+                className={`shrink-0 ${
+                  scrolled
+                    ? "text-gray-400"
+                    : "text-white/60"
+                }`}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
             )}
           </div>
 
-          {/* Search dropdown */}
+          {/* Search Dropdown */}
           {showDropdown && (
             <SearchDropdown
               query={searchValue}
@@ -318,7 +371,7 @@ function Navbar() {
           )}
         </div>
 
-        {/* Right side */}
+        {/* Right: Icons */}
         <div className="flex items-center gap-5">
 
           {/* Wishlist */}
@@ -333,7 +386,6 @@ function Navbar() {
               height="26"
               viewBox="0 0 24 24"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
@@ -393,35 +445,47 @@ function Navbar() {
               height="16"
               viewBox="0 0 24 24"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path
-                d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
 
               <line
                 x1="3"
                 y1="6"
                 x2="21"
                 y2="6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
               />
 
-              <path
-                d="M16 10a4 4 0 0 1-8 0"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
+              <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
 
             Cart
+
+            {/* Cart Count */}
+            {totalItems > 0 && (
+              <span
+                style={{
+                  backgroundColor: "var(--color-error)",
+                  color: "#ffffff",
+                  fontSize: "0.65rem",
+                  fontWeight: "700",
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  position: "absolute",
+                  top: "-6px",
+                  right: "-6px",
+                }}
+              >
+                {totalItems}
+              </span>
+            )}
           </Link>
         </div>
       </div>
