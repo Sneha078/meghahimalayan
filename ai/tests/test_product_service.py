@@ -9,6 +9,7 @@ MongoDB connection.
 import pandas as pd
 import pytest
 from bson import ObjectId
+import re
 
 import shared.product_service as product_service
 
@@ -42,7 +43,14 @@ class FakeProductsCollection:
                 results = [p for p in results if p["_id"] == id_query]
 
         if "category" in query:
-            results = [p for p in results if p.get("category") == query["category"]]
+            cat_q = query["category"]
+            if isinstance(cat_q, dict) and "$regex" in cat_q:
+                flags = re.IGNORECASE if cat_q.get("$options") == "i" else 0
+                pattern = re.compile(cat_q["$regex"], flags)
+                results = [p for p in results if pattern.match(p.get("category", ""))]
+            else:
+                results = [p for p in results if p.get("category") == cat_q]
+            
 
         if "gender" in query:
             g = query["gender"]

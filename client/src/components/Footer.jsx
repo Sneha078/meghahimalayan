@@ -257,7 +257,7 @@ function Footer() {
       }}>
         {[
           { icon: '🔒', text: 'Secure Payments' },
-          { icon: '🚚', text: 'Free Shipping Over Rs5k' },
+          { icon: '🚚', text: 'Free Shipping Over Rs.5k' },
           { icon: '✅', text: 'Genuine Products' },
           { icon: '🎁', text: 'Daily Discounts' },
         ].map(item => (

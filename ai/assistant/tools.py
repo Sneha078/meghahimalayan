@@ -3,6 +3,7 @@ Tools used by the AI shopping assistant.
 """
 
 import logging
+import re
 import time
 from threading import Lock
 from typing import Any
@@ -51,8 +52,7 @@ def search_products(query: str, top_k: int = 5) -> list[dict[str, Any]]:
             exc_info=True,
         )
         products = product_service.get_all_products()
-        print({p["category"] for p in products})
-        query_lower = query.lower()
+        query_words = re.findall(r"\w+", query.lower())
         matches = []
         for product in products:
             searchable = " ".join([
@@ -61,7 +61,7 @@ def search_products(query: str, top_k: int = 5) -> list[dict[str, Any]]:
                 str(product.get("brand", "")),
                 str(product.get("description", "")),
             ]).lower()
-            if any(word in searchable for word in query_lower.split()):
+            if any(re.search(rf"\b{re.escape(word)}\b", searchable) for word in query_words):
                 matches.append(product)
             if len(matches) >= top_k:
                 break
@@ -169,10 +169,12 @@ def filter_products(
     max_price: float | None = None,
     min_price: float | None = None,
     gender: str | None = None,
+    color: str | None = None,
 ) -> list[dict[str, Any]]:
     return product_service.filter_products(
         category=category,
         max_price=max_price,
         min_price=min_price,
         gender=gender,
+        color=color,
     )

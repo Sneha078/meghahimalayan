@@ -66,6 +66,7 @@ function AssistantChat({ onClose }) {
           role: 'assistant',
           text: result.response || "Here's what I found:",
           products: result.products?.slice(0, 4) || [],
+          reviewAnalysis: result.review_analysis ?? null,
         },
       ])
     } catch (err) {
@@ -172,6 +173,9 @@ function AssistantChat({ onClose }) {
                 ))}
               </div>
             )}
+            {m.reviewAnalysis && m.reviewAnalysis.total_reviews > 0 && (
+              <ReviewAnalysisCard data={m.reviewAnalysis} />
+            )}
           </div>
         ))}
 
@@ -259,6 +263,90 @@ function AssistantChat({ onClose }) {
           Send
         </button>
       </form>
+    </div>
+  )
+}
+
+// ── Review analysis card rendered inside the chat ─────────────────────────────
+function ReviewAnalysisCard({ data }) {
+  const { total_reviews, overall_sentiment, average_compound, reviews } = data
+
+  const sentimentColors = { positive: '#16a34a', neutral: '#a59887', negative: '#e74c3c' }
+  const sentimentBg     = { positive: '#dcfce7', neutral: '#f3f4f6', negative: '#fee2e2' }
+  const color = sentimentColors[overall_sentiment] ?? '#a59887'
+  const bg    = sentimentBg[overall_sentiment]    ?? '#f3f4f6'
+
+  return (
+    <div style={{
+      backgroundColor: '#ffffff',
+      border: '1px solid var(--color-border)',
+      borderRadius: '10px',
+      padding: '12px 14px',
+      marginBottom: '10px',
+      maxWidth: '320px',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {total_reviews} Review{total_reviews !== 1 ? 's' : ''}
+        </span>
+        <span style={{
+          padding: '3px 10px', borderRadius: '999px',
+          backgroundColor: bg, color,
+          fontSize: '0.72rem', fontWeight: '700',
+          textTransform: 'capitalize',
+        }}>
+          {overall_sentiment}
+        </span>
+      </div>
+
+      {/* Score bar */}
+      {average_compound != null && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ height: '5px', backgroundColor: '#f3f4f6', borderRadius: '999px', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              // compound is -1 to +1; map to 0-100%
+              width: `${Math.round(((average_compound + 1) / 2) * 100)}%`,
+              backgroundColor: color,
+              borderRadius: '999px',
+              transition: 'width 0.5s ease',
+            }} />
+          </div>
+          <p style={{ fontSize: '0.68rem', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Sentiment score: {average_compound.toFixed(3)} (−1 negative → +1 positive)
+          </p>
+        </div>
+      )}
+
+      {/* Top 3 reviews */}
+      {reviews?.slice(0, 3).map((r, i) => (
+        <div key={r.review_id ?? i} style={{
+          display: 'flex', gap: '8px', alignItems: 'flex-start',
+          paddingTop: i > 0 ? '8px' : 0,
+          borderTop: i > 0 ? '1px solid var(--color-border)' : 'none',
+          marginTop: i > 0 ? '8px' : 0,
+        }}>
+          <span style={{
+            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, marginTop: '5px',
+            backgroundColor: sentimentColors[r.sentiment] ?? '#a59887',
+            display: 'inline-block',
+          }} />
+          <div>
+            <span style={{ fontSize: '0.72rem', fontWeight: '600', color: 'var(--color-navy)' }}>
+              {r.user_name ?? 'Customer'}
+            </span>
+            {r.rating != null && (
+              <span style={{ marginLeft: '6px', fontSize: '0.68rem', color: '#C9A84C' }}>
+                {'★'.repeat(Math.round(r.rating))}
+              </span>
+            )}
+            <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginTop: '2px', lineHeight: 1.4 }}>
+              {r.review_text?.length > 80 ? r.review_text.slice(0, 80) + '…' : r.review_text}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

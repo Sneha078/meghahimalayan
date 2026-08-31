@@ -1,9 +1,13 @@
+import { Link } from 'react-router-dom'
+
 function AssistantProductResult({ product }) {
   const isWatch = product.category?.toLowerCase().includes('watch')
   const hasImage = Boolean(product.image_url)
+  const productId = product.id ?? product._id
 
   return (
-    <div
+    <Link
+      to={`/product/${productId}`}
       style={{
         display: 'flex',
         gap: '12px',
@@ -14,6 +18,8 @@ function AssistantProductResult({ product }) {
         padding: '10px',
         minWidth: '220px',
         maxWidth: '240px',
+        textDecoration: 'none',
+        cursor: 'pointer',
       }}
     >
       <div
@@ -35,7 +41,6 @@ function AssistantProductResult({ product }) {
             alt={product.name || 'Product'}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
-              // Broken URL fallback: hide the image, let gradient show through
               e.currentTarget.style.display = 'none'
               e.currentTarget.parentElement.style.background =
                 'linear-gradient(135deg, #0d2031, #1a3a52)'
@@ -91,7 +96,7 @@ function AssistantProductResult({ product }) {
           Rs. {Number(product.price || 0).toLocaleString()}
         </p>
       </div>
-    </div>
+    </Link>
   )
 }
 

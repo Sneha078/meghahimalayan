@@ -7,6 +7,7 @@ from routes.recommendation import recommendation_router
 from routes.semantic_search import semantic_search_router
 from routes.sentiment import sentiment_router
 from routes.assistant import assistant_router
+from routes.search import search_router
 
 app = FastAPI(
     title="AI E-commerce",
@@ -36,7 +37,7 @@ app.include_router(recommendation_router)
 app.include_router(semantic_search_router)
 app.include_router(sentiment_router)
 app.include_router(assistant_router)
-
+app.include_router(search_router)
 
 @app.get("/health")
 def health_check():
@@ -51,6 +52,7 @@ def root():
             "/recommendation/similar",
             "/recommendation/for-user",
             "/search",
+            "/search/autocomplete"
             "/sentiment/analyze",
             "/sentiment/analyze-batch",
             "/assistant/chat",

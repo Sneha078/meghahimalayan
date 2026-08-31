@@ -42,6 +42,28 @@ const destroyImages = async (images) => {
   }
 };
 
+const uploadMedia = async (files, resourceType = "image", folder = "products") => {
+  const links = []
+  for (const file of files) {
+    const result = await cloudinary.uploader.upload(file, {
+      folder, 
+      resource_type: resourceType,
+    })
+    links.push({ public_id: result.public_id, url: result.secure_url})
+  }
+  return links
+}
+
+const destroyMedia = async (DataTransferItemList, resourceType = "image") => {
+  for (const item of items) {
+    if (item.public_id ) {
+      await cloudinary.uploader.destroy(item.public_id, {
+        resource_type: resourceType,
+      })
+    }
+  }
+}
+
 //Get all products
 // GET /api/v1/products
 // Supports: keyword, category, brand, gender, minPrice, maxPrice,
@@ -176,7 +198,7 @@ export const getProductReviews = handleAsyncError(async (req, res, next) => {
 
 export const createOrUpdateReview = handleAsyncError(
   async (req, res, next) => {
-    const { rating, comment, productId } = req.body;
+    const { rating, comment, productId, images, videos } = req.body;
 
     if (!productId || !rating || !comment) {
       return next(
@@ -200,6 +222,15 @@ export const createOrUpdateReview = handleAsyncError(
       return next(new HandleError("Product not found", 404));
     }
 
+    let imageLinks;
+    let videoLinks;
+    if (Array.isArray(images) && images.length > 0) {
+      imageLinks = await uploadMedia(images, "image", "reviews/images")
+    }
+    if (Array.isArray(videos) && videos.length > 0){
+      videoLinks = await uploadMedia(videos, "video", "reviews/videos")
+    }
+
     //check if review has already been created
     const existingIndex = product.reviews.findIndex(
       (r) => r.user.toString() === req.user._id.toString()
@@ -207,14 +238,26 @@ export const createOrUpdateReview = handleAsyncError(
 
     //if there is exiting review it donot create new review but uodate it
     if (existingIndex >= 0) {
-      product.reviews[existingIndex].rating = Number(rating);
-      product.reviews[existingIndex].comment = comment;
+      const existing = product.reviews[existingIndex];
+      existing.rating = Number(rating)
+      existing.comment = comment
+
+      if (imageLinks) {
+        await destroyMedia(existing.images || [], "image")
+        existing.images = imageLinks
+      }
+      if (videoLinks) {
+        await destroyMedia(existing.videos || [], "video")
+        existing.videos = videoLinks
+      }
     } else {
       product.reviews.push({
         user: req.user._id,
         name: req.user.name,
         rating: Number(rating),
         comment,
+        images: imageLinks || [],
+        videos: videoLinks || []
       });
     }
 
@@ -413,6 +456,8 @@ export const deleteReview = handleAsyncError(async (req, res, next) => {
       )
     );
   }
+  await destroyMedia(review.images || [], "image")
+  await destroyMedia(review.videos || [], "video")
 
   product.reviews = product.reviews.filter(
     (r) => r._id.toString() !== req.query.id

@@ -56,7 +56,7 @@ app.use(
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // 10 MB limit to accommodate base64-encoded image uploads sent in JSON bodies.
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "60mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── Cookie parser ─────────────────────────────────────────────────────────────

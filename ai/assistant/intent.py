@@ -58,6 +58,32 @@ _EYEGLASSES_KEYWORDS = [
 _PERFUME_KEYWORDS = [
     "perfume", "perfumes", "fragrance", "fragrances", "attar", "ittar",
 ]
+
+# Color keywords mapped to normalised colour names.
+# Watches use dialColor + frameColor, eyeglasses use frameColor.
+# We match colours as whole words to avoid "golden" matching "old" etc.
+_COLOR_MAP = {
+    "black":     "Black",
+    "white":     "White",
+    "silver":    "Silver",
+    "gold":      "Gold",
+    "golden":    "Gold",
+    "rose gold":  "Rose Gold",
+    "blue":      "Blue",
+    "navy":      "Blue",
+    "red":       "Red",
+    "green":     "Green",
+    "brown":     "Brown",
+    "grey":      "Grey",
+    "gray":      "Grey",
+    "pink":      "Pink",
+    "purple":    "Purple",
+    "yellow":    "Yellow",
+    "orange":    "Orange",
+    "beige":     "Beige",
+    "transparent": "Transparent",
+    "clear":     "Transparent",
+}
  
 _REVIEW_PHRASES = [
     "review", "reviews", "what do people say", "customer feedback",
@@ -75,7 +101,7 @@ _RECOMMEND_PHRASES = [
 ]
 _FILTER_PHRASES = [
     "under", "below", "less than", "upto", "up to", "between",
-    "within my budget", "cheap", "affordable",
+    "within my budget", "cheap", "affordable", "budget", "inexpensive",
 ]
 _SEARCH_WORDS = [
     "find", "search", "looking for", "show me", "want", "need",
@@ -151,6 +177,33 @@ def extract_product_id(text: str) -> Optional[str]:
     return None
  
  
+def extract_color(text: str) -> Optional[str]:
+    """
+    Extract a colour name from natural language.
+
+    Multi-word colours ("rose gold") are checked before single words so
+    they take priority over a bare "gold" match.
+
+    Examples:
+        "black watches"        -> "Black"
+        "rose gold dial watch" -> "Rose Gold"
+        "grey frame glasses"   -> "Grey"
+    """
+    text_lower = text.lower()
+
+    # Check multi-word colours first (e.g. "rose gold")
+    for phrase, canonical in _COLOR_MAP.items():
+        if " " in phrase and phrase in text_lower:
+            return canonical
+
+    # Then single-word colours with word-boundary matching
+    for phrase, canonical in _COLOR_MAP.items():
+        if " " not in phrase and _word_in_text(phrase, text_lower):
+            return canonical
+
+    return None
+
+
 def detect_category(text: str) -> Optional[str]:
     """
     Detect the product category from the user's message.

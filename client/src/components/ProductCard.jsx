@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 function ProductCard({ product }) {
 const [wishlisted, setWishlisted] = useState(false)
@@ -12,7 +13,9 @@ const [hovered, setHovered] = useState(false)
 
   // Backend stores images as [{ public_id, url }], discountPrice as the sale price,
   // and originalPrice doesn't exist — price is always the base price.
-  const imageUrl = product.image?.[0]?.url ?? null
+  const imageUrl = product.image_url ??
+  product.image?.[0]?.url ??
+  null
   const originalPrice = product.discountPrice ? product.price : null
   const sellingPrice  = product.discountPrice ?? product.price
 
@@ -28,6 +31,10 @@ const [hovered, setHovered] = useState(false)
   const reviewCount = product.numOfReviews ?? product.reviews     ?? 0
 
   return (
+    <Link
+      to={`/product/${product._id ?? product.id}`}
+      style={{ textDecoration: 'none', display: 'block' }}
+    >
     <div
       style={{
         backgroundColor: '#ffffff',
@@ -253,6 +260,7 @@ onMouseLeave={(e) => {
       </div>
 
     </div>
+    </Link>
   )
 }
 

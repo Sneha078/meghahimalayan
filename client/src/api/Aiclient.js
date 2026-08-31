@@ -55,4 +55,22 @@ export function chatWithAssistant(query) {
   })
 }
 
+/**
+ * Fetch personalised recommendations for a user.
+ * @param {string|null} userId  - MongoDB user _id (optional)
+ * @param {string[]}    viewedIds - Recently viewed product IDs (optional)
+ * @param {number}      topN    - How many to return (default 8)
+ * @returns {Promise<{ recommendations: object[] }>}
+ */
+export function fetchUserRecommendations(userId = null, viewedIds = [], topN = 8) {
+  return request('/recommendation/for-user', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: userId ?? undefined,
+      viewed_product_ids: viewedIds,
+      top_n: topN,
+    }),
+  })
+}
+
 export { AiApiError }

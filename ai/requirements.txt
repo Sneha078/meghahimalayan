@@ -16,5 +16,8 @@ vaderSentiment
 pymongo
 requests
 
+rank-bm25
+
 pytest
 httpx
+rapidfuzz
