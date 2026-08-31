@@ -7,6 +7,7 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import ProductDetails from './pages/ProductDetails'
 import OrderConfirmation from './pages/OrderConfirmation'
+import LoginPage from './features/Auth/LoginPage'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/cart"        element={<Cart />} />
         <Route path="/checkout"    element={<Checkout />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
       <Footer />
     </div>
