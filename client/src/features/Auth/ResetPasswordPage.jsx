@@ -1,16 +1,23 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { resetPassword } from '../../api/authClient'
 
 function ResetPasswordPage() {
+  const { token } = useParams()   // reads the token from /reset-password/:token
+  const navigate = useNavigate()
+
   const [form, setForm] = useState({ password: '', confirmPassword: '' })
   const [errors, setErrors] = useState({})
+  const [serverError, setServerError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
+    if (serverError) setServerError('')
   }
 
   const validate = () => {
@@ -22,77 +29,61 @@ function ResetPasswordPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validate()) return
-    setSuccess(true)
+
+    setSubmitting(true)
+    setServerError('')
+
+    try {
+      await resetPassword({
+        token,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+      })
+      setSuccess(true)
+      // Redirect to login after 2 seconds
+      setTimeout(() => navigate('/login'), 2000)
+    } catch (err) {
+      setServerError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (success) {
     return (
       <div style={{
-        backgroundColor: 'var(--color-sbg)',
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 20px',
+        backgroundColor: 'var(--color-sbg)', minHeight: '100vh',
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: '40px 20px',
       }}>
         <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: '20px',
-          padding: '48px',
-          maxWidth: '440px',
-          width: '100%',
-          border: '1px solid var(--color-border)',
-          textAlign: 'center',
+          backgroundColor: 'var(--color-white)', borderRadius: '20px',
+          padding: '48px', maxWidth: '440px', width: '100%',
+          border: '1px solid var(--color-border)', textAlign: 'center',
         }}>
           <div style={{
-            width: '72px',
-            height: '72px',
-            borderRadius: '50%',
-            backgroundColor: '#dcfce7',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem',
-            margin: '0 auto 20px',
+            width: '72px', height: '72px', borderRadius: '50%',
+            backgroundColor: '#dcfce7', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            fontSize: '2rem', margin: '0 auto 20px',
           }}>
             ✓
           </div>
           <h2 style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '1.6rem',
-            fontWeight: '700',
-            color: 'var(--color-navy)',
-            marginBottom: '12px',
+            fontFamily: 'var(--font-serif)', fontSize: '1.6rem',
+            fontWeight: '700', color: 'var(--color-navy)', marginBottom: '12px',
           }}>
             Password Reset!
           </h2>
-          <p style={{
-            color: 'var(--color-muted)',
-            fontSize: '0.88rem',
-            lineHeight: '1.7',
-            marginBottom: '32px',
-          }}>
-            Your password has been successfully reset. You can now sign in with your new password.
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.88rem', lineHeight: '1.7', marginBottom: '8px' }}>
+            Your password has been reset successfully.
           </p>
-          <Link
-            to="/login"
-            style={{
-              display: 'block',
-              padding: '13px',
-              backgroundColor: 'var(--color-navy)',
-              color: 'var(--color-taupe)',
-              textDecoration: 'none',
-              borderRadius: '8px',
-              fontSize: '0.82rem',
-              fontWeight: '700',
-              letterSpacing: '0.1em',
-            }}
-          >
-            SIGN IN NOW
-          </Link>
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.82rem' }}>
+            Redirecting you to login…
+          </p>
         </div>
       </div>
     )
@@ -100,19 +91,13 @@ function ResetPasswordPage() {
 
   return (
     <div style={{
-      backgroundColor: 'var(--color-sbg)',
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 20px',
+      backgroundColor: 'var(--color-sbg)', minHeight: '100vh',
+      display: 'flex', alignItems: 'center',
+      justifyContent: 'center', padding: '40px 20px',
     }}>
       <div style={{
-        backgroundColor: 'var(--color-white)',
-        borderRadius: '20px',
-        padding: '48px',
-        width: '100%',
-        maxWidth: '440px',
+        backgroundColor: 'var(--color-white)', borderRadius: '20px',
+        padding: '48px', width: '100%', maxWidth: '440px',
         border: '1px solid var(--color-border)',
         boxShadow: '0 20px 60px rgba(13,32,49,0.08)',
       }}>
@@ -120,11 +105,8 @@ function ResetPasswordPage() {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🔒</div>
           <h2 style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '1.8rem',
-            fontWeight: '800',
-            color: 'var(--color-navy)',
-            marginBottom: '8px',
+            fontFamily: 'var(--font-serif)', fontSize: '1.8rem',
+            fontWeight: '800', color: 'var(--color-navy)', marginBottom: '8px',
           }}>
             Reset Password
           </h2>
@@ -133,31 +115,47 @@ function ResetPasswordPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {serverError && (
+          <div style={{
+            padding: '12px 16px', borderRadius: '8px',
+            backgroundColor: '#fef2f2', color: '#dc2626',
+            fontSize: '0.85rem', fontWeight: '500',
+            marginBottom: '20px', border: '1px solid #fecaca',
+          }}>
+            {serverError}
+          </div>
+        )}
 
+        {!token && (
+          <div style={{
+            padding: '12px 16px', borderRadius: '8px',
+            backgroundColor: '#fef2f2', color: '#dc2626',
+            fontSize: '0.85rem', marginBottom: '20px',
+          }}>
+            Invalid reset link.{' '}
+            <Link to="/forgot-password" style={{ color: '#dc2626', fontWeight: '600' }}>
+              Request a new one
+            </Link>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '18px' }}>
             <label style={labelStyle}>New Password</label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Min. 6 characters"
+                name="password" value={form.password}
+                onChange={handleChange} placeholder="Min. 6 characters"
                 style={{ ...inputStyle(errors.password), paddingRight: '44px' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--color-muted)',
+                  position: 'absolute', right: '12px', top: '50%',
+                  transform: 'translateY(-50%)', background: 'none',
+                  border: 'none', cursor: 'pointer', color: 'var(--color-muted)',
                 }}
               >
                 {showPassword ? '🙈' : '👁️'}
@@ -169,11 +167,8 @@ function ResetPasswordPage() {
           <div style={{ marginBottom: '28px' }}>
             <label style={labelStyle}>Confirm New Password</label>
             <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              placeholder="Re-enter new password"
+              type="password" name="confirmPassword" value={form.confirmPassword}
+              onChange={handleChange} placeholder="Re-enter new password"
               style={inputStyle(errors.confirmPassword)}
             />
             {errors.confirmPassword && <p style={errorStyle}>{errors.confirmPassword}</p>}
@@ -181,25 +176,19 @@ function ResetPasswordPage() {
 
           <button
             type="submit"
+            disabled={submitting || !token}
             style={{
-              width: '100%',
-              padding: '13px',
-              backgroundColor: 'var(--color-navy)',
-              color: 'var(--color-taupe)',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              fontWeight: '700',
-              letterSpacing: '0.1em',
-              cursor: 'pointer',
+              width: '100%', padding: '13px',
+              backgroundColor: submitting || !token ? '#e5e7eb' : 'var(--color-navy)',
+              color: submitting || !token ? '#9ca3af' : 'var(--color-taupe)',
+              border: 'none', borderRadius: '8px',
+              fontSize: '0.85rem', fontWeight: '700', letterSpacing: '0.1em',
+              cursor: submitting || !token ? 'not-allowed' : 'pointer',
               transition: 'opacity 0.2s ease',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           >
-            RESET PASSWORD
+            {submitting ? 'Resetting…' : 'RESET PASSWORD'}
           </button>
-
         </form>
       </div>
     </div>
@@ -207,28 +196,19 @@ function ResetPasswordPage() {
 }
 
 const labelStyle = {
-  display: 'block',
-  fontSize: '0.78rem',
-  fontWeight: '600',
-  color: 'var(--color-navy)',
-  marginBottom: '6px',
+  display: 'block', fontSize: '0.78rem', fontWeight: '600',
+  color: 'var(--color-navy)', marginBottom: '6px',
 }
 
 const inputStyle = (hasError) => ({
-  width: '100%',
-  padding: '11px 14px',
-  borderRadius: '8px',
+  width: '100%', padding: '11px 14px', borderRadius: '8px',
   border: `1px solid ${hasError ? 'var(--color-error)' : 'var(--color-border)'}`,
-  fontSize: '0.88rem',
-  color: 'var(--color-navy)',
-  outline: 'none',
-  backgroundColor: 'var(--color-white)',
+  fontSize: '0.88rem', color: 'var(--color-navy)',
+  outline: 'none', backgroundColor: 'var(--color-white)',
 })
 
 const errorStyle = {
-  fontSize: '0.72rem',
-  color: 'var(--color-error)',
-  marginTop: '4px',
+  fontSize: '0.72rem', color: 'var(--color-error)', marginTop: '4px',
 }
 
 export default ResetPasswordPage
