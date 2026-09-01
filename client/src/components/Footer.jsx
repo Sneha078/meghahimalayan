@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
-
+import { useStoreLocator } from '../hooks/useStoreLocator'
 
 function FooterLink({ to, children }) {
   const [hovered, setHovered] = useState(false)
@@ -55,6 +55,7 @@ function SocialBtn({ href, label, children }) {
 
 
 function Footer() {
+  const {openStoreLocator, StoreLocatorModal} = useStoreLocator()
   return (
     <footer style={{ backgroundColor: 'var(--color-navy)', color: 'rgba(255,255,255,0.5)' }}>
 
@@ -107,7 +108,9 @@ function Footer() {
           </p>
 
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.82rem' }}>
+          <div 
+          onClick={openStoreLocator}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.82rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
               <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center', marginTop: '1px' }}>📍</span>
               <span>Mahendra Pool, Pokhara 33700, Nepal</span>
@@ -290,6 +293,7 @@ function Footer() {
           Developed by POCOMAT
         </p>
       </div>
+      <StoreLocatorModal />
 
     </footer>
   )

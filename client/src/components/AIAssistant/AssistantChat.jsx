@@ -4,8 +4,10 @@ import ChatMessage from './ChatMessage'
 import AssistantProductResult from './AssistantProductResult'
 import { chatWithAssistant, AiApiError } from '../../api/aiClient'
 import avatarMark from '../../assets/avatar-mark.png'
+import { useStoreLocator } from '../../hooks/useStoreLocator'
 
 const STARTER_PROMPTS = [
+  'Find Our Store',
   'Watches under Rs. 10,000',
   'Something for a summer fragrance',
   'Best sunglasses',
@@ -33,6 +35,7 @@ function TypingIndicator() {
 }
 
 function AssistantChat({ onClose }) {
+  const { openStoreLocator, StoreLocatorModal } = useStoreLocator()
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -80,6 +83,14 @@ function AssistantChat({ onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     sendMessage(input)
+  }
+
+  const handlePrompt = (prompt) => {
+    if (prompt === 'Find Our Store') {
+      openStoreLocator()
+      return
+    }
+    sendMessage(prompt)
   }
 
   return (
@@ -198,7 +209,7 @@ function AssistantChat({ onClose }) {
           {STARTER_PROMPTS.map((prompt) => (
             <button
               key={prompt}
-              onClick={() => sendMessage(prompt)}
+              onClick={() => handlePrompt(prompt)}
               style={{
                 fontFamily: 'var(--font-sans)',
                 fontSize: '0.75rem',
@@ -263,6 +274,7 @@ function AssistantChat({ onClose }) {
           Send
         </button>
       </form>
+      <StoreLocatorModal />
     </div>
   )
 }
