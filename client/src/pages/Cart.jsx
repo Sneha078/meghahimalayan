@@ -140,16 +140,25 @@ function Cart() {
                   width: '80px',
                   height: '80px',
                   borderRadius: '10px',
-                  background: item.gradient,
+                  backgroundColor: '#f3f4f6',
                   flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                  opacity: 0.8,
+                  overflow: 'hidden',
                 }}>
-                  {item.category === 'watches' ? '⌚'
-                    : item.category === 'perfumes' ? '🧴' : '👓'}
+                  {item.image?.[0]?.url ? (
+                    <img
+                      src={item.image[0].url}
+                      alt={item.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%', height: '100%',
+                      display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: '1.5rem',
+                    }}>
+                      {item.category === 'watches' ? '⌚' : item.category === 'perfumes' ? '🧴' : '👓'}
+                    </div>
+                  )}
                 </div>
 
                 {/* Name & Brand */}
