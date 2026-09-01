@@ -83,20 +83,40 @@ const userSchema = new mongoose.Schema(
       maxlength: [100, "Email cannot exceed 100 characters"],
     },
 
-    phone: {
+   phone: {
+  type: String,
+  default: "",
+  trim: true,
+  validate: {
+    validator: function (v) {
+      // Allow empty/null phone for Google users, validate only when provided
+      return !v || /^(?:\+977)?9[678]\d{8}$/.test(v);
+    },
+    message: "Please enter a valid Nepal phone number",
+  },
+},
+
+    // SOCIAL AUTH
+    googleId: {
       type: String,
-      default: "",
-      trim: true,
-      match: [
-        /^(?:\+977)?9[678]\d{8}$/,
-        "Please enter a valid Nepal phone number",
-      ],
+      sparse: true,
+      unique: true,
+      select: false,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
 
     // PASSWORD
     password: {
       type: String,
-      required: [true, "Please enter a password"],
+      required: function () {
+        // Password not required for social auth users
+        return this.authProvider === "local";
+      },
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
@@ -184,14 +204,14 @@ const userSchema = new mongoose.Schema(
 
 // PASSWORD HASHING
 
+// PASSWORD HASHING
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
+  if (!this.isModified("password") || !this.password) {
     return next();
   }
 
   this.password = await bcryptjs.hash(this.password, 12);
 
-  // Prevent passwordChangedAt from being set incorrectly
   if (!this.isNew) {
     this.passwordChangedAt = new Date(Date.now() - 1000);
   }
@@ -214,9 +234,12 @@ userSchema.methods.getJWTToken = function () {
 
 // PASSWORD VERIFICATION
 userSchema.methods.verifyPassword = async function (enteredPassword) {
+  if (!this.password) {
+    return false;
+  }
+
   return bcryptjs.compare(enteredPassword, this.password);
 };
-
 // JWT INVALIDATION AFTER PASSWORD CHANGE
 userSchema.methods.isPasswordChangedAfter = function (jwtIssuedAt) {
   if (!this.passwordChangedAt) {

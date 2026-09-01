@@ -11,13 +11,14 @@ import HandleError from "./utils/handleError.js";
 import errorMiddleware from "./middleware/error.js";
 
 // ── Route imports ─────────────────────────────────────────────────────────────
-import userRoutes      from "./routes/userRoutes.js";
-import productRoutes   from "./routes/productRoutes.js";
-import orderRoutes     from "./routes/orderRoutes.js";
-import cartRoutes      from "./routes/cartRoutes.js";
-import couponRoutes    from "./routes/couponRoutes.js";
-import contactRoutes   from "./routes/contactRoutes.js";
-import analyticsRoutes from "./routes/analyticsRoutes.js";
+import userRoutes        from "./routes/userRoutes.js";
+import productRoutes     from "./routes/productRoutes.js";
+import orderRoutes       from "./routes/orderRoutes.js";
+import cartRoutes        from "./routes/cartRoutes.js";
+import couponRoutes      from "./routes/couponRoutes.js";
+import contactRoutes     from "./routes/contactRoutes.js";
+import analyticsRoutes   from "./routes/analyticsRoutes.js";
+import socialAuthRoutes  from "./routes/socialAuthRoutes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
@@ -141,6 +142,7 @@ app.use("/api/v1", cartRoutes);
 app.use("/api/v1", couponRoutes);
 app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);
+app.use("/api/v1", socialAuthRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes
