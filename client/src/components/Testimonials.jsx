@@ -40,9 +40,9 @@ function Testimonials() {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '56px' }}>
         <p style={{
-          color:         'var(--color-taupe)',
-          fontSize:      '0.85rem',
-          fontWeight:    '800',
+          color:  'var(--color-taupe)',
+          fontSize:  '0.85rem',
+          fontWeight: '800',
           letterSpacing: '0.2em',
           textTransform: 'uppercase',
           marginBottom:  '12px',
@@ -51,32 +51,32 @@ function Testimonials() {
         </p>
         <h2 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize:   '2.5rem',
+          fontSize: '2.5rem',
           fontWeight: '700',
-          color:      'var(--color-navy)',
+          color:   'var(--color-navy)',
           lineHeight: '1.2',
         }}>
           What Our Customers Say
         </h2>
       </div>
 
-      {/* Cards grid */}
+     
       <div style={{
-        display:             'grid',
+        display:  'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gap:                 '24px',
+        gap: '24px',
       }}>
         {testimonials.map(t => (
           <div
             key={t.id}
             style={{
               backgroundColor: 'var(--color-sbg)',
-              borderRadius:    '16px',
-              padding:         '32px',
-              border:          '3px solid var(--color-border)',
-              borderTop:       '3px solid var(--color-taupe)',
-              boxShadow:       '0 4px 16px rgba(13,32,49,0.08)',
-              transition:      'transform 0.3s ease, box-shadow 0.3s ease',
+              borderRadius:'16px',
+              padding: '32px',
+              border: '3px solid var(--color-border)',
+              borderTop: '3px solid var(--color-taupe)',
+              boxShadow: '0 4px 16px rgba(13,32,49,0.08)',
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
             }}
             onMouseEnter={e => {
               e.currentTarget.style.transform = 'translateY(-6px)'
@@ -101,33 +101,32 @@ function Testimonials() {
 
             {/* Comment */}
             <p style={{
-              color:        'var(--color-muted)',
-              fontSize:     '0.88rem',
-              lineHeight:   '1.75',
+              color: 'var(--color-muted)',
+              fontSize: '0.88rem',
+              lineHeight: '1.75',
               marginBottom: '20px',
-              fontStyle:    'italic',
-              textAlign:    'justify',
+              fontStyle: 'italic',
+              textAlign:'justify',
             }}>
               "{t.comment}"
             </p>
 
-            {/* Divider */}
             <div style={{ height: '1px', backgroundColor: 'var(--color-border)', marginBottom: '16px' }} />
 
-            {/* Reviewer */}
+           
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{
-                width:           '38px',
-                height:          '38px',
-                borderRadius:    '50%',
+                width: '38px',
+                height: '38px',
+                borderRadius:  '50%',
                 backgroundColor: 'var(--color-navy)',
-                display:         'flex',
-                alignItems:      'center',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent:  'center',
-                color:           'var(--color-taupe)',
-                fontSize:        '0.88rem',
-                fontWeight:      '700',
-                flexShrink:       0,
+                color: 'var(--color-taupe)',
+                fontSize: '0.88rem',
+                fontWeight: '700',
+                flexShrink: 0,
               }}>
                 {t.name[0]}
               </div>

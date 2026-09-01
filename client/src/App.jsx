@@ -8,6 +8,10 @@ import Checkout from './pages/Checkout'
 import ProductDetails from './pages/ProductDetails'
 import OrderConfirmation from './pages/OrderConfirmation'
 import LoginPage from './features/Auth/LoginPage'
+import SignupPage from './features/Auth/SignupPage'
+import ForgotPasswordPage from './features/Auth/ForgotPasswordPage'
+import ResetPasswordPage from './features/Auth/ResetPasswordPage'
+import AdminLoginPage from './features/Auth/AdminLoginPage'
         
 
 
@@ -16,13 +20,18 @@ function App() {
     <div>
       <Navbar />
       <Routes>
-        <Route path="/"            element={<Home />} />
-        <Route path="/shop"        element={<Shop />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
         <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/cart"        element={<Cart />} />
-        <Route path="/checkout"    element={<Checkout />} />
+        <Route path="/cart"  element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
          <Route path="/order-confirmation" element={<OrderConfirmation />} />
          <Route path="/login" element={<LoginPage />} />
+         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+         
       </Routes>
       <Footer />
     </div>
