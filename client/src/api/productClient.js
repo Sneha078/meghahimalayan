@@ -69,3 +69,18 @@ export async function submitReview({ productId, rating, comment, images = [], vi
   });
   return handleResponse(res);
 }
+
+// POST /api/v1/order/new
+export async function createOrder(orderData) {
+  const res = await fetch(`${API_URL}/order/new`, {
+    method: 'POST',
+    credentials: 'include',         // sends the auth cookie
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(orderData),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to place order')
+  }
+  return res.json()
+}

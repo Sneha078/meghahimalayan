@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { createOrder } from "../api/productClient";
+
 
 const STEPS = ["Delivery", "Payment", "Review"];
 
@@ -85,10 +87,43 @@ function Checkout() {
     setCurrentStep((prev) => prev - 1);
   };
 
-  const handlePlaceOrder = () => {
-    clearCart();
-    navigate("/order-confirmation");
-  };
+const [orderLoading, setOrderLoading] = useState(false)
+const [orderError, setOrderError] = useState('')
+
+const handlePlaceOrder = async ()=> {
+  setOrderLoading(true)
+  setOrderError('')
+
+  try{
+    const orderData = {
+      shippingInfo: {
+        name: form.fullName,
+        address: form.address,
+        city: form.city,
+        state: form.province,
+        pinCode: '00000',
+        phoneNo: form.phone,
+        country: 'Nepal',
+      },
+      orderItems: cartItems.map((item) => ({
+        product: item._id ?? item.id,
+        quantity: item.quantity,
+      })),
+      paymentInfo: {
+        method: 'COD',
+        status: 'Pending',
+      },
+      taxPrice: 0,
+    }
+    await createOrder(orderData)
+    clearCart()
+    navigate('/order-confirmation')
+  }
+  catch(err) {
+    setOrderError(err.message)
+    setOrderLoading(false)
+  }
+}
 
   // Empty cart
   if (cartItems.length === 0 && currentStep !== 2) {
@@ -889,31 +924,32 @@ function Checkout() {
                 CONTINUE →
               </button>
             ) : (
-              <button
-                onClick={handlePlaceOrder}
-                style={{
-                  padding: "12px 32px",
-                  backgroundColor: "var(--color-taupe)",
-                  border: "none",
-                  color: "var(--color-navy)",
-                  fontSize: "0.82rem",
-                  fontWeight: "700",
-                  letterSpacing: "0.1em",
-                  cursor: "pointer",
-                  borderRadius: "8px",
-                  transition: "background-color 0.2s ease",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    "var(--color-taupe-dark)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    "var(--color-taupe)")
-                }
-              >
-                PLACE ORDER ✓
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+  {orderError && (
+    <p style={{ fontSize: '0.8rem', color: '#dc2626', textAlign: 'right' }}>
+      {orderError}
+    </p>
+  )}
+  <button
+    onClick={handlePlaceOrder}
+    disabled={orderLoading}
+    style={{
+      padding: '12px 32px',
+      backgroundColor: orderLoading ? '#e5e7eb' : 'var(--color-taupe)',
+      color: orderLoading ? '#9ca3af' : 'var(--color-navy)',
+      border: 'none',
+      fontSize: '0.82rem',
+      fontWeight: '700',
+      letterSpacing: '0.1em',
+      cursor: orderLoading ? 'not-allowed' : 'pointer',
+      borderRadius: '8px',
+      transition: 'background-color 0.2s ease',
+    }}
+  >
+    {orderLoading ? 'Placing Order…' : 'PLACE ORDER ✓'}
+  </button>
+</div>
+
             )}
           </div>
         </div>
