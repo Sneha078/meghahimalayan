@@ -84,3 +84,27 @@ export async function createOrder(orderData) {
   }
   return res.json()
 }
+
+export async function getMyOrders() {
+  const res = await fetch(`${API_URL}/orders/me`, {
+    credentials: 'include',
+  })
+  if(!res.ok){
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to fetch orders')
+  }
+  return res.json()
+}
+
+// PUT /api/v1/order/:id/cancel
+export async function cancelOrder(orderId) {
+  const res = await fetch(`${API_URL}/order/${orderId}/cancel`, {
+    method: 'PUT',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to cancel order')
+  }
+  return res.json()
+}
