@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import logo from "../assets/hoh_logo.png";
 import SearchDropdown from "./SearchDropdown";
 import { fetchAutocomplete, fetchSearchResults } from "../services/searchClient";
+import CoinBadge from "./CoinBadge";
 
 const SEARCH_MIN_CHARS = 2;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -341,6 +342,9 @@ function Navbar() {
               </Link>
             )}
           </div>
+
+          {/* Coin Balance */}
+          <CoinBadge scrolled={scrolled} />
 
           {/* Cart */}
           <Link

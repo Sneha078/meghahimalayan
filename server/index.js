@@ -17,6 +17,7 @@ import orderRoutes     from "./routes/orderRoutes.js";
 import couponRoutes    from "./routes/couponRoutes.js";
 import contactRoutes   from "./routes/contactRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import rewardRoutes from "./routes/rewards.routes.js"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
@@ -139,6 +140,7 @@ app.use("/api/v1", orderRoutes);
 app.use("/api/v1", couponRoutes);
 app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);
+app.use("/api/v1", rewardRoutes)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes

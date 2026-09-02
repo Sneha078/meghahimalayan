@@ -12,6 +12,7 @@ import SignupPage from './features/Auth/SignupPage'
 import ForgotPasswordPage from './features/Auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/Auth/ResetPasswordPage'
 import AdminLoginPage from './features/Auth/AdminLoginPage'
+import RewardsPage from './pages/RewardsPage'
         
 
 
@@ -31,6 +32,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/password/reset/:token" element={<ResetPasswordPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/rewards" element={<RewardsPage></RewardsPage>} />
          
       </Routes>
       <Footer />
