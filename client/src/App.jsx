@@ -1,6 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
-
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -18,6 +17,8 @@ import Account from './pages/Account'
 import RewardsPage from './pages/RewardsPage'
 import SearchResults from './components/SearchResults'
 import Orders from './pages/Orders'
+import Wishlist from './pages/Wishlist'
+
 
 function ScrollToTop() {
   const {pathname, search } = useLocation()
@@ -54,6 +55,8 @@ function App() {
         <Route path="/rewards" element={<RewardsPage></RewardsPage>} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+
 
 
 
