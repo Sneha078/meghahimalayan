@@ -18,7 +18,7 @@ import couponRoutes    from "./routes/couponRoutes.js";
 import contactRoutes   from "./routes/contactRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import rewardRoutes from "./routes/rewards.routes.js"
-
+import paymentRoutes from "./routes/paymentRoutes.js"
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
 // Fail fast if critical variables are missing.
@@ -141,6 +141,7 @@ app.use("/api/v1", couponRoutes);
 app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);
 app.use("/api/v1", rewardRoutes)
+app.use("/api/v1",paymentRoutes)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes

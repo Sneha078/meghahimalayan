@@ -1,10 +1,9 @@
 // src/pages/Orders.jsx
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyOrders, cancelOrder } from '../api/productClient'
 import { useAuth } from '../context/AuthContext'
 
-// Status badge colors
 const STATUS_STYLES = {
   Processing:  { bg: '#fef9c3', color: '#854d0e' },
   Confirmed:   { bg: '#dbeafe', color: '#1e40af' },
@@ -13,14 +12,27 @@ const STATUS_STYLES = {
   Cancelled:   { bg: '#fee2e2', color: '#dc2626' },
 }
 
+const STATUS_FILTERS = ['All', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
+
 function Orders() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [cancelling, setCancelling] = useState(null)
+
+  const activeStatus = searchParams.get('status') ?? 'All'
+
+  const setActiveStatus = (status) => {
+    if (status === 'All') {
+      setSearchParams({})
+    } else {
+      setSearchParams({ status })
+    }
+  }
 
   const handleCancel = async (orderId) => {
     if (!window.confirm('Are you sure you want to cancel this order?')) return
@@ -40,10 +52,8 @@ function Orders() {
   }
 
   useEffect(() => {
-    // Wait for auth to finish loading before checking
     if (authLoading) return
 
-    // Not logged in — send to login
     if (!user) {
       navigate('/login')
       return
@@ -66,13 +76,16 @@ function Orders() {
     return () => { cancelled = true }
   }, [user, authLoading, navigate])
 
-  // Still checking auth
   if (authLoading) return null
+
+  const visibleOrders =
+    activeStatus === 'All'
+      ? orders
+      : orders.filter((o) => o.orderStatus === activeStatus)
 
   return (
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
 
-      {/* Page Header */}
       <div style={{
         backgroundColor: 'var(--color-navy)',
         padding: '48px 5rem 36px',
@@ -99,14 +112,46 @@ function Orders() {
 
       <div style={{ padding: '40px 5rem', maxWidth: '900px' }}>
 
-        {/* Loading */}
+        {/* Status filter chips */}
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+        }}>
+          {STATUS_FILTERS.map((status) => (
+            <button
+              key={status}
+              onClick={() => setActiveStatus(status)}
+              style={{
+                padding: '7px 16px',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                border: activeStatus === status
+                  ? '1px solid var(--color-navy)'
+                  : '1px solid var(--color-border)',
+                backgroundColor: activeStatus === status
+                  ? 'var(--color-navy)'
+                  : 'var(--color-white)',
+                color: activeStatus === status
+                  ? '#ffffff'
+                  : 'var(--color-navy)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
         {loading && (
           <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>
             Loading your orders…
           </p>
         )}
 
-        {/* Error */}
         {error && (
           <div style={{
             padding: '16px 20px',
@@ -120,8 +165,7 @@ function Orders() {
           </div>
         )}
 
-        {/* No orders */}
-        {!loading && !error && orders.length === 0 && (
+        {!loading && !error && visibleOrders.length === 0 && (
           <div style={{
             textAlign: 'center',
             padding: '80px 20px',
@@ -133,15 +177,17 @@ function Orders() {
               fontSize: '1rem', fontWeight: '600',
               color: 'var(--color-navy)', marginBottom: '8px',
             }}>
-              No orders yet
+              {activeStatus === 'All' ? 'No orders yet' : `No ${activeStatus.toLowerCase()} orders`}
             </p>
             <p style={{
               fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: '24px',
             }}>
-              Looks like you haven't placed any orders yet.
+              {activeStatus === 'All'
+                ? "Looks like you haven't placed any orders yet."
+                : 'Try a different status, or view all your orders.'}
             </p>
             <Link
-              to="/shop"
+              to={activeStatus === 'All' ? '/shop' : '/orders'}
               style={{
                 padding: '11px 28px',
                 backgroundColor: 'var(--color-navy)',
@@ -153,15 +199,14 @@ function Orders() {
                 letterSpacing: '0.1em',
               }}
             >
-              START SHOPPING
+              {activeStatus === 'All' ? 'START SHOPPING' : 'VIEW ALL ORDERS'}
             </Link>
           </div>
         )}
 
-        {/* Orders list */}
-        {!loading && !error && orders.length > 0 && (
+        {!loading && !error && visibleOrders.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {orders.map((order) => {
+            {visibleOrders.map((order) => {
               const statusStyle = STATUS_STYLES[order.orderStatus] ?? STATUS_STYLES.Processing
 
               return (
@@ -174,7 +219,6 @@ function Orders() {
                     padding: '24px 28px',
                   }}
                 >
-                  {/* Order header row */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -201,7 +245,6 @@ function Orders() {
                       </p>
                     </div>
 
-                    {/* Status badge */}
                     <span style={{
                       padding: '4px 14px',
                       borderRadius: '20px',
@@ -215,7 +258,6 @@ function Orders() {
                     </span>
                   </div>
 
-                  {/* Items */}
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -228,7 +270,6 @@ function Orders() {
                         alignItems: 'center',
                         gap: '14px',
                       }}>
-                        {/* Product image */}
                         <div style={{
                           width: '52px',
                           height: '52px',
@@ -254,7 +295,6 @@ function Orders() {
                           )}
                         </div>
 
-                        {/* Item info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{
                             fontSize: '0.88rem',
@@ -275,7 +315,6 @@ function Orders() {
                     ))}
                   </div>
 
-                  {/* Footer row — total + payment */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -309,7 +348,6 @@ function Orders() {
                       </div>
                     </div>
 
-                    {/* Cancel button — only for Processing or Confirmed orders */}
                     {['Processing', 'Confirmed'].includes(order.orderStatus) && (
                       <button
                         onClick={() => handleCancel(order._id)}
