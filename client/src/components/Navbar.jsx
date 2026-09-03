@@ -23,7 +23,7 @@ function Navbar() {
   
 
   const { totalItems } = useCart();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { totalWishlisted } = useWishlist();
 
   const searchContainerRef = useRef(null);
