@@ -18,6 +18,19 @@ import RewardsPage from './pages/RewardsPage'
 import SearchResults from './components/SearchResults'
 import Orders from './pages/Orders'
 import Wishlist from './pages/Wishlist'
+import AdminRoute from './components/admin/AdminRoute'
+import AdminLayout from './components/admin/AdminLayout'
+import Dashboard from './pages/admin/Dashboard'
+import Analytics from './pages/admin/Analytics'
+import AdminOrders from './pages/admin/AdminOrders'
+import AdminOrderDetail from './pages/admin/AdminOrderDetail'
+import AdminProducts from './pages/admin/AdminProducts'
+import AdminProductForm from './pages/admin/AdminProductForm'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminCoupons from './pages/admin/AdminCoupons'
+import AdminMessages from './pages/admin/AdminMessages'
+
+
 
 
 function ScrollToTop() {
@@ -56,11 +69,58 @@ function App() {
         <Route path="/search" element={<SearchResults />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/wishlist" element={<Wishlist />} />
-
-
-
-
-         
+      
+<Route path="/admin/dashboard" element={
+  <AdminRoute>
+    <AdminLayout><Dashboard /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/analytics" element={
+  <AdminRoute>
+    <AdminLayout><Analytics /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/orders" element={
+  <AdminRoute>
+    <AdminLayout><AdminOrders /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/orders/:id" element={
+  <AdminRoute>
+    <AdminLayout><AdminOrderDetail /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/products" element={
+  <AdminRoute>
+    <AdminLayout><AdminProducts /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/products/new" element={
+  <AdminRoute>
+    <AdminLayout><AdminProductForm /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/products/:id/edit" element={
+  <AdminRoute>
+    <AdminLayout><AdminProductForm /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/users" element={
+  <AdminRoute>
+    <AdminLayout><AdminUsers /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/coupons" element={
+  <AdminRoute>
+    <AdminLayout><AdminCoupons /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/messages" element={
+  <AdminRoute>
+    <AdminLayout><AdminMessages /></AdminLayout>
+  </AdminRoute>
+} />
+    
       </Routes>
       <Footer />
     </div>
