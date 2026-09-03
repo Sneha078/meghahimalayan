@@ -1,5 +1,5 @@
 import axios from "axios";
-import { KHALTI_CONFIG } from "../config/paymentConfig.js";
+import { KHALTI_CONFIG } from "../../config/paymentConfig.js";
 
 export async function initiateKhaltiPayment({ amount, purchaseOrderId, purchaseOrderName, returnUrl, websiteUrl, customerInfo }) {
   const response = await axios.post(

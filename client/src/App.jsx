@@ -14,7 +14,7 @@ import SignupPage from './features/Auth/SignupPage'
 import ForgotPasswordPage from './features/Auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/Auth/ResetPasswordPage'
 import AdminLoginPage from './features/Auth/AdminLoginPage'
-import Account from './pages/Account'
+import AccountPage from './pages/AccountPage'
 import RewardsPage from './pages/RewardsPage'
 import SearchResults from './components/SearchResults'
 import Orders from './pages/Orders'
@@ -50,7 +50,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/password/reset/:token" element={<ResetPasswordPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path='/account' element={<Account />} />
+        <Route path='/account' element={<AccountPage />} />
         <Route path="/rewards" element={<RewardsPage></RewardsPage>} />
         <Route path="/search" element={<SearchResults />} />
         <Route path="/orders" element={<Orders />} />

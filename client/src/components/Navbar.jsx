@@ -19,20 +19,14 @@ function Navbar() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [accountOpen, setAccountOpen] = useState(false);
+  
 
   const { totalItems } = useCart();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const searchContainerRef = useRef(null);
   const debounceRef = useRef(null);
   const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    setAccountOpen(false);
-    await logout();
-    navigate('/');
-  };
 
   
   useEffect(() => {
@@ -52,17 +46,7 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close account dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (accountOpen && !e.target.closest('[data-account-menu]')) {
-        setAccountOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [accountOpen]);
-
+  
   // Debounced autocomplete + product preview search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -255,93 +239,46 @@ function Navbar() {
             </svg>
           </button>
 
+         
           {/* Account */}
-          <div style={{ position: 'relative' }} data-account-menu>
-            {user ? (
-              <div>
-                <button
-                  onClick={() => setAccountOpen((prev) => !prev)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: scrolled ? '#0d1a2a' : '#ffffff',
-                  }}
-                >
-                  <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    backgroundColor: 'var(--color-taupe)', color: 'var(--color-navy)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.82rem', fontWeight: '700',
-                  }}>
-                    {user.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <span style={{
-                    fontSize: '0.82rem', fontWeight: '600',
-                    color: scrolled ? '#0d1a2a' : '#ffffff',
-                    maxWidth: '80px', overflow: 'hidden',
-                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {user.name?.split(' ')[0]}
-                  </span>
-                </button>
-
-                {accountOpen && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 12px)', right: 0,
-                    backgroundColor: '#ffffff', border: '1px solid var(--color-border)',
-                    borderRadius: '12px', boxShadow: '0 12px 40px rgba(13,32,49,0.12)',
-                    minWidth: '200px', zIndex: 100, overflow: 'hidden',
-                  }}>
-                    <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--color-border)' }}>
-                      <p style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '2px' }}>
-                        {user.name}
-                      </p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <div style={{ padding: '8px 0' }}>
-                      <Link
-                        to="/orders"
-                        onClick={() => setAccountOpen(false)}
-                        style={dropdownItemStyle}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-sbg)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        My Orders
-                      </Link>
-
-                      <button
-                        onClick={handleLogout}
-                        style={{
-                          ...dropdownItemStyle, width: '100%', textAlign: 'left',
-                          border: 'none', cursor: 'pointer',
-                          borderTop: '1px solid var(--color-border)',
-                          color: '#dc2626', marginTop: '4px',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
-                aria-label="Account"
-              >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
-            )}
-          </div>
+{user ? (
+  <Link
+    to="/account"
+    style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      textDecoration: 'none',
+      color: scrolled ? '#0d1a2a' : '#ffffff',
+    }}
+  >
+    <div style={{
+      width: '32px', height: '32px', borderRadius: '50%',
+      backgroundColor: 'var(--color-taupe)', color: 'var(--color-navy)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '0.82rem', fontWeight: '700',
+    }}>
+      {user.name?.charAt(0).toUpperCase()}
+    </div>
+    <span style={{
+      fontSize: '0.82rem', fontWeight: '600',
+      color: scrolled ? '#0d1a2a' : '#ffffff',
+      maxWidth: '80px', overflow: 'hidden',
+      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    }}>
+      {user.name?.split(' ')[0]}
+    </span>
+  </Link>
+) : (
+  <Link
+    to="/login"
+    className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
+    aria-label="Account"
+  >
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </Link>
+)}
 
           {/* Coin Balance */}
           <CoinBadge scrolled={scrolled} />

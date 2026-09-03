@@ -1,12 +1,40 @@
+import mongoose from "mongoose";
 import Payment from "../models/paymentModel.js";
 import BankTransfer from "../models/bankTransferModel.js";
 import Order from "../models/orderModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
-import { restoreStock } from "../utils/stockUtils.js";
+import { restoreStock, releaseCouponUsage } from "../utils/stockUtils.js";
 import { ESEWA_CONFIG, BANK_ACCOUNT_INFO } from "../config/paymentConfig.js";
-import { generateEsewaSignature, verifyEsewaSignature } from "../utils/esewaHelper.js";
-import { initiateKhaltiPayment, lookupKhaltiPayment } from "../utils/khaltiHelper.js";
+import { generateEsewaSignature, verifyEsewaSignature } from "../utils/payments/esewaHelper.js";
+import { initiateKhaltiPayment, lookupKhaltiPayment } from "../utils/payments/khaltiHelper.js";
+
+/**
+ * Shared cleanup for a payment that failed/was rejected: restores stock,
+ * releases coupon usage, and cancels the order — all atomically, matching
+ * the transaction pattern orderController.js uses for cancellation.
+ */
+async function cancelOrderForFailedPayment(orderId, failureNote) {
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const order = await Order.findById(orderId).session(session);
+      if (!order || order.orderStatus === "Cancelled") return;
+
+      await restoreStock(order.orderItems, session);
+      await releaseCouponUsage(order.couponCode, session);
+
+      order.orderStatus = "Cancelled";
+      order.cancelledAt = new Date();
+      order.paymentInfo.status = "Failed";
+      order.statusHistory.push({ status: "Cancelled", changedAt: new Date(), note: failureNote });
+
+      await order.save({ session });
+    });
+  } finally {
+    await session.endSession();
+  }
+}
 
 // ─── eSewa ────────────────────────────────────────────────────────────────
 
@@ -75,8 +103,9 @@ export const verifyEsewa = handleAsyncError(async (req, res, next) => {
       "paymentInfo.status": "Paid",
       "paymentInfo.method": "eSewa",
       "paymentInfo.id": decoded.transaction_code,
-      paidAt: Date.now(),
+      paidAt: new Date(),
       orderStatus: "Confirmed",
+      confirmedAt: new Date(),
       $push: {
         statusHistory: { status: "Confirmed", changedAt: new Date(), note: "Payment verified via eSewa" },
       },
@@ -89,19 +118,7 @@ export const verifyEsewa = handleAsyncError(async (req, res, next) => {
   payment.gatewayResponse = decoded;
   await payment.save();
 
-  // Payment failed — don't leave stock silently deducted for good.
-  const failedOrder = await Order.findById(payment.order);
-  if (failedOrder && failedOrder.orderStatus !== "Cancelled") {
-    await restoreStock(failedOrder.orderItems);
-    failedOrder.orderStatus = "Cancelled";
-    failedOrder.paymentInfo.status = "Failed";
-    failedOrder.statusHistory.push({
-      status: "Cancelled",
-      changedAt: new Date(),
-      note: "eSewa payment failed or was not completed",
-    });
-    await failedOrder.save();
-  }
+  await cancelOrderForFailedPayment(payment.order, "eSewa payment failed or was not completed");
 
   res.redirect(`${process.env.FRONTEND_URL}/order-failed`);
 });
@@ -160,8 +177,9 @@ export const verifyKhalti = handleAsyncError(async (req, res) => {
       "paymentInfo.status": "Paid",
       "paymentInfo.method": "Khalti",
       "paymentInfo.id": lookupRes.transaction_id,
-      paidAt: Date.now(),
+      paidAt: new Date(),
       orderStatus: "Confirmed",
+      confirmedAt: new Date(),
       $push: {
         statusHistory: { status: "Confirmed", changedAt: new Date(), note: "Payment verified via Khalti" },
       },
@@ -174,18 +192,7 @@ export const verifyKhalti = handleAsyncError(async (req, res) => {
   payment.gatewayResponse = lookupRes;
   await payment.save();
 
-  const failedOrder = await Order.findById(payment.order);
-  if (failedOrder && failedOrder.orderStatus !== "Cancelled") {
-    await restoreStock(failedOrder.orderItems);
-    failedOrder.orderStatus = "Cancelled";
-    failedOrder.paymentInfo.status = "Failed";
-    failedOrder.statusHistory.push({
-      status: "Cancelled",
-      changedAt: new Date(),
-      note: "Khalti payment failed or was not completed",
-    });
-    await failedOrder.save();
-  }
+  await cancelOrderForFailedPayment(payment.order, "Khalti payment failed or was not completed");
 
   res.redirect(`${process.env.FRONTEND_URL}/order-failed`);
 });
@@ -235,36 +242,26 @@ export const reviewBankTransfer = handleAsyncError(async (req, res, next) => {
   transfer.reviewNote = note || "";
   await transfer.save();
 
-  const order = await Order.findById(transfer.order);
-  if (!order) return next(new HandleError("Linked order not found", 404));
-
   if (approve) {
+    const order = await Order.findById(transfer.order);
+    if (!order) return next(new HandleError("Linked order not found", 404));
+
     order.paymentInfo.status = "Paid";
-    order.paidAt = Date.now();
+    order.paidAt = new Date();
     order.orderStatus = "Confirmed";
+    order.confirmedAt = new Date();
     order.statusHistory.push({
       status: "Confirmed",
       changedAt: new Date(),
       changedBy: req.user._id,
       note: "Bank transfer verified by admin",
     });
+    await order.save();
   } else {
-    // Rejected — same stock leak risk as a failed gateway payment.
-    // Restore stock rather than leaving it silently deducted.
-    if (order.orderStatus !== "Cancelled") {
-      await restoreStock(order.orderItems);
-    }
-    order.paymentInfo.status = "Failed";
-    order.orderStatus = "Cancelled";
-    order.statusHistory.push({
-      status: "Cancelled",
-      changedAt: new Date(),
-      changedBy: req.user._id,
-      note: `Bank transfer rejected: ${note || "no reason given"}`,
-    });
+    // Same cleanup as a failed gateway payment — restore stock, release any
+    // coupon usage, and cancel, so nothing is left silently deducted.
+    await cancelOrderForFailedPayment(transfer.order, `Bank transfer rejected: ${note || "no reason given"}`);
   }
-
-  await order.save();
 
   res.status(200).json({ success: true, transfer });
 });

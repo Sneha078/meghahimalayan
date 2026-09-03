@@ -4,7 +4,7 @@ import { getProductById, getProductReviews, submitReview } from '../api/productC
 import { useCart } from '../context/CartContext'
 import RecommendedProducts from '../components/RecommendedProducts'
 import SentimentSummary from '../components/SentimentSummary'
-
+import { trackProductView } from '../utils/recentlyViewed'
 // ── Upload limits ────────────────────────────────────────────────────────────
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5MB
@@ -68,6 +68,9 @@ function ProductDetail() {
 
   useEffect(() => {
     let cancelled = false
+
+    //remember that this product was viewed
+    trackProductView(id)
     setLoading(true)
     setError(null)
     setSelectedImage(0)
@@ -75,8 +78,11 @@ function ProductDetail() {
     setSubmitSuccess(false)
 
     getProductById(id)
-      .then((data) => { if (!cancelled) setProduct(data) })
-      .catch((err) => { if (!cancelled) setError(err.message) })
+      .then((data) => { if (!cancelled){
+      setProduct(data)
+    }
+  })
+    .catch((err) => { if (!cancelled) setError(err.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     // Fetch reviews in parallel — non-blocking
