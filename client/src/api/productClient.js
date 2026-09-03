@@ -108,3 +108,43 @@ export async function cancelOrder(orderId) {
   }
   return res.json()
 }
+// GET /api/v1/wishlist
+export async function getWishlist() {
+  const res = await fetch(`${API_URL}/wishlist`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to fetch wishlist')
+  }
+  return res.json()  // returns { success, wishlist: [...products] }
+}
+
+
+export async function addToWishlist(productId) {
+  const res = await fetch(`${API_URL}/wishlist`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to add to wishlist')
+  }
+  return res.json()
+}
+
+
+export async function removeFromWishlist(productId) {
+  const res = await fetch(`${API_URL}/wishlist/${productId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to remove from wishlist')
+  }
+  return res.json()
+}
+

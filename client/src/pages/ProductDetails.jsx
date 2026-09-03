@@ -4,6 +4,8 @@ import { getProductById, getProductReviews, submitReview } from '../api/productC
 import { useCart } from '../context/CartContext'
 import RecommendedProducts from '../components/RecommendedProducts'
 import SentimentSummary from '../components/SentimentSummary'
+import { useWishlist } from '../context/WishlistContext'
+import { useAuth } from '../context/AuthContext'
 import { trackProductView } from '../utils/recentlyViewed'
 // ── Upload limits ────────────────────────────────────────────────────────────
 const MAX_IMAGES = 3
@@ -46,15 +48,17 @@ function SpecRow({ label, value }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 function ProductDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const { addItem } = useCart()
-
   const [product, setProduct]             = useState(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [added, setAdded]                 = useState(false)
-  const [wishlisted, setWishlisted]       = useState(false)
+  const { user } = useAuth()
+  const { isWishlisted, toggleWishlist } = useWishlist()
+  const navigate = useNavigate()
+
+
 
   // ── Reviews state ────────────────────────────────────────────────────────────
   const [reviews, setReviews]             = useState([])
@@ -472,14 +476,17 @@ function ProductDetail() {
             </button>
 
             <button
-              onClick={() => setWishlisted((w) => !w)}
+              onClick={async () => {
+                if (!user) { navigate('/login'); return }
+                await toggleWishlist(product)
+              }}
               aria-label="Add to wishlist"
               style={{
                 width: '50px',
                 height: '50px',
                 borderRadius: '8px',
                 border: '1px solid var(--color-border)',
-                backgroundColor: wishlisted ? '#fff1f2' : 'var(--color-white)',
+                backgroundColor: isWishlisted(product?._id ?? product?.id) ? '#fff1f2' : 'var(--color-white)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -489,8 +496,8 @@ function ProductDetail() {
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24"
-                fill={wishlisted ? '#e74c3c' : 'none'}
-                stroke={wishlisted ? '#e74c3c' : '#555'}
+                fill={isWishlisted(product?._id ?? product?.id) ? '#e74c3c' : 'none'}
+                stroke={isWishlisted(product?._id ?? product?.id) ? '#e74c3c' : '#555'}
                 strokeWidth="2"
               >
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />

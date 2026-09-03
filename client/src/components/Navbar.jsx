@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useWishlist } from "../context/WishlistContext";
 import logo from "../assets/hoh_logo.png";
 import SearchDropdown from "./SearchDropdown";
 import { fetchAutocomplete, fetchSearchResults } from "../services/searchClient";
@@ -22,7 +23,8 @@ function Navbar() {
   
 
   const { totalItems } = useCart();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { totalWishlisted } = useWishlist();
 
   const searchContainerRef = useRef(null);
   const debounceRef = useRef(null);
@@ -227,8 +229,9 @@ function Navbar() {
         <div className="flex items-center gap-5">
 
           {/* Wishlist */}
-          <button
-            className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
+          <Link
+            to="/wishlist"
+            style={{ position: 'relative', color: scrolled ? '#0d1a2a' : '#ffffff', lineHeight: 0 }}
             aria-label="Wishlist"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -237,7 +240,18 @@ function Navbar() {
                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
               />
             </svg>
-          </button>
+            {totalWishlisted > 0 && (
+              <span style={{
+                backgroundColor: '#e74c3c', color: '#ffffff',
+                fontSize: '0.65rem', fontWeight: '700',
+                width: '18px', height: '18px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', top: '-6px', right: '-6px',
+              }}>
+                {totalWishlisted}
+              </span>
+            )}
+          </Link>
 
          
           {/* Account */}

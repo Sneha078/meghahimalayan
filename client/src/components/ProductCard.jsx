@@ -1,12 +1,16 @@
 ﻿import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useWishlist } from '../context/WishlistContext'
+import { useAuth } from '../context/AuthContext'
 
 function ProductCard({ product }) {
-  const [wishlisted, setWishlisted] = useState(false)
   const [added, setAdded] = useState(false)
   const [hovered, setHovered] = useState(false)
   const { addItem } = useCart()
+  const { user } = useAuth()
+  const { isWishlisted, toggleWishlist } = useWishlist()
+  const navigate = useNavigate()
 
   const handleAddToCart = () => {
     addItem(product)
@@ -136,7 +140,12 @@ function ProductCard({ product }) {
 
           {/* Wishlist */}
           <button
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setWishlisted(!wishlisted) }}
+            onClick={async (e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              if (!user) { navigate('/login'); return }
+              await toggleWishlist(product)
+            }}
             style={{
               position: 'absolute',
               top: '10px',
@@ -154,8 +163,8 @@ function ProductCard({ product }) {
             aria-label="Add to wishlist"
           >
             <svg width="15" height="15" viewBox="0 0 24 24"
-              fill={wishlisted ? '#e74c3c' : 'none'}
-              stroke={wishlisted ? '#e74c3c' : '#555'}
+              fill={isWishlisted(product?._id ?? product?.id) ? '#e74c3c' : 'none'}
+              stroke={isWishlisted(product?._id ?? product?.id) ? '#e74c3c' : '#555'}
               strokeWidth="2"
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
