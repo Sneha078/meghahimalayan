@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
+import { useStoreLocator } from '../hooks/useStoreLocator'
 
 function OurStory() {
   const [hoveredShop, setHoveredShop] = useState(false)
   const [hoveredStore, setHoveredStore] = useState(false)
-
+  const {openStoreLocator, StoreLocatorModal} = useStoreLocator()
   return (
     <section style={{ backgroundColor: 'var(--color-navy)', padding: '80px 5rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5rem', alignItems: 'center' }}>
@@ -90,8 +91,8 @@ function OurStory() {
               SHOP COLLECTION
             </Link>
 
-            <Link
-              to="/contact"
+            <button
+              onClick={openStoreLocator}
               style={{
                 display: 'inline-block',
                 backgroundColor: 'transparent',
@@ -116,7 +117,7 @@ function OurStory() {
               }}
             >
               FIND OUR STORE
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -155,6 +156,7 @@ function OurStory() {
         </div>
 
       </div>
+      <StoreLocatorModal/>
     </section>
   )
 }

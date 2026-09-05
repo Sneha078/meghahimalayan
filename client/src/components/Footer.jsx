@@ -196,7 +196,7 @@ function Footer() {
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <FooterLink to="/account">My Account</FooterLink>
-            <FooterLink to="/account/orders">My Orders</FooterLink>
+            <FooterLink to="/orders">My Orders</FooterLink>
             <FooterLink to="/wishlist">Wishlist</FooterLink>
             <FooterLink to="/cart">My Cart</FooterLink>
           </ul>

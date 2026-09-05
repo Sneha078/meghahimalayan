@@ -29,7 +29,10 @@ import AdminProductForm from './pages/admin/AdminProductForm'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminMessages from './pages/admin/AdminMessages'
-
+import Shipping from './pages/Shipping'
+import Returns from './pages/Returns'
+import FAQ from './pages/FAQ'
+import Contact from './pages/Contact'
 
 
 
@@ -120,6 +123,10 @@ function App() {
     <AdminLayout><AdminMessages /></AdminLayout>
   </AdminRoute>
 } />
+<Route path='/shipping' element={<Shipping/>} />
+<Route path='/returns' element={<Returns/>} />
+<Route path='/faq' element={<FAQ/>} />
+<Route path='/contact' element={<Contact/>} />
     
       </Routes>
       <Footer />

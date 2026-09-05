@@ -163,7 +163,7 @@ export function useStoreLocator() {
               )}
               {mode !== 'minimized' && status === 'denied' && (
                 <p style={{ fontSize: '0.72rem', color: '#a59887', marginTop: '6px' }}>
-                  Location unavailable — showing store location only.
+                  Location unavailable - showing store location only.
                 </p>
               )}
             </div>

@@ -31,7 +31,7 @@ function AccountPage() {
 
     Promise.all(
       ids.map((id) =>
-        getProductById(id).catch(()=>{
+        getProductById(id).catch((err)=>{
           console.error(`Failed to load recently viewed product ${id}:`, err)
          return null})
       )
@@ -41,7 +41,7 @@ function AccountPage() {
         setRecentProducts(results.filter(Boolean))
       })
       .finally(() => setLoadingRecent(false));
-  });
+  }, []);
 
   return (
     <section style={{ maxWidth: "1080px", margin: "0 auto", padding: "40px 24px 64px" }}>
