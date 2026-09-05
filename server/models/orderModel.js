@@ -119,6 +119,21 @@ const orderSchema = new mongoose.Schema(
       maxlength: [50, "Order number cannot exceed 50 characters"],
     },
 
+    // Dedicated Tax Invoice Number (persisted upon invoice issuance)
+    invoiceNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true,
+      maxlength: [50, "Invoice number cannot exceed 50 characters"],
+    },
+
+    invoiceGeneratedAt: {
+      type: Date,
+      default: null,
+    },
+
     // ─────────────────────────────────────────────────────────────────────────
     // CUSTOMER
     // ─────────────────────────────────────────────────────────────────────────
@@ -176,6 +191,13 @@ const orderSchema = new mongoose.Schema(
         required: [true, "Shipping phone number is required"],
         trim: true,
         maxlength: [20, "Shipping phone number cannot exceed 20 characters"],
+      },
+
+      pan: {
+        type: String,
+        trim: true,
+        maxlength: [20, "PAN cannot exceed 20 characters"],
+        default: "",
       },
     },
 

@@ -1227,4 +1227,4 @@ export const deleteOrder =
       message:
         "Order deleted successfully",
     });
-  });
+  });
