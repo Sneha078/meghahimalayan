@@ -29,6 +29,8 @@ import AdminProductForm from './pages/admin/AdminProductForm'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminMessages from './pages/admin/AdminMessages'
+import AdminReturns from './pages/admin/AdminReturns'
+import AdminReturnDetail from './pages/admin/AdminReturnDetail'
 import Shipping from './pages/Shipping'
 import Returns from './pages/Returns'
 import ReturnRequest from './pages/ReturnRequest'
@@ -36,6 +38,7 @@ import FAQ from './pages/FAQ'
 import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import OrderFailed from './pages/OrderFailed'
 
 
 
@@ -126,13 +129,25 @@ function App() {
     <AdminLayout><AdminMessages /></AdminLayout>
   </AdminRoute>
 } />
+<Route path="/admin/returns" element={
+  <AdminRoute>
+    <AdminLayout><AdminReturns /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/returns/:id" element={
+  <AdminRoute>
+    <AdminLayout><AdminReturnDetail /></AdminLayout>
+  </AdminRoute>
+} />
+
 <Route path='/shipping' element={<Shipping/>} />
 <Route path='/returns' element={<Returns/>} />
 <Route path='/order/:id/return' element={<ReturnRequest />} />
 <Route path='/faq' element={<FAQ/>} />
 <Route path='/contact' element={<Contact/>} />
 < Route path='/privacy' element={<Privacy/>} /> 
-<Route path='/terms' element={<Terms />} />  
+<Route path='/terms' element={<Terms />} />
+<Route path ='/order-failed' element={<OrderFailed />} />  
       </Routes>
       <Footer />
     </div>

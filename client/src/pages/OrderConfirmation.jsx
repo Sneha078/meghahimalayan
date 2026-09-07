@@ -1,7 +1,82 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { getMySingleOrder } from '../api/productClient'
+
+const PAYMENT_LABEL = {
+  COD: 'Cash on Delivery',
+  eSewa: 'eSewa',
+  Khalti: 'Khalti',
+  'Bank Transfer': 'Bank Transfer',
+}
 
 function OrderConfirmation() {
-  const orderNumber = `MH${Date.now().toString().slice(-6)}`
+  const [searchParams] = useSearchParams()
+  const orderId = searchParams.get('orderId')
+
+  // Falls back to a made-up number only when there's no real order to show
+  // (e.g. this page reached without an orderId at all).
+  const fallbackOrderNumber = `MH${Date.now().toString().slice(-6)}`
+
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(!!orderId)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!orderId) return
+
+    let cancelled = false
+    setLoading(true)
+    setError('')
+
+    getMySingleOrder(orderId)
+      .then((data) => {
+        if (!cancelled) setOrder(data.order ?? data)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [orderId])
+
+  const paymentMethod = order
+    ? PAYMENT_LABEL[order.paymentInfo?.method] ?? order.paymentInfo?.method
+    : 'Cash on Delivery'
+
+  const orderStatus = order?.orderStatus ?? 'Confirmed'
+  const displayOrderNumber = order?._id
+    ? order._id.slice(-6).toUpperCase()
+    : fallbackOrderNumber
+
+  // Timeline reflects the order's actual status once we have it; before
+  // that (or for the no-orderId fallback) it shows the original static
+  // "just placed, confirmed" state.
+  const steps = [
+    { label: 'Order Placed', done: true },
+    { label: 'Order Confirmed', done: !order || ['Confirmed', 'Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Processing', done: order && ['Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Shipped', done: order && ['Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Delivered', done: order && orderStatus === 'Delivered' },
+  ]
+
+  if (loading) {
+    return (
+      <div style={{
+        backgroundColor: 'var(--color-sbg)',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>Loading your order…</p>
+      </div>
+    )
+  }
 
   return (
     <div style={{
@@ -58,6 +133,16 @@ function OrderConfirmation() {
           Thank you for your order. We'll contact you shortly to confirm your delivery details.
         </p>
 
+        {error && (
+          <p style={{
+            fontSize: '0.8rem',
+            color: '#dc2626',
+            marginBottom: '24px',
+          }}>
+            Couldn't load your order details ({error}), but your payment went through — check "My Orders" for the full status.
+          </p>
+        )}
+
         {/* Order Details */}
         <div style={{
           backgroundColor: 'var(--color-sbg)',
@@ -71,14 +156,14 @@ function OrderConfirmation() {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Order Number</span>
             <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)' }}>
-              #{orderNumber}
+              #{displayOrderNumber}
             </span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Payment Method</span>
             <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--color-navy)' }}>
-              Cash on Delivery
+              {paymentMethod}
             </span>
           </div>
 
@@ -99,7 +184,7 @@ function OrderConfirmation() {
               padding: '3px 10px',
               borderRadius: '20px',
             }}>
-              CONFIRMED
+              {orderStatus.toUpperCase()}
             </span>
           </div>
 
@@ -118,18 +203,12 @@ function OrderConfirmation() {
             Order Timeline
           </p>
 
-          {[
-            { label: 'Order Placed', done: true },
-            { label: 'Order Confirmed', done: true },
-            { label: 'Processing', done: false },
-            { label: 'Shipped', done: false },
-            { label: 'Delivered', done: false },
-          ].map((step, index) => (
+          {steps.map((step, index) => (
             <div key={step.label} style={{
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              marginBottom: index < 4 ? '8px' : '0',
+              marginBottom: index < steps.length - 1 ? '8px' : '0',
             }}>
               <div style={{
                 width: '24px',

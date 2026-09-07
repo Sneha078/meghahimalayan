@@ -1,18 +1,44 @@
 import { useState } from "react";
 import PageBanner from "../components/PageBanner";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
+
 function Contact() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: wire to a real contact endpoint once one exists
-    setSubmitted(true);
+    setSubmitting(true);
+    setError("");
+
+    try {
+      // ASSUMPTION: endpoint is POST /api/v1/contact, paired with the
+      // AdminMessages.jsx admin view. If your route is named differently
+      // (e.g. /messages), change this one URL.
+      const res = await fetch(`${API_URL}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to send message");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputStyle = {
@@ -53,6 +79,10 @@ function Contact() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {error && (
+                <p style={{ fontSize: "0.82rem", color: "#dc2626" }}>{error}</p>
+              )}
+
               <div>
                 <label style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--color-navy)", marginBottom: "6px", display: "block" }}>
                   Name
@@ -97,20 +127,21 @@ function Contact() {
 
               <button
                 type="submit"
+                disabled={submitting}
                 style={{
                   alignSelf: "flex-start",
                   padding: "11px 28px",
-                  backgroundColor: "var(--color-navy)",
-                  color: "var(--color-taupe)",
+                  backgroundColor: submitting ? "#e5e7eb" : "var(--color-navy)",
+                  color: submitting ? "#9ca3af" : "var(--color-taupe)",
                   border: "none",
                   borderRadius: "8px",
                   fontSize: "0.82rem",
                   fontWeight: "700",
                   letterSpacing: "0.1em",
-                  cursor: "pointer",
+                  cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                SEND MESSAGE
+                {submitting ? "SENDING…" : "SEND MESSAGE"}
               </button>
             </form>
           )}

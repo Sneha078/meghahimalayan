@@ -2,6 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { createOrder } from "../api/productClient";
+import {
+  initiateEsewaPayment,
+  initiateKhaltiPayment,
+  redirectToEsewa,
+  redirectToKhalti,
+} from "../api/paymentClient";
 
 
 const STEPS = ["Delivery", "Payment", "Review"];
@@ -23,6 +29,7 @@ function Checkout() {
   });
 
   const [errors, setErrors] = useState({});
+  // 'cod' | 'esewa' | 'khalti'
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const shipping = subtotal >= 5000 ? 0 : 200;
@@ -92,43 +99,77 @@ function Checkout() {
     setCurrentStep((prev) => prev - 1);
   };
 
-const [orderLoading, setOrderLoading] = useState(false)
-const [orderError, setOrderError] = useState('')
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
-const handlePlaceOrder = async ()=> {
-  setOrderLoading(true)
-  setOrderError('')
+  // paymentInfo.method sent on order creation. Gateway payments stay
+  // "Pending" until the backend's verify step confirms them; COD is also
+  // "Pending" until delivery, unchanged from before.
+  const paymentMethodLabel = {
+    cod: "COD",
+    esewa: "eSewa",
+    khalti: "Khalti",
+  };
 
-  try{
-    const orderData = {
-      shippingInfo: {
-        name: form.fullName,
-        address: form.address,
-        city: form.city,
-        state: form.province,
-        pincode: form.pincode,
-        phoneNo: form.phone,
-        country: 'Nepal',
-      },
-      orderItems: cartItems.map((item) => ({
-        product: item._id ?? item.id,
-        quantity: item.quantity,
-      })),
-      paymentInfo: {
-        method: 'COD',
-        status: 'Pending',
-      },
-      taxPrice: 0,
+  const buildOrderData = () => ({
+    shippingInfo: {
+      name: form.fullName,
+      address: form.address,
+      city: form.city,
+      state: form.province,
+      pincode: form.pincode,
+      phoneNo: form.phone,
+      country: "Nepal",
+    },
+    orderItems: cartItems.map((item) => ({
+      product: item._id ?? item.id,
+      quantity: item.quantity,
+    })),
+    paymentInfo: {
+      method: paymentMethodLabel[paymentMethod],
+      status: "Pending",
+    },
+    taxPrice: 0,
+  });
+
+  const handlePlaceOrder = async () => {
+    setOrderLoading(true);
+    setOrderError("");
+
+    try {
+      const orderData = buildOrderData();
+      const orderRes = await createOrder(orderData);
+      const orderId =
+        orderRes?.order?._id ?? orderRes?.order?.id ?? orderRes?._id;
+
+      if (paymentMethod === "cod") {
+        clearCart();
+        navigate("/order-confirmation");
+        return;
+      }
+
+      if (!orderId) {
+        throw new Error("Order was created but no order id was returned");
+      }
+
+      if (paymentMethod === "esewa") {
+        const { url, payload } = await initiateEsewaPayment(orderId);
+        clearCart(); // order already exists server-side; gateway takes over from here
+        redirectToEsewa(url, payload);
+        return; // page is navigating away, nothing left to render
+      }
+
+      if (paymentMethod === "khalti") {
+        const { paymentUrl } = await initiateKhaltiPayment(orderId);
+        clearCart();
+        redirectToKhalti(paymentUrl);
+        return;
+      }
+    } catch (err) {
+      setOrderError(err.message);
+      setOrderLoading(false);
     }
-    await createOrder(orderData)
-    clearCart()
-    navigate('/order-confirmation')
-  }
-  catch(err) {
-    setOrderError(err.message)
-    setOrderLoading(false)
-  }
-}
+  };
 
   // Empty cart
   if (cartItems.length === 0 && currentStep !== 2) {
@@ -507,142 +548,34 @@ const handlePlaceOrder = async ()=> {
                 }}
               >
                 {/* Cash on Delivery */}
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "16px",
-                    padding: "20px 24px",
-                    borderRadius: "12px",
-                    border: `2px solid ${
-                      paymentMethod === "cod"
-                        ? "var(--color-navy)"
-                        : "var(--color-border)"
-                    }`,
-                    cursor: "pointer",
-                    transition: "border-color 0.2s ease",
-                    backgroundColor:
-                      paymentMethod === "cod"
-                        ? "var(--color-sbg)"
-                        : "var(--color-white)",
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    style={{
-                      accentColor: "var(--color-navy)",
-                      width: "18px",
-                      height: "18px",
-                    }}
-                  />
+                <PaymentOption
+                  value="cod"
+                  selected={paymentMethod === "cod"}
+                  onSelect={setPaymentMethod}
+                  icon="💵"
+                  title="Cash on Delivery"
+                  description="Pay when your order arrives at your doorstep"
+                />
 
-                  <div style={{ fontSize: "1.8rem" }}>💵</div>
+                {/* eSewa */}
+                <PaymentOption
+                  value="esewa"
+                  selected={paymentMethod === "esewa"}
+                  onSelect={setPaymentMethod}
+                  icon="📱"
+                  title="eSewa"
+                  description="Pay securely with your eSewa wallet"
+                />
 
-                  <div>
-                    <p
-                      style={{
-                        fontWeight: "600",
-                        color: "var(--color-navy)",
-                        fontSize: "0.95rem",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      Cash on Delivery
-                    </p>
-
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--color-muted)",
-                      }}
-                    >
-                      Pay when your order arrives at your doorstep
-                    </p>
-                  </div>
-
-                  {paymentMethod === "cod" && (
-                    <span
-                      style={{
-                        marginLeft: "auto",
-                        backgroundColor: "var(--color-navy)",
-                        color: "var(--color-taupe)",
-                        fontSize: "0.65rem",
-                        fontWeight: "700",
-                        padding: "4px 10px",
-                        borderRadius: "20px",
-                      }}
-                    >
-                      SELECTED
-                    </span>
-                  )}
-                </label>
-
-                {/* Digital Wallet */}
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "16px",
-                    padding: "20px 24px",
-                    borderRadius: "12px",
-                    border: "2px solid var(--color-border)",
-                    cursor: "not-allowed",
-                    opacity: 0.5,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="esewa"
-                    disabled
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                    }}
-                  />
-
-                  <div style={{ fontSize: "1.8rem" }}>📱</div>
-
-                  <div>
-                    <p
-                      style={{
-                        fontWeight: "600",
-                        color: "var(--color-navy)",
-                        fontSize: "0.95rem",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      eSewa / Khalti
-                    </p>
-
-                    <p
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--color-muted)",
-                      }}
-                    >
-                      Digital wallet payment
-                    </p>
-                  </div>
-
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      backgroundColor: "var(--color-ivory)",
-                      color: "var(--color-muted)",
-                      fontSize: "0.65rem",
-                      fontWeight: "700",
-                      padding: "4px 10px",
-                      borderRadius: "20px",
-                    }}
-                  >
-                    COMING SOON
-                  </span>
-                </label>
+                {/* Khalti */}
+                <PaymentOption
+                  value="khalti"
+                  selected={paymentMethod === "khalti"}
+                  onSelect={setPaymentMethod}
+                  icon="🟣"
+                  title="Khalti"
+                  description="Pay securely with your Khalti wallet"
+                />
               </div>
             </div>
           )}
@@ -754,8 +687,23 @@ const handlePlaceOrder = async ()=> {
                     color: "var(--color-navy)",
                   }}
                 >
-                  💵 Cash on Delivery
+                  {paymentMethod === "cod" && "💵 Cash on Delivery"}
+                  {paymentMethod === "esewa" && "📱 eSewa"}
+                  {paymentMethod === "khalti" && "🟣 Khalti"}
                 </p>
+
+                {paymentMethod !== "cod" && (
+                  <p
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "var(--color-muted)",
+                      marginTop: "6px",
+                    }}
+                  >
+                    You'll be redirected to {paymentMethodLabel[paymentMethod]}{" "}
+                    to complete payment after placing the order.
+                  </p>
+                )}
               </div>
 
               {/* Items */}
@@ -969,7 +917,13 @@ const handlePlaceOrder = async ()=> {
       transition: 'background-color 0.2s ease',
     }}
   >
-    {orderLoading ? 'Placing Order…' : 'PLACE ORDER ✓'}
+    {orderLoading
+      ? paymentMethod === 'cod'
+        ? 'Placing Order…'
+        : 'Redirecting…'
+      : paymentMethod === 'cod'
+        ? 'PLACE ORDER ✓'
+        : `PAY WITH ${paymentMethodLabel[paymentMethod].toUpperCase()} →`}
   </button>
 </div>
 
@@ -1209,6 +1163,84 @@ const handlePlaceOrder = async ()=> {
         </div>
       </div>
     </div>
+  );
+}
+
+// Small presentational helper for the three payment radio cards — same
+// look the original COD-only card had, just parameterised so it's not
+// repeated three times inline.
+function PaymentOption({ value, selected, onSelect, icon, title, description }) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        padding: "20px 24px",
+        borderRadius: "12px",
+        border: `2px solid ${
+          selected ? "var(--color-navy)" : "var(--color-border)"
+        }`,
+        cursor: "pointer",
+        transition: "border-color 0.2s ease",
+        backgroundColor: selected
+          ? "var(--color-sbg)"
+          : "var(--color-white)",
+      }}
+    >
+      <input
+        type="radio"
+        name="payment"
+        value={value}
+        checked={selected}
+        onChange={(e) => onSelect(e.target.value)}
+        style={{
+          accentColor: "var(--color-navy)",
+          width: "18px",
+          height: "18px",
+        }}
+      />
+
+      <div style={{ fontSize: "1.8rem" }}>{icon}</div>
+
+      <div>
+        <p
+          style={{
+            fontWeight: "600",
+            color: "var(--color-navy)",
+            fontSize: "0.95rem",
+            marginBottom: "4px",
+          }}
+        >
+          {title}
+        </p>
+
+        <p
+          style={{
+            fontSize: "0.8rem",
+            color: "var(--color-muted)",
+          }}
+        >
+          {description}
+        </p>
+      </div>
+
+      {selected && (
+        <span
+          style={{
+            marginLeft: "auto",
+            backgroundColor: "var(--color-navy)",
+            color: "var(--color-taupe)",
+            fontSize: "0.65rem",
+            fontWeight: "700",
+            padding: "4px 10px",
+            borderRadius: "20px",
+          }}
+        >
+          SELECTED
+        </span>
+      )}
+    </label>
   );
 }
 

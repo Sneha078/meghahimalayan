@@ -122,3 +122,40 @@ export const deleteMessage = (id) =>
     method: 'DELETE',
     credentials: 'include',
   }).then(handleResponse)
+
+// ─────────────────────────────────────────────────────────────────────────
+// Returns
+// Note: unlike orders/products/coupons/messages, returnRoutes.js uses the
+// plural "/admin/returns/:id" for single-item routes too (no singular
+// "/admin/return/:id" form) — confirmed against the actual backend routes.
+// ─────────────────────────────────────────────────────────────────────────
+ 
+export const getAllReturns = (params = {}) => {
+  const query = new URLSearchParams(params).toString()
+  return fetch(`${API_URL}/admin/returns${query ? `?${query}` : ''}`, { credentials: 'include' }).then(handleResponse)
+}
+ 
+export const getAdminReturnById = (id) =>
+  fetch(`${API_URL}/admin/returns/${id}`, { credentials: 'include' }).then(handleResponse)
+ 
+export const updateReturnStatus = (id, payload) =>
+  fetch(`${API_URL}/admin/returns/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(handleResponse)
+ 
+export const processReturnRefund = (id, payload) =>
+  fetch(`${API_URL}/admin/returns/${id}/refund`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(handleResponse)
+ 
+export const deleteReturn = (id) =>
+  fetch(`${API_URL}/admin/returns/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  }).then(handleResponse)
