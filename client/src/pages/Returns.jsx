@@ -51,7 +51,7 @@ function Returns() {
             color: "#854d0e",
           }}
         >
-          Items must be returned within 14 days of delivery. Final sale items are not eligible for return.
+          Items must be returned within 7 days of delivery. Final sale items are not eligible for return.
         </div>
 
         <Link
