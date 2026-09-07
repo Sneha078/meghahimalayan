@@ -349,25 +349,46 @@ function Orders() {
                       </div>
                     </div>
 
-                    {['Processing', 'Confirmed'].includes(order.orderStatus) && (
-                      <button
-                        onClick={() => handleCancel(order._id)}
-                        disabled={cancelling === order._id}
-                        style={{
-                          padding: '8px 20px',
-                          borderRadius: '8px',
-                          border: '1px solid #fecaca',
-                          backgroundColor: cancelling === order._id ? '#f3f4f6' : '#fef2f2',
-                          color: cancelling === order._id ? '#9ca3af' : '#dc2626',
-                          fontSize: '0.78rem',
-                          fontWeight: '600',
-                          cursor: cancelling === order._id ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        {cancelling === order._id ? 'Cancelling…' : 'Cancel Order'}
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {['Processing', 'Confirmed'].includes(order.orderStatus) && (
+                        <button
+                          onClick={() => handleCancel(order._id)}
+                          disabled={cancelling === order._id}
+                          style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: '1px solid #fecaca',
+                            backgroundColor: cancelling === order._id ? '#f3f4f6' : '#fef2f2',
+                            color: cancelling === order._id ? '#9ca3af' : '#dc2626',
+                            fontSize: '0.78rem',
+                            fontWeight: '600',
+                            cursor: cancelling === order._id ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          {cancelling === order._id ? 'Cancelling…' : 'Cancel Order'}
+                        </button>
+                      )}
+
+                      {order.orderStatus === 'Delivered' && (
+                        <Link
+                          to={`/order/${order._id}/return`}
+                          style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--color-border)',
+                            backgroundColor: 'var(--color-white)',
+                            color: 'var(--color-navy)',
+                            fontSize: '0.78rem',
+                            fontWeight: '600',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          Return Items
+                        </Link>
+                      )}
+                    </div>
                   </div>
                   <OrderTimeline 
                   status={order.orderStatus}

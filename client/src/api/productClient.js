@@ -107,6 +107,18 @@ export async function getMyOrders() {
   return res.json()
 }
 
+// GET /api/v1/order/:id  (single order for the logged-in user)
+export async function getMySingleOrder(orderId) {
+  const res = await fetch(`${API_URL}/order/${orderId}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to fetch order')
+  }
+  return res.json()
+}
+
 // PUT /api/v1/order/:id/cancel
 export async function cancelOrder(orderId) {
   const res = await fetch(`${API_URL}/order/${orderId}/cancel`, {
@@ -155,6 +167,21 @@ export async function removeFromWishlist(productId) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.message || 'Failed to remove from wishlist')
+  }
+  return res.json()
+}
+
+// POST /api/v1/returns
+export async function submitReturnRequest(payload) {
+  const res = await fetch(`${API_URL}/returns`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to submit return request')
   }
   return res.json()
 }

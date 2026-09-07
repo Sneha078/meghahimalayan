@@ -31,6 +31,7 @@ import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminMessages from './pages/admin/AdminMessages'
 import Shipping from './pages/Shipping'
 import Returns from './pages/Returns'
+import ReturnRequest from './pages/ReturnRequest'
 import FAQ from './pages/FAQ'
 import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
@@ -127,6 +128,7 @@ function App() {
 } />
 <Route path='/shipping' element={<Shipping/>} />
 <Route path='/returns' element={<Returns/>} />
+<Route path='/order/:id/return' element={<ReturnRequest />} />
 <Route path='/faq' element={<FAQ/>} />
 <Route path='/contact' element={<Contact/>} />
 < Route path='/privacy' element={<Privacy/>} /> 
