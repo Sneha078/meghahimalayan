@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyOrders, cancelOrder } from '../api/productClient'
 import { useAuth } from '../context/AuthContext'
+import OrderTimeline from '../components/OrderTimeline'
 
 const STATUS_STYLES = {
   Processing:  { bg: '#fef9c3', color: '#854d0e' },
@@ -368,6 +369,9 @@ function Orders() {
                       </button>
                     )}
                   </div>
+                  <OrderTimeline 
+                  status={order.orderStatus}
+                  statusHistory={order.statusHistory} />
 
                 </div>
               )

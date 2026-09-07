@@ -130,14 +130,20 @@ export const getSingleProduct = handleAsyncError(async (req, res, next) => {
 
 //public-getFilterOptions(used for filter sidebar)
 // GET /api/v1/filters
+// GET /api/v1/filters?category=eyeglasses
 // Returns distinct categories, brands, genders, subcategories + price range parallely
+// When a category is passed, brand/subcategory/gender are scoped to that
+// category only — "categories" itself always stays global so the tab list
+// never shrinks when you're already filtered into one category.
 export const getFilterOptions = handleAsyncError(async (req, res, next) => {
+  const categoryFilter = req.query.category ? { category: req.query.category } : {};
+
   //promise allow multiple independent database queries to run together in parallel
   const [categories, brands, subcategories, genders] = await Promise.all([
     Product.distinct("category"),
-    Product.distinct("brand"),
-    Product.distinct("subcategory"),
-    Product.distinct("gender"),
+    Product.distinct("brand", categoryFilter),
+    Product.distinct("subcategory", categoryFilter),
+    Product.distinct("gender", categoryFilter),
   ]);
 
   //aggregation helps to find lowest price and highest price from db
@@ -155,9 +161,20 @@ export const getFilterOptions = handleAsyncError(async (req, res, next) => {
     ? { min: priceAgg[0].min, max: priceAgg[0].max }
     : { min: 0, max: 0 };
 
+    //NEW: count products per category
+    const categoryCountsAgg = await Product.aggregate([
+      { $group: {_id: "$category", count: {$sum: 1}}},
+    ])
+
+    const categoryCounts = categoryCountsAgg.reduce((acc, c) =>{
+      acc[c._id] = c.count
+      return acc
+    }, {})
+
   res.status(200).json({
     success: true,
     categories,
+    categoryCounts,
     brands,
     subcategories: subcategories.filter(Boolean),
     genders,

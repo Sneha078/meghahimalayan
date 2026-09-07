@@ -19,6 +19,7 @@ function Checkout() {
     address: "",
     city: "",
     province: "",
+    pincode: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -70,6 +71,10 @@ function Checkout() {
       newErrors.province = "Province is required";
     }
 
+    if (!form.pincode.trim()) {
+      newErrors.pincode = "Postal/pin code is required";
+    }
+
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
@@ -101,7 +106,7 @@ const handlePlaceOrder = async ()=> {
         address: form.address,
         city: form.city,
         state: form.province,
-        pinCode: '00000',
+        pincode: form.pincode,
         phoneNo: form.phone,
         country: 'Nepal',
       },
@@ -457,6 +462,24 @@ const handlePlaceOrder = async ()=> {
                     <p style={errorStyle}>{errors.province}</p>
                   )}
                 </div>
+
+                {/* Pincode */}
+                <div>
+                  <label style={labelStyle}>Postal / Pin Code</label>
+
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={form.pincode}
+                    onChange={handleChange}
+                    placeholder="e.g. 33700"
+                    style={inputStyle(errors.pincode)}
+                  />
+
+                  {errors.pincode && (
+                    <p style={errorStyle}>{errors.pincode}</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -679,7 +702,7 @@ const handlePlaceOrder = async ()=> {
                     marginBottom: "2px",
                   }}
                 >
-                  {form.address}, {form.city}
+                  {form.address}, {form.city} {form.pincode}
                 </p>
 
                 <p

@@ -33,6 +33,8 @@ import Shipping from './pages/Shipping'
 import Returns from './pages/Returns'
 import FAQ from './pages/FAQ'
 import Contact from './pages/Contact'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 
 
@@ -127,7 +129,8 @@ function App() {
 <Route path='/returns' element={<Returns/>} />
 <Route path='/faq' element={<FAQ/>} />
 <Route path='/contact' element={<Contact/>} />
-    
+< Route path='/privacy' element={<Privacy/>} /> 
+<Route path='/terms' element={<Terms />} />  
       </Routes>
       <Footer />
     </div>

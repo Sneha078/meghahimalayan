@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
 import { getFilterOptions } from '../api/productClient'
 import ProductCard from '../components/ProductCard'
@@ -12,13 +13,6 @@ const SORT_OPTIONS = [
   { value: '-isBestSeller', label: 'Best Selling' },
 ]
 
-const GENDER_OPTIONS = [
-  { value: '',        label: 'All' },
-  { value: 'Men',     label: 'Men' },
-  { value: 'Women',   label: 'Women' },
-  { value: 'Unisex',  label: 'Unisex' },
-]
-
 const PRICE_RANGES = [
   { label: 'All Prices',        min: 0,     max: undefined },
   { label: 'Under Rs 10,000',   min: 0,     max: 10000 },
@@ -28,22 +22,33 @@ const PRICE_RANGES = [
 ]
 
 function Shop() {
-  // Filter state
-  const [category,       setCategory]       = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Filter state — category and discount initialize from the URL
+  const [category,       setCategory]       = useState(searchParams.get('category') || '')
   const [gender,         setGender]         = useState('')
   const [selectedBrands, setSelectedBrands] = useState([])
   const [priceRange,     setPriceRange]     = useState({ min: 0, max: undefined })
+  const [discount,       setDiscount]       = useState(searchParams.get('discount') === 'true')
   const [sortBy,         setSortBy]         = useState('featured')
   const [page,           setPage]           = useState(1)
 
-  // Filter options fetched from the backend
+  // Filter options fetched from the backend — brands/genders are scoped to
+  // whichever category is currently selected (or global, when category is '')
   const [filterOpts, setFilterOpts] = useState({ categories: [], brands: [], genders: [] })
 
   useEffect(() => {
-    getFilterOptions()
+    getFilterOptions(category ? { category } : {})
       .then((data) => setFilterOpts(data))
       .catch(() => {/* non-critical */})
-  }, [])
+  }, [category])
+
+  // Keep local state in sync with the URL even when navigating between two
+  // /shop?category=X links without a full remount (e.g. clicking banner CTAs)
+  useEffect(() => {
+    setCategory(searchParams.get('category') || '')
+    setDiscount(searchParams.get('discount') === 'true')
+  }, [searchParams])
 
   // Build the query object sent to useProducts / the API
   const query = {
@@ -52,20 +57,35 @@ function Shop() {
     ...(selectedBrands.length > 0 && { brand: selectedBrands.join(',') }),
     ...(priceRange.min > 0        && { minPrice: priceRange.min }),
     ...(priceRange.max            && { maxPrice: priceRange.max }),
+    ...(discount                  && { discount: 'true' }),
     ...(sortBy !== 'featured'     && { sort: sortBy }),
     limit: 24,
     page,
   }
 
-  const { products, loading, error } = useProducts(query)
+  const { products, productCount, totalPages, loading, error } = useProducts(query)
 
   // Reset to page 1 whenever filters change
   const resetPage = useCallback(() => setPage(1), [])
 
-  const handleCategory = (val) => { setCategory(val);       resetPage() }
-  const handleGender   = (val) => { setGender(val);         resetPage() }
-  const handleSort     = (val) => { setSortBy(val);         resetPage() }
-  const handlePrice    = (range) => { setPriceRange(range); resetPage() }
+  const handleCategory = (val) => {
+    setCategory(val)
+    // Brand/gender picks from the previous category may not exist in the new
+    // one — clear them so there's no invisible stale filter narrowing results.
+    setSelectedBrands([])
+    setGender('')
+    resetPage()
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (val) next.set('category', val)
+      else next.delete('category')
+      return next
+    })
+  }
+
+  const handleGender = (val) => { setGender(val); resetPage() }
+  const handleSort   = (val) => { setSortBy(val); resetPage() }
+  const handlePrice  = (range) => { setPriceRange(range); resetPage() }
 
   const toggleBrand = (brand) => {
     setSelectedBrands((prev) =>
@@ -74,20 +94,35 @@ function Shop() {
     resetPage()
   }
 
+  const toggleDiscount = () => {
+    const next = !discount
+    setDiscount(next)
+    resetPage()
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      if (next) p.set('discount', 'true')
+      else p.delete('discount')
+      return p
+    })
+  }
+
   const clearFilters = () => {
     setCategory('')
     setGender('')
     setSelectedBrands([])
     setPriceRange({ min: 0, max: undefined })
+    setDiscount(false)
     setSortBy('featured')
     setPage(1)
+    setSearchParams({})
   }
 
   const activeFilterCount =
     (category ? 1 : 0) +
     (gender ? 1 : 0) +
     selectedBrands.length +
-    (priceRange.min > 0 || priceRange.max ? 1 : 0)
+    (priceRange.min > 0 || priceRange.max ? 1 : 0) +
+    (discount ? 1 : 0)
 
   // Use backend categories if loaded, otherwise a sensible fallback
   const categoryTabs = [
@@ -105,6 +140,22 @@ function Shop() {
   const brandList = filterOpts.brands.length > 0
     ? filterOpts.brands
     : ['Ray-Ban', 'Gucci', 'Prada', 'Oakley', 'Titan', 'Fastrack', 'Casio', 'Seiko', 'Citizen', 'Tissot']
+
+  // Gender pills are now driven by the backend, scoped to the current category.
+  // "All" is always shown; the rest come from whatever genders actually exist
+  // among products in this category (e.g. perfumes might only have Men/Women/Unisex,
+  // watches might have all four).
+  const genderOptions = [
+    { value: '', label: 'All' },
+    ...(filterOpts.genders.length > 0
+      ? filterOpts.genders.map((g) => ({ value: g, label: g }))
+      : [
+          { value: 'Men',    label: 'Men' },
+          { value: 'Women',  label: 'Women' },
+          { value: 'Unisex', label: 'Unisex' },
+        ]
+    ),
+  ]
 
   return (
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
@@ -227,7 +278,7 @@ function Shop() {
               Gender
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {GENDER_OPTIONS.map((g) => (
+              {genderOptions.map((g) => (
                 <button
                   key={g.value}
                   onClick={() => handleGender(g.value)}
@@ -247,6 +298,27 @@ function Shop() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
+
+          {/* On Sale */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={discount}
+                onChange={toggleDiscount}
+                style={{ accentColor: 'var(--color-navy)', width: '14px', height: '14px', cursor: 'pointer' }}
+              />
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                color: discount ? 'var(--color-navy)' : 'var(--color-muted)',
+              }}>
+                On Sale Only
+              </span>
+            </label>
           </div>
 
           <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
@@ -333,7 +405,7 @@ function Shop() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
               <span style={{ fontWeight: '600', color: 'var(--color-navy)' }}>
-                {loading ? '…' : products.length}
+                {loading ? '…' : productCount}
               </span> products found
               {activeFilterCount > 0 && (
                 <span style={{ marginLeft: '8px', color: 'var(--color-taupe)', fontWeight: '600' }}>
@@ -417,7 +489,7 @@ function Shop() {
           )}
 
           {/* Pagination */}
-          {!loading && !error && products.length === 24 && (
+          {!loading && !error && totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '40px' }}>
               <button
                 disabled={page === 1}
@@ -436,17 +508,18 @@ function Shop() {
                 ← Prev
               </button>
               <span style={{ padding: '8px 16px', fontSize: '0.82rem', color: 'var(--color-navy)', fontWeight: '600' }}>
-                Page {page}
+                Page {page} of {totalPages}
               </span>
               <button
+                disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
                 style={{
                   padding: '8px 20px',
                   borderRadius: '7px',
                   border: 'none',
-                  backgroundColor: 'var(--color-navy)',
-                  color: 'var(--color-taupe)',
-                  cursor: 'pointer',
+                  backgroundColor: page === totalPages ? 'transparent' : 'var(--color-navy)',
+                  color: page === totalPages ? 'var(--color-muted)' : 'var(--color-taupe)',
+                  cursor: page === totalPages ? 'default' : 'pointer',
                   fontSize: '0.82rem',
                   fontWeight: '600',
                 }}

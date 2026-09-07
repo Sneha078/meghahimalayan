@@ -31,8 +31,16 @@ export async function getProducts(params = {}) {
   const url = `${API_URL}/products${query ? `?${query}` : ""}`;
   const res = await fetch(url);
   const data = await handleResponse(res);
-  const products = data.products ?? data;
-  return products.map(normalizeProduct);
+  const products = (data.products ?? data).map(normalizeProduct)
+  return {
+    products,
+    // NOTE: this key was previously "ProductCount" (capital P), which never
+    // matched data.productCount from the backend — productCount was silently
+    // always falling back to products.length (the capped page size).
+    productCount: data.productCount ?? products.length,
+    totalPages: data.totalPages ?? 1,
+    currentPage: data.currentPage ?? 1,
+  }
 }
 
 export async function getProductById(id) {
@@ -41,8 +49,11 @@ export async function getProductById(id) {
   return normalizeProduct(data.product ?? data);
 }
 
-export async function getFilterOptions() {
-  const res = await fetch(`${API_URL}/filters`);
+// GET /api/v1/filters
+// GET /api/v1/filters?category=eyeglasses  → brand/subcategory/gender scoped to that category
+export async function getFilterOptions(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_URL}/filters${query ? `?${query}` : ""}`);
   return handleResponse(res);
 }
 
@@ -147,4 +158,3 @@ export async function removeFromWishlist(productId) {
   }
   return res.json()
 }
-
