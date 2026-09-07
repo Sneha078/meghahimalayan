@@ -236,6 +236,11 @@ const productSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    //how many coins are required to redeem this product?
+    pointsCost: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

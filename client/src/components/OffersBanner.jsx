@@ -73,7 +73,7 @@ function OffersBanner(){
                 alignItems: 'center',
                 }}>
                     <Link
-                    to="/shop"
+                    to="/shop?category=eyeglasses"
                     style={{
                     backgroundColor: 'transparent',
                     color: '#ffffff',
@@ -96,7 +96,7 @@ function OffersBanner(){
             SHOP EYEGLASSES
           </Link>
          <Link
-  to="/shop"
+  to="/shop?category=watches"
   style={{
     backgroundColor: 'transparent',
     color: '#ffffff',
@@ -121,7 +121,7 @@ function OffersBanner(){
 </Link>
 
           <Link
-          to="/shop"
+          to="/shop?category=perfumes"
           style={{
             backgroundColor: 'transparent',
             color: '#ffffff',

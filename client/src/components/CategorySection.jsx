@@ -1,38 +1,39 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getFilterOptions } from '../api/productClient'
 
 const categories = [
   {
     id: 1,
     title:       'Eyeglasses',
     description: 'Ray-Ban, Gucci, Prada, Dior, Oakley & more',
-    count:       '15 PRODUCTS',
     tagline:     'VIEW THE WORLD DIFFERENTLY',
     image:       'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=900&q=80&fit=crop',
     link:        '/shop?category=eyeglasses',
+    categoryKey: 'eyeglasses',
   },
   {
     id: 2,
     title:       'Watches',
     description: 'Casio, Omega, Rado, Emporio Armani & more',
-    count:       '9 PRODUCTS',
     tagline:     'TIME, REDEFINED',
     image:       'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80&fit=crop',
     link:        '/shop?category=watches',
+    categoryKey: 'watches',
   },
   {
     id: 3,
     title:       'Perfumes',
     description: 'Dior, Chanel, Tom Ford, YSL, Versace & more',
-    count:       '8 PRODUCTS',
     tagline:     'A SCENT THAT DEFINES YOU',
     image:       'https://images.unsplash.com/photo-1615634260167-c8cdede054de?w=900&q=80&fit=crop',
     link:        '/shop?category=perfumes',
+    categoryKey: 'perfumes',
   },
 ]
 
 
-function CategoryCard({ cat }) {
+function CategoryCard({ cat, count }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -85,7 +86,7 @@ function CategoryCard({ cat }) {
     marginBottom: '4px',
     textShadow: '0 1px 4px rgba(0,0,0,0.6)',
   }}>
-    {cat.count}
+    {count === null ? '\u00A0' : `${count} PRODUCT${count === 1 ? '' : 'S'}`}
   </p>
 
   <p style={{
@@ -157,6 +158,12 @@ function CategoryCard({ cat }) {
 
 
 function CategorySection() {
+  const [counts, setCounts] = useState({})
+  useEffect(()=> {
+    getFilterOptions()
+    .then((data) => setCounts(data.categoryCounts || {}))
+    .catch(() => {/* non-critical, cards just show blank count */})
+  }, [])
   return (
     <section style={{
       backgroundColor: 'var(--color-white)',
@@ -191,7 +198,8 @@ function CategorySection() {
         gap:'24px',
       }}>
         {categories.map(cat => (
-          <CategoryCard key={cat.id} cat={cat} />
+          <CategoryCard key={cat.id} cat={cat}
+          count = {counts[cat.categoryKey] ?? null} />
         ))}
       </div>
     </section>

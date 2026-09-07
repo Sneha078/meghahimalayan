@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sentry/node": "^10.71.0",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
@@ -27,6 +29,7 @@
     "mongoose": "^8.24.3",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
+    "node-cron": "^4.6.0",
     "nodemailer": "^9.0.5",
     "nodemon": "^3.1.14",
     "pdfkit": "^0.20.2",

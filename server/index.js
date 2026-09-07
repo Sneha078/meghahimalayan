@@ -21,7 +21,8 @@ import contactRoutes     from "./routes/contactRoutes.js";
 import analyticsRoutes   from "./routes/analyticsRoutes.js";
 import socialAuthRoutes  from "./routes/socialAuthRoutes.js";
 import returnRoutes      from "./routes/returnRoutes.js";
-
+import rewardRoutes from "./routes/rewards.routes.js"
+import paymentRoutes from "./routes/paymentRoutes.js"
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
 // Fail fast if critical variables are missing.
@@ -60,7 +61,7 @@ app.use(
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
 // 10 MB limit to accommodate base64-encoded image uploads sent in JSON bodies.
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "60mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── Cookie parser ─────────────────────────────────────────────────────────────
@@ -147,6 +148,8 @@ app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);
 app.use("/api/v1", socialAuthRoutes);
 app.use("/api/v1", returnRoutes);
+app.use("/api/v1", rewardRoutes)
+app.use("/api/v1",paymentRoutes)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes

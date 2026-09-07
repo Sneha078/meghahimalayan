@@ -222,10 +222,12 @@ const validateDuplicateProducts = (orderItems) => {
 };
 
 //Add a status change to the order history.
-const addStatusHistory = (order, status) => {
+const addStatusHistory = (order, status, changedBy = null, note = '') => {
   order.statusHistory.push({
     status,
     changedAt: new Date(),
+    changedBy,
+    note: note.trim().slice(0, 500),
   });
 };
 
@@ -791,7 +793,9 @@ export const cancelMyOrder =
 
           addStatusHistory(
             order,
-            "Cancelled"
+            "Cancelled",
+            req.user._id,
+            'Order cancelled by customer'
           );
 
           // Do not mark online payment as
@@ -952,7 +956,7 @@ export const getAdminSingleOrder =
 
 export const updateOrderStatus =
   handleAsyncError(async (req, res, next) => {
-    const { status } = req.body;
+    const { status, note= '' } = req.body;
 
     const validStatuses = [
       "Processing",
@@ -1110,14 +1114,17 @@ export const updateOrderStatus =
 
             addStatusHistory(
               order,
-              "Cancelled"
+              "Cancelled",
+              req.user._id,
+              'Order cancelled by admin'
             );
           } else {
             order.orderStatus = status;
 
             addStatusHistory(
               order,
-              status
+              status,
+              req.user?._id, note
             );
           }
 
@@ -1227,4 +1234,4 @@ export const deleteOrder =
       message:
         "Order deleted successfully",
     });
-  });
+  });

@@ -108,16 +108,16 @@ class TestExtractProductId:
 
 class TestDetectCategory:
     def test_watch_keywords(self):
-        assert detect_category("I need a new wristwatch") == "watch"
-        assert detect_category("looking for a chronograph") == "watch"
+        assert detect_category("I need a new wristwatch") == "watches"
+        assert detect_category("looking for a chronograph") == "watches"
 
     def test_eyeglasses_keywords(self):
         assert detect_category("need new eyeglasses") == "eyeglasses"
         assert detect_category("show me some frames") == "eyeglasses"
 
     def test_perfume_keywords(self):
-        assert detect_category("looking for a nice fragrance") == "perfume"
-        assert detect_category("show me some attar") == "perfume"
+        assert detect_category("looking for a nice fragrance") == "perfumes"
+        assert detect_category("show me some attar") == "perfumes"
 
     def test_no_category_returns_none(self):
         assert detect_category("show me something nice") is None
@@ -127,7 +127,7 @@ class TestDetectCategory:
     def test_brand_alone_does_not_trigger_eyeglasses(self):
         # Previously "brand" was an eyeglasses keyword, so a perfume
         # query mentioning "brand" was misclassified.
-        assert detect_category("recommend a good perfume brand") == "perfume"
+        assert detect_category("recommend a good perfume brand") == "perfumes"
         assert detect_category("what's a good brand for me") is None
 
     def test_round_as_substring_does_not_trigger_watch(self):
@@ -137,19 +137,19 @@ class TestDetectCategory:
         assert detect_category("plain background image") is None
 
     def test_round_dial_still_triggers_watch(self):
-        assert detect_category("looking for a round dial watch") == "watch"
+        assert detect_category("looking for a round dial watch") == "watches"
 
     def test_round_frame_still_triggers_eyeglasses(self):
         assert detect_category("I want round frame glasses") == "eyeglasses"
 
     def test_square_typo_fixed(self):
         # Previously "sqaure" (typo) meant "square" never matched.
-        assert detect_category("square watch please") == "watch"
+        assert detect_category("square watch please") == "watches"
 
     def test_watch_checked_before_eyeglasses_for_ambiguous_text(self):
         # Both categories mentioned — watch keyword list is checked
         # first, so watch should win when both appear.
-        assert detect_category("watch and glasses combo deal") == "watch"
+        assert detect_category("watch and glasses combo deal") == "watches"
 
 
 # ------------------------------------------------------------
@@ -339,7 +339,7 @@ class TestSimilar:
     def test_no_match_at_all_returns_not_found_message(self,mock_search, assistant):
         mock_search.return_value = []
 
-        result = assistant.chat("show me something like dior scent")
+        result = assistant.chat("show me products like dior scent")
 
         assert result["intent"] == "similar"
         assert result["products"] == []
@@ -351,10 +351,10 @@ class TestSimilar:
 # ------------------------------------------------------------
 
 class TestRecommend:
-    @patch("assistant.tools.get_recommendations")
+    
     def test_similar_and_recommend_equal_priority_earliest_phrase_wins(self):
         #"recommend" appears before "similar to" ->RECOMMEND wins
-        assert detect_intent("recommend something similar to W005") == RECOMMEND
+        assert detect_intent("recommend something similar to seiko") == RECOMMEND
         # "similar to " appears before "recommendations" -> SIMILAR wins
         assert detect_intent("something similar to this, any recommendations?") == SIMILAR
     
@@ -420,7 +420,7 @@ class TestFilter:
 
         result = assistant.chat("show me watches under 5000")
 
-        mock_filter.assert_called_once_with(category="watch", max_price=5000.0)
+        mock_filter.assert_called_once_with(category="watches", max_price=5000.0, color=None)
         assert result["intent"] == "filter"
         assert "watch" in result["message"].lower()
         assert "5,000" in result["message"] or "5000" in result["message"]
@@ -622,11 +622,11 @@ class TestRecommendations:
         mock_engine.get_recommendations_for_user.return_value = [{"id": "p2"}]
 
         result = tools.get_recommendations(
-            viewed_product_ids=["p1", "p2"], user_name="alice", top_k=3
+            viewed_product_ids=["p1", "p2"], user_id="alice", top_k=3
         )
 
         mock_engine.get_recommendations_for_user.assert_called_once_with(
-            viewed_product_ids=["p1", "p2"], user_name="alice", top_k=3
+            viewed_product_ids=["p1", "p2"], user_id="alice", top_k=3
         )
         mock_engine.get_similar_products.assert_not_called()
         assert result == [{"id": "p2"}]
@@ -774,12 +774,19 @@ class TestFilterProducts:
         result = tools.filter_products(
             category="watch", max_price=5000, min_price=1000, gender="Unisex"
         )
+        mock_filter.assert_called_once_with(
+            category="watch", max_price=5000, min_price=1000, gender="Unisex",
+            color=None
+        )
+        assert "occasion" not in mock_filter.call_args.kwargs
+        assert result == [{"id": "p1"}]
 
         # Regression test for the bug: previously an `occasion=None`
         # kwarg was always forwarded here, which raised TypeError since
         # product_service.filter_products() doesn't declare that param.
         mock_filter.assert_called_once_with(
-            category="watch", max_price=5000, min_price=1000, gender="Unisex"
+            category="watch", max_price=5000, min_price=1000, gender="Unisex",
+            color=None
         )
         assert "occasion" not in mock_filter.call_args.kwargs
         assert result == [{"id": "p1"}]

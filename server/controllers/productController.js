@@ -42,6 +42,28 @@ const destroyImages = async (images) => {
   }
 };
 
+const uploadMedia = async (files, resourceType = "image", folder = "products") => {
+  const links = []
+  for (const file of files) {
+    const result = await cloudinary.uploader.upload(file, {
+      folder, 
+      resource_type: resourceType,
+    })
+    links.push({ public_id: result.public_id, url: result.secure_url})
+  }
+  return links
+}
+
+const destroyMedia = async (DataTransferItemList, resourceType = "image") => {
+  for (const item of items) {
+    if (item.public_id ) {
+      await cloudinary.uploader.destroy(item.public_id, {
+        resource_type: resourceType,
+      })
+    }
+  }
+}
+
 //Get all products
 // GET /api/v1/products
 // Supports: keyword, category, brand, gender, minPrice, maxPrice,
@@ -108,14 +130,20 @@ export const getSingleProduct = handleAsyncError(async (req, res, next) => {
 
 //public-getFilterOptions(used for filter sidebar)
 // GET /api/v1/filters
+// GET /api/v1/filters?category=eyeglasses
 // Returns distinct categories, brands, genders, subcategories + price range parallely
+// When a category is passed, brand/subcategory/gender are scoped to that
+// category only — "categories" itself always stays global so the tab list
+// never shrinks when you're already filtered into one category.
 export const getFilterOptions = handleAsyncError(async (req, res, next) => {
+  const categoryFilter = req.query.category ? { category: req.query.category } : {};
+
   //promise allow multiple independent database queries to run together in parallel
   const [categories, brands, subcategories, genders] = await Promise.all([
     Product.distinct("category"),
-    Product.distinct("brand"),
-    Product.distinct("subcategory"),
-    Product.distinct("gender"),
+    Product.distinct("brand", categoryFilter),
+    Product.distinct("subcategory", categoryFilter),
+    Product.distinct("gender", categoryFilter),
   ]);
 
   //aggregation helps to find lowest price and highest price from db
@@ -133,9 +161,20 @@ export const getFilterOptions = handleAsyncError(async (req, res, next) => {
     ? { min: priceAgg[0].min, max: priceAgg[0].max }
     : { min: 0, max: 0 };
 
+    //NEW: count products per category
+    const categoryCountsAgg = await Product.aggregate([
+      { $group: {_id: "$category", count: {$sum: 1}}},
+    ])
+
+    const categoryCounts = categoryCountsAgg.reduce((acc, c) =>{
+      acc[c._id] = c.count
+      return acc
+    }, {})
+
   res.status(200).json({
     success: true,
     categories,
+    categoryCounts,
     brands,
     subcategories: subcategories.filter(Boolean),
     genders,
@@ -176,7 +215,7 @@ export const getProductReviews = handleAsyncError(async (req, res, next) => {
 
 export const createOrUpdateReview = handleAsyncError(
   async (req, res, next) => {
-    const { rating, comment, productId } = req.body;
+    const { rating, comment, productId, images, videos } = req.body;
 
     if (!productId || !rating || !comment) {
       return next(
@@ -200,6 +239,15 @@ export const createOrUpdateReview = handleAsyncError(
       return next(new HandleError("Product not found", 404));
     }
 
+    let imageLinks;
+    let videoLinks;
+    if (Array.isArray(images) && images.length > 0) {
+      imageLinks = await uploadMedia(images, "image", "reviews/images")
+    }
+    if (Array.isArray(videos) && videos.length > 0){
+      videoLinks = await uploadMedia(videos, "video", "reviews/videos")
+    }
+
     //check if review has already been created
     const existingIndex = product.reviews.findIndex(
       (r) => r.user.toString() === req.user._id.toString()
@@ -207,14 +255,26 @@ export const createOrUpdateReview = handleAsyncError(
 
     //if there is exiting review it donot create new review but uodate it
     if (existingIndex >= 0) {
-      product.reviews[existingIndex].rating = Number(rating);
-      product.reviews[existingIndex].comment = comment;
+      const existing = product.reviews[existingIndex];
+      existing.rating = Number(rating)
+      existing.comment = comment
+
+      if (imageLinks) {
+        await destroyMedia(existing.images || [], "image")
+        existing.images = imageLinks
+      }
+      if (videoLinks) {
+        await destroyMedia(existing.videos || [], "video")
+        existing.videos = videoLinks
+      }
     } else {
       product.reviews.push({
         user: req.user._id,
         name: req.user.name,
         rating: Number(rating),
         comment,
+        images: imageLinks || [],
+        videos: videoLinks || []
       });
     }
 
@@ -413,6 +473,8 @@ export const deleteReview = handleAsyncError(async (req, res, next) => {
       )
     );
   }
+  await destroyMedia(review.images || [], "image")
+  await destroyMedia(review.videos || [], "video")
 
   product.reviews = product.reviews.filter(
     (r) => r._id.toString() !== req.query.id

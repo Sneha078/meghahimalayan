@@ -237,6 +237,7 @@ const orderSchema = new mongoose.Schema(
 
       default: "Processing",
       index: true,
+      index: true,
     },
 
     // Complete order status audit trail
@@ -276,6 +277,7 @@ const orderSchema = new mongoose.Schema(
             "eSewa",
             "Khalti",
             "Card",
+            "Bank Transfer",
             "Other",
           ],
 
@@ -287,12 +289,14 @@ const orderSchema = new mongoose.Schema(
 
       // IMPORTANT:
       // "Partially Refunded" is required by returnController.js
+      // "Pending Verification" added for manual bank transfer review flow
       status: {
         type: String,
 
         enum: {
           values: [
             "Pending",
+            "Pending Verification",
             "Paid",
             "Failed",
             "Partially Refunded",
