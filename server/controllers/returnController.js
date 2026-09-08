@@ -3,9 +3,15 @@ import mongoose from "mongoose";
 import Return from "../models/returnModel.js";
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
+import User from "../models/userModel.js";
 
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
+
+import {
+  sendReturnStatusEmail,
+  sendAdminNewReturnEmail,
+} from "../services/emailService.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -89,6 +95,127 @@ const ALLOWED_TRANSITIONS = {
   "Item Received": ["Item Received", "Completed"],
   Completed: [],
   Expired: [],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMAIL DISPATCH HELPERS
+// Note: emails are fire-and-forget and must
+// never block or fail the API response.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Statuses that trigger a customer email.
+const RETURN_EMAIL_STATUSES = [
+  "Approved",
+  "Rejected",
+  "Item Received",
+  "Completed",
+];
+
+const getReturnCustomer = async (returnDoc) => {
+  try {
+    return await User.findById(
+      returnDoc.user
+    )
+      .select("name email phone")
+      .lean();
+  } catch (err) {
+    console.error(
+      `Failed to load customer for return ${returnDoc.returnNumber}:`,
+      err?.message || err
+    );
+
+    return null;
+  }
+};
+
+// Sends the customer email for a status change.
+const dispatchReturnStatusEmail = async (
+  returnDoc,
+  status
+) => {
+  if (!RETURN_EMAIL_STATUSES.includes(status)) {
+    return;
+  }
+
+  const customer =
+    await getReturnCustomer(returnDoc);
+
+  if (!customer?.email) {
+    console.error(
+      `Customer email missing for return status: ${returnDoc.returnNumber}`
+    );
+
+    return;
+  }
+
+  try {
+    await sendReturnStatusEmail(
+      returnDoc,
+      customer,
+      status
+    );
+  } catch (err) {
+    console.error(
+      `Return status email failed for ${returnDoc.returnNumber} (${status}):`,
+      err?.message || err
+    );
+  }
+};
+
+// Sends the customer refund-processed email.
+const dispatchRefundProcessedEmail = async (
+  returnDoc
+) => {
+  if (
+    returnDoc.refundStatus !==
+    "Succeeded"
+  ) {
+    return;
+  }
+
+  const customer =
+    await getReturnCustomer(returnDoc);
+
+  if (!customer?.email) {
+    console.error(
+      `Customer email missing for refund notification: ${returnDoc.returnNumber}`
+    );
+
+    return;
+  }
+
+  try {
+    await sendReturnStatusEmail(
+      returnDoc,
+      customer,
+      "Refunded"
+    );
+  } catch (err) {
+    console.error(
+      `Refund email failed for ${returnDoc.returnNumber}:`,
+      err?.message || err
+    );
+  }
+};
+
+// Alerts all active admins about a new return request.
+const dispatchAdminNewReturnEmail = async (
+  returnDoc
+) => {
+  const customer =
+    await getReturnCustomer(returnDoc);
+
+  try {
+    await sendAdminNewReturnEmail(
+      returnDoc,
+      customer
+    );
+  } catch (err) {
+    console.error(
+      `Admin new-return email failed for ${returnDoc.returnNumber}:`,
+      err?.message || err
+    );
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -788,6 +915,16 @@ export const createReturnRequest = handleAsyncError(
         returnDoc = created[0];
       });
 
+      /*
+       * MongoDB transaction has committed.
+       *
+       * Alert active admin accounts about
+       * the new return request.
+       */
+      void dispatchAdminNewReturnEmail(
+        returnDoc
+      );
+
       return res.status(201).json({
         success: true,
         message:
@@ -1291,6 +1428,7 @@ export const updateReturn =
 
       try {
         let updatedReturn;
+        let previousReturnStatus;
 
         await session.withTransaction(
           async () => {
@@ -1311,6 +1449,9 @@ export const updateReturn =
 
             const currentStatus =
               returnDoc.status;
+
+            previousReturnStatus =
+              currentStatus;
 
             const allowed =
               ALLOWED_TRANSITIONS[
@@ -1832,6 +1973,23 @@ export const updateReturn =
           }
         );
 
+        /*
+         * MongoDB transaction has committed.
+         *
+         * Only send the customer email when
+         * there was actually a status
+         * transition.
+         */
+        if (
+          previousReturnStatus !==
+          updatedReturn.status
+        ) {
+          void dispatchReturnStatusEmail(
+            updatedReturn,
+            updatedReturn.status
+          );
+        }
+
         return res.status(200).json({
           success: true,
           message:
@@ -2290,6 +2448,21 @@ export const processRefund =
             });
           }
         );
+
+        /*
+         * MongoDB transaction has committed.
+         *
+         * Notify the customer that their
+         * refund has been processed.
+         */
+        if (
+          updatedReturn.refundStatus ===
+          "Succeeded"
+        ) {
+          void dispatchRefundProcessedEmail(
+            updatedReturn
+          );
+        }
 
         return res.status(200).json({
           success: true,

@@ -1,29 +1,39 @@
-import nodemailer from "nodemailer";
+import transporter, { EMAIL_FROM } from "../config/email.js";
+/*
+ * Generic email sender.
+ *
+ * This file knows HOW to send an email.
+ * It does not know WHY the email is being sent.
+ */
+const sendEmail = async ({
+  email,
+  subject,
+  text,
+  html,
+}) => {
+  if (!email) {
+    throw new Error("Recipient email is required");
+  }
 
-// Sends an email via Gmail (or any nodemailer-compatible SMTP provider).
-// For Gmail you need an App Password — not your regular account password.
-// Generate one at: https://myaccount.google.com/apppasswords
-//
-// options: { email, subject, message }
+  if (!subject) {
+    throw new Error("Email subject is required");
+  }
 
-const sendEmail = async (options) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
+  if (!text && !html) {
+    throw new Error(
+      "Email must contain text or HTML content"
+    );
+  }
+
+  const info = await transporter.sendMail({
+    from: `"Mega Himalaya" <${EMAIL_FROM}>`,
+    to: email,
+    subject,
+    text,
+    html,
   });
 
-  const mailOptions = {
-    from: `"Mega Himalaya" <${process.env.EMAIL_USER}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    // html: options.html,   // uncomment when you have an HTML template
-  };
-
-  await transporter.sendMail(mailOptions);
+  return info;
 };
 
 export default sendEmail;

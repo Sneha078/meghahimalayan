@@ -4,8 +4,12 @@ import Product from "../models/productModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
 import { sendToken } from "../utils/jwtToken.js";
-import sendEmail from "../utils/sendEmail.js";
 import cloudinary from "../config/cloudinary.js";
+
+import {
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+} from "../services/emailService.js";
 
 // Authentication
 
@@ -29,6 +33,11 @@ export const registerUser = handleAsyncError(async (req, res, next) => {
     password,
     phone: phone || "",
   });
+
+  // Welcome email (fire-and-forget — never blocks registration)
+  sendWelcomeEmail(user).catch((err) =>
+    console.error(`Welcome email failed for ${user.email}:`, err?.message)
+  );
 
   sendToken(user, 201, res);
 });
@@ -75,50 +84,108 @@ export const logout = handleAsyncError(async (req, res, next) => {
 // PASSWORD RESET FLOW
 //Forgot password
 // POST /api/v1/password/forgot
-export const forgotPassword = handleAsyncError(async (req, res, next) => {
-  const { email } = req.body;
+export const forgotPassword = handleAsyncError(
+  async (req, res, next) => {
+    const { email } = req.body;
 
-  if (!email) {
-    return next(new HandleError("Please provide your email address", 400));
-  }
+    if (!email) {
+      return next(
+        new HandleError(
+          "Please provide your email address",
+          400
+        )
+      );
+    }
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    // Return success even when email not found — prevents user enumeration
-    return res.status(200).json({
-      success: true,
-      message: "If an account with that email exists, a reset link has been sent",
-    });
-  }
+    const normalizedEmail =
+      String(email).trim().toLowerCase();
 
-  const resetToken = user.generatePasswordResetToken();
-  await user.save({ validateBeforeSave: false });
-
-  // Link goes to the frontend reset page which calls PUT /api/v1/password/reset/:token
-  const resetURL = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
-
-  const message = `You requested a password reset for your Mega Himalaya account.\n\nClick the link below to reset your password:\n\n${resetURL}\n\nThis link expires in 30 minutes.\n\nIf you did not request this, please ignore this email.`;
-
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Mega Himalaya — Password Reset Request",
-      message,
+    const user = await User.findOne({
+      email: normalizedEmail,
+      isDeleted: false,
+      isActive: true,
     });
 
-    res.status(200).json({
-      success: true,
-      message: `Password reset link sent to ${user.email}`,
-    });
-  } catch (err) {
-    // Roll back token fields if email failed so user can try again
-    user.resetPasswordToken = null;
-    user.resetPasswordExpire = null;
-    await user.save({ validateBeforeSave: false });
+    /*
+     * Always return the same response when
+     * the account does not exist.
+     *
+     * This prevents email enumeration.
+     */
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a reset link has been sent",
+      });
+    }
 
-    return next(new HandleError("Email could not be sent. Please try again later", 500));
+    const resetToken =
+      user.generatePasswordResetToken();
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    const frontendUrl =
+      process.env.FRONTEND_URL;
+
+    if (!frontendUrl) {
+      user.resetPasswordToken = null;
+      user.resetPasswordExpire = null;
+
+      await user.save({
+        validateBeforeSave: false,
+      });
+
+      return next(
+        new HandleError(
+          "Password reset service is not configured",
+          500
+        )
+      );
+    }
+
+    const resetURL =
+      `${frontendUrl}/password/reset/${resetToken}`;
+
+    try {
+      await sendPasswordResetEmail(
+        user,
+        resetURL
+      );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a reset link has been sent",
+      });
+    } catch (err) {
+      /*
+       * Roll back reset token if email delivery failed.
+       * This allows the user to request another reset.
+       */
+      user.resetPasswordToken = null;
+      user.resetPasswordExpire = null;
+
+      await user.save({
+        validateBeforeSave: false,
+      });
+
+      console.error(
+        "Password reset email failed:",
+        err?.message
+      );
+
+      return next(
+        new HandleError(
+          "Email could not be sent. Please try again later",
+          500
+        )
+      );
+    }
   }
-});
+);
 
 //Reset password
 // PUT /api/v1/password/reset/:token
