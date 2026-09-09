@@ -11,6 +11,8 @@ import {
   sendPasswordResetEmail,
 } from "../services/emailService.js";
 
+import { notifyAdmins } from "../services/notificationService.js";
+
 // Authentication
 
 //Register user
@@ -38,6 +40,17 @@ export const registerUser = handleAsyncError(async (req, res, next) => {
   sendWelcomeEmail(user).catch((err) =>
     console.error(`Welcome email failed for ${user.email}:`, err?.message)
   );
+
+  void notifyAdmins({
+    type: "USER",
+    title: "New User Registered",
+    message: `${user.name} joined as a new customer`,
+    data: {
+      userId: user._id,
+      userName: user.name,
+      email: user.email,
+    },
+  });
 
   sendToken(user, 201, res);
 });

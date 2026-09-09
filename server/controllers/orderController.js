@@ -16,6 +16,8 @@ import {
   sendOrderCancelledEmail,
 } from "../services/emailService.js";
 
+import { notifyAdmins } from "../services/notificationService.js";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -920,6 +922,17 @@ export const createNewOrder =
           createdOrder
         );
 
+        void notifyAdmins({
+          type: "ORDER",
+          title: "New Order Received",
+          message: `${createdOrder.orderNumber} — NPR ${createdOrder.totalPrice}`,
+          data: {
+            orderId: createdOrder._id,
+            orderNumber: createdOrder.orderNumber,
+            totalAmount: createdOrder.totalPrice,
+          },
+        });
+
         return res.status(201).json({
           success: true,
           order: createdOrder,
@@ -1195,6 +1208,16 @@ export const cancelMyOrder =
         void dispatchOrderCancelledEmail(
           cancelledOrder
         );
+
+        void notifyAdmins({
+          type: "ORDER",
+          title: "Order Cancelled by Customer",
+          message: `${cancelledOrder.orderNumber} was cancelled by the customer`,
+          data: {
+            orderId: cancelledOrder._id,
+            orderNumber: cancelledOrder.orderNumber,
+          },
+        });
 
         return res.status(200).json({
           success: true,
@@ -1658,6 +1681,18 @@ export const updateOrderStatus =
               updatedOrder.orderStatus
             );
           }
+
+          void notifyAdmins({
+            type: "ORDER",
+            title: "Order Status Updated",
+            message: `${updatedOrder.orderNumber} — ${previousStatus} → ${updatedOrder.orderStatus}`,
+            data: {
+              orderId: updatedOrder._id,
+              orderNumber: updatedOrder.orderNumber,
+              previousStatus,
+              newStatus: updatedOrder.orderStatus,
+            },
+          });
         }
 
         return res.status(200).json({

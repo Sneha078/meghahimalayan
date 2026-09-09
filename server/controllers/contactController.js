@@ -1,6 +1,7 @@
 import ContactMessage from "../models/contactModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
+import { notifyAdmins } from "../services/notificationService.js";
 
 
 // PUBLIC API 
@@ -23,6 +24,18 @@ export const createContactMessage = handleAsyncError(async (req, res, next) => {
     message,
     // Link to the authenticated user if they are logged in
     user: req.user ? req.user._id : null,
+  });
+
+  void notifyAdmins({
+    type: "MESSAGE",
+    title: "New Contact Message",
+    message: `${contact.name} — ${contact.subject}`,
+    data: {
+      messageId: contact._id,
+      senderName: contact.name,
+      subject: contact.subject,
+      email: contact.email,
+    },
   });
 
   res.status(201).json({

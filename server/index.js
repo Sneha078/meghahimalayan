@@ -1,4 +1,5 @@
 import "dotenv/config";                        // must be first — loads .env before anything else
+import { createServer } from "http";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -9,18 +10,20 @@ import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
 import HandleError from "./utils/handleError.js";
 import errorMiddleware from "./middleware/error.js";
+import { initSocket } from "./socket/socket.js";
 
 // ── Route imports ─────────────────────────────────────────────────────────────
-import userRoutes        from "./routes/userRoutes.js";
-import productRoutes     from "./routes/productRoutes.js";
-import orderRoutes       from "./routes/orderRoutes.js";
-import invoiceRoutes     from "./routes/invoiceRoutes.js";
-import cartRoutes        from "./routes/cartRoutes.js";
-import couponRoutes      from "./routes/couponRoutes.js";
-import contactRoutes     from "./routes/contactRoutes.js";
-import analyticsRoutes   from "./routes/analyticsRoutes.js";
-import socialAuthRoutes  from "./routes/socialAuthRoutes.js";
-import returnRoutes      from "./routes/returnRoutes.js";
+import userRoutes         from "./routes/userRoutes.js";
+import productRoutes      from "./routes/productRoutes.js";
+import orderRoutes        from "./routes/orderRoutes.js";
+import invoiceRoutes      from "./routes/invoiceRoutes.js";
+import cartRoutes         from "./routes/cartRoutes.js";
+import couponRoutes       from "./routes/couponRoutes.js";
+import contactRoutes      from "./routes/contactRoutes.js";
+import analyticsRoutes    from "./routes/analyticsRoutes.js";
+import socialAuthRoutes   from "./routes/socialAuthRoutes.js";
+import returnRoutes       from "./routes/returnRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
@@ -147,6 +150,7 @@ app.use("/api/v1", contactRoutes);
 app.use("/api/v1", analyticsRoutes);
 app.use("/api/v1", socialAuthRoutes);
 app.use("/api/v1", returnRoutes);
+app.use("/api/v1", notificationRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes
@@ -169,7 +173,10 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    const server = app.listen(PORT, () => {
+    const httpServer = createServer(app);
+    initSocket(httpServer);
+
+    const server = httpServer.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
 

@@ -13,6 +13,8 @@ import {
   sendAdminNewReturnEmail,
 } from "../services/emailService.js";
 
+import { notifyAdmins } from "../services/notificationService.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ─────────────────────────────────────────────────────────────────────────────
@@ -924,6 +926,17 @@ export const createReturnRequest = handleAsyncError(
       void dispatchAdminNewReturnEmail(
         returnDoc
       );
+
+      void notifyAdmins({
+        type: "RETURN",
+        title: "New Return Request",
+        message: `${returnDoc.returnNumber} — NPR ${returnDoc.refund.requestedAmount}`,
+        data: {
+          returnId: returnDoc._id,
+          returnNumber: returnDoc.returnNumber,
+          requestedAmount: returnDoc.refund.requestedAmount,
+        },
+      });
 
       return res.status(201).json({
         success: true,
