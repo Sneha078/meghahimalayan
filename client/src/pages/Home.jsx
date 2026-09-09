@@ -11,12 +11,14 @@ import Testimonials from '../components/Testimonials'
 import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
 import SplitVideoSection from '../components/SplitVideoSection'
 
-
 function Home() {
   return (
     <main>
       <SplitVideoSection />
       <StatsBar />
+      <CategorySection />
+      <FeaturedCollection />
+      <OffersBanner />
       <NewArrivals />
       <RecommendedForYou />
       <BestSellers />
