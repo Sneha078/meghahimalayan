@@ -1,8 +1,8 @@
 const stats = [
   { id: 1, number: 'Est. 2001', label: 'Serving Pokhara' },
   { id: 2, number: '20+', label: 'Premium Brands' },
-  { id: 3, number: '5,000+', label: 'Happy Customers' },
-  { id: 4, number: '50,000+', label: 'Eyeglasses Sold' },
+  { id: 3, number: '5,00+', label: 'Happy Customers' },
+  { id: 4, number: '10,00+', label: 'Eyeglasses Sold' },
 ]
 
 function StatsBar() {
