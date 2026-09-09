@@ -7,7 +7,7 @@ import SentimentSummary from '../components/SentimentSummary'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { trackProductView } from '../utils/recentlyViewed'
-import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
+
 // ── Upload limits ────────────────────────────────────────────────────────────
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5MB
@@ -837,7 +837,6 @@ function ProductDetail() {
         </div>
       </div>
 
-      <FloatingAssistant />
     </div>
   )
 }

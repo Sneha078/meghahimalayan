@@ -60,6 +60,7 @@ function OurStory() {
 
           <p style={{
             color: 'var(--color-taupe)',
+            fontWeight: 'bold',
             fontSize: '0.95rem',
             lineHeight: '1.8',
             fontStyle: 'italic',

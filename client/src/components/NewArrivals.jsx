@@ -1,18 +1,13 @@
 import { useRef } from 'react'
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation } from 'swiper/modules'
 import { useProducts } from '../hooks/useProducts'
 import ProductCard from './ProductCard'
 
 function NewArrivals() {
-  const prevRef = useRef(null)
-  const nextRef = useRef(null)
-
-  // Ask the backend to filter server-side (new=true) instead of fetching
-  // a partial page and filtering in JS — getAllProducts defaults to only
-  // 12 results/page, so client-side filtering would silently miss most
-  // of the catalog otherwise.
+  const scrollRef = useRef(null)
   const { products: newProducts, loading, error } = useProducts({ new: true, limit: 8 })
+
+  const scrollBy = (amount) =>
+    scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
 
   return (
     <section style={{
@@ -52,7 +47,8 @@ function NewArrivals() {
         {/* Arrow Buttons */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            ref={prevRef}
+            onClick={() => scrollBy(-260)}
+            aria-label="Scroll left"
             style={{
               width: '44px',
               height: '44px',
@@ -79,7 +75,8 @@ function NewArrivals() {
             ←
           </button>
           <button
-            ref={nextRef}
+            onClick={() => scrollBy(260)}
+            aria-label="Scroll right"
             style={{
               width: '44px',
               height: '44px',
@@ -110,7 +107,14 @@ function NewArrivals() {
 
       {/* Loading / error states */}
       {loading && (
-        <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>Loading new arrivals…</p>
+        <div style={{ display: 'flex', gap: '16px', overflow: 'hidden' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{
+              minWidth: '220px', height: '340px',
+              borderRadius: '12px', background: '#e5e7eb', flexShrink: 0,
+            }} />
+          ))}
+        </div>
       )}
       {error && (
         <p style={{ color: '#e74c3c' }}>Couldn't load products: {error}</p>
@@ -119,35 +123,48 @@ function NewArrivals() {
         <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>No new arrivals right now.</p>
       )}
 
-      {/* Swiper */}
+      {/* Scrollable product row */}
       {!loading && !error && newProducts.length > 0 && (
-        <Swiper
-          modules={[Navigation]}
-          navigation={{
-            prevEl: prevRef.current,
-            nextEl: nextRef.current,
+        <div
+          ref={scrollRef}
+          style={{
+            display: 'flex',
+            gap: '20px',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            paddingBottom: '4px',
+            scrollbarWidth: 'none',
+            cursor: 'grab',
           }}
-          onBeforeInit={(swiper) => {
-            swiper.params.navigation.prevEl = prevRef.current
-            swiper.params.navigation.nextEl = nextRef.current
+          onMouseDown={(e) => {
+            const el = scrollRef.current
+            if (!el) return
+            el.style.cursor = 'grabbing'
+            const startX = e.pageX - el.offsetLeft
+            const scrollLeft = el.scrollLeft
+
+            const onMove = (ev) => {
+              const x = ev.pageX - el.offsetLeft
+              el.scrollLeft = scrollLeft - (x - startX)
+            }
+            const onUp = () => {
+              el.style.cursor = 'grab'
+              window.removeEventListener('mousemove', onMove)
+              window.removeEventListener('mouseup', onUp)
+            }
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
           }}
-          slidesPerView={4}
-          spaceBetween={20}
-          grabCursor={true}
-          breakpoints={{
-            0: { slidesPerView: 1, spaceBetween: 12 },
-            640: { slidesPerView: 2, spaceBetween: 16 },
-            1024: { slidesPerView: 3, spaceBetween: 20 },
-            1280: { slidesPerView: 4, spaceBetween: 20 },
-          }}
-          style={{ width: '100%' }}
         >
           {newProducts.map((product) => (
-            <SwiperSlide key={product._id} style={{ height: 'auto' }}>
+            <div
+              key={product._id}
+              style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start', flexShrink: 0 }}
+            >
               <ProductCard product={product} />
-            </SwiperSlide>
+            </div>
           ))}
-        </Swiper>
+        </div>
       )}
 
     </section>

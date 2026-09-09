@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
 import { getFilterOptions } from '../api/productClient'
 import ProductCard from '../components/ProductCard'
-import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
+
 
 const SORT_OPTIONS = [
   { value: 'featured',   label: 'Featured' },
@@ -532,7 +532,6 @@ function Shop() {
 
         </div>
       </div>
-      <FloatingAssistant />
     </div>
   )
 }

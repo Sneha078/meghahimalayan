@@ -224,12 +224,24 @@ function Footer() {
           </ul>
 
       
-          <div style={{
-            marginTop:'2rem',
-            padding: '1rem',
-            border: '1px solid rgba(165,152,135,0.25)',
-            textAlign:  'center',
-          }}>
+          <div
+            style={{
+              marginTop:'2rem',
+              padding: '1rem',
+              border: '1px solid rgba(165,152,135,0.25)',
+              textAlign:  'center',
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+              cursor: 'default',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)'
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
+          >
             <p style={{
               fontFamily:'var(--font-serif)',
               color: 'var(--color-taupe)',
@@ -262,10 +274,10 @@ function Footer() {
         gap:'1rem',
       }}>
         {[
-          { icon: '🔒', text: 'Secure Payments' },
-          { icon: '🚚', text: 'Free Shipping Over Rs.5k' },
-          { icon: '✅', text: 'Genuine Products' },
-          { icon: '🎁', text: 'Daily Discounts' },
+          {  text: 'Secure Payments' },
+          {  text: 'Free Shipping Over Rs.5k' },
+          {  text: 'Genuine Products' },
+          {  text: 'Daily Discounts' },
         ].map(item => (
           <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>

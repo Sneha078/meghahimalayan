@@ -28,6 +28,8 @@ const features = [
     icon: '✅',
     title: 'Genuine Products',
     description: 'Only authentic international brand eyewear, watches and perfumes',
+    fontSize: 600,
+    
   },
 ]
 
@@ -38,7 +40,7 @@ function WhyChooseUs() {
      
       <div style={{ textAlign: 'center', marginBottom: '56px' }}>
         <p style={{
-          color: 'var(--color-taupe)',
+          color: 'var(--color-black)',
           fontSize: '0.85rem',
           fontWeight:'800',
           letterSpacing: '0.2em',
