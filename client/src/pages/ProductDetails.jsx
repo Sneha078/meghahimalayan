@@ -7,6 +7,7 @@ import SentimentSummary from '../components/SentimentSummary'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { trackProductView } from '../utils/recentlyViewed'
+import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
 // ── Upload limits ────────────────────────────────────────────────────────────
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5MB
@@ -476,6 +477,36 @@ function ProductDetail() {
             </button>
 
             <button
+              disabled={product.isOutOfStock}
+              onClick={() => {
+                addItem(product)
+                navigate('/checkout')
+              }}
+              style={{
+                flex: 1,
+                padding: '14px 24px',
+                backgroundColor: product.isOutOfStock ? '#e5e7eb' : 'var(--color-taupe)',
+                color: product.isOutOfStock ? '#9ca3af' : 'var(--color-navy)',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                cursor: product.isOutOfStock ? 'not-allowed' : 'pointer',
+                transition: 'opacity 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => { if (!product.isOutOfStock) e.currentTarget.style.opacity = '0.85' }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+            >
+              Buy Now
+            </button>
+
+            <button
               onClick={async () => {
                 if (!user) { navigate('/login'); return }
                 await toggleWishlist(product)
@@ -806,6 +837,7 @@ function ProductDetail() {
         </div>
       </div>
 
+      <FloatingAssistant />
     </div>
   )
 }
