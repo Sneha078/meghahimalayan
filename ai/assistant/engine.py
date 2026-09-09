@@ -8,14 +8,16 @@ the existing AI services:
     Semantic Search
     VADER Sentiment Analysis
 
-
 No Ollama, Anthropic, OpenAI, or other paid LLM is required.
 """
+
+import re
 
 from assistant.intent import (
     detect_intent,
     extract_price,
     extract_product_id,
+    extract_color,
     detect_category,
     SEARCH,
     RECOMMEND,
@@ -57,6 +59,22 @@ def _resolve_product_id(message: str) -> str | None:
         return candidates[0].get("id")
 
     return None
+
+
+_VAGUE_CHEAP_WORDS = {"cheap", "affordable", "budget", "inexpensive"}
+
+
+def _is_price_conscious(message: str) -> bool:
+    """Return True if the message implies sorting cheap-first."""
+    msg = message.lower()
+    return (
+        any(w in msg for w in _VAGUE_CHEAP_WORDS)
+        or extract_price(message) is not None
+    )
+
+
+def _sort_by_price(products: list[dict]) -> list[dict]:
+    return sorted(products, key=lambda p: p.get("price") or 0)
 
 
 class ShoppingAssistant:
@@ -109,7 +127,7 @@ class ShoppingAssistant:
 
                 if not product_id:
                     return {
-                        "message": "Please provide a product ID.",
+                        "message": "Please specify a product ID.",
                         "intent": intent,
                         "products": [],
                     }
@@ -164,16 +182,49 @@ class ShoppingAssistant:
             if intent == RECOMMEND:
 
                 product_id = extract_product_id(message)
+                category   = detect_category(message)
+                max_price  = extract_price(message)
+                color      = extract_color(message)
+
+                # If the user mentioned a category, price, or colour
+                # alongside "suggest/recommend", honour those constraints
+                # first. The generic hybrid recommender has no awareness
+                # of request context.
+                if category or max_price or color:
+                    products = tools.filter_products(
+                        category=category,
+                        max_price=max_price,
+                        color=color,
+                    )
+                    # Sort cheapest-first when the user asked for cheap/affordable
+                    if _is_price_conscious(message):
+                        products = _sort_by_price(products)
+                    products = products[:5]
+
+                    parts = []
+                    if color:
+                        parts.append(color.lower())
+                    if category:
+                        parts.append(category)
+                    label = " ".join(parts) if parts else "products"
+
+                    if max_price:
+                        title = f"Here are some {label} under Rs. {max_price:,.0f}:"
+                    else:
+                        title = f"Here are some {label} you might like:"
+
+                    return {
+                        "message": format_product_list(products, title=title),
+                        "intent": intent,
+                        "products": products,
+                    }
 
                 if product_id:
-
                     products = tools.get_recommendations(
                         product_id=product_id,
                         top_k=5,
                     )
-
                 else:
-
                     products = tools.get_recommendations(
                         viewed_product_ids=[],
                         top_k=5,
@@ -191,20 +242,37 @@ class ShoppingAssistant:
 
             if intent == REVIEW:
 
-                # Same fallback as SIMILAR: allow "reviews for dior
-                # scent" without requiring an exact product ID.
-                product_id = _resolve_product_id(message)
+                product_id = extract_product_id(message)
 
+                # Check if explicit product ID is missing
                 if not product_id:
-                    return {
-                        "message": (
-                            "I couldn't find a product matching that. "
-                            "Try naming the product, or provide a "
-                            "product ID, for example P006."
-                        ),
-                        "intent": intent,
-                        "products": [],
-                    }
+                    # Only attempt name-based resolution when the message
+                    # likely contains a real product name rather than a
+                    # bare pronoun reference ("what do people say about it?").
+                    # Pronoun-only queries should prompt the user for a
+                    # product ID instead of returning a spurious match.
+                    _PRONOUN_ONLY_RE = re.compile(
+                        r"\b(it|this|that|them|these|those)\b\s*[?!.]*$",
+                        re.IGNORECASE,
+                    )
+                    if _PRONOUN_ONLY_RE.search(message.strip()):
+                        return {
+                            "message": (
+                                "Please specify a product ID to check reviews."
+                            ),
+                            "intent": intent,
+                            "products": [],
+                        }
+                    resolved_id = _resolve_product_id(message)
+                    if not resolved_id:
+                        return {
+                            "message": (
+                                "Please specify a product ID to check reviews."
+                            ),
+                            "intent": intent,
+                            "products": [],
+                        }
+                    product_id = resolved_id
 
                 review_data = tools.analyze_product_reviews(
                     product_id
@@ -224,23 +292,40 @@ class ShoppingAssistant:
             if intent == FILTER:
 
                 max_price = extract_price(message)
-                category = detect_category(message)
+                category  = detect_category(message)
+                color     = extract_color(message)
+
+                # "cheap" / "affordable" / "budget" trigger FILTER but
+                # contain no numeric price. Apply a reasonable ceiling so
+                # the query isn't completely unfiltered.
+                if max_price is None and any(w in message.lower() for w in _VAGUE_CHEAP_WORDS):
+                    max_price = 10000  # Rs. 10,000 default ceiling
 
                 products = tools.filter_products(
                     category=category,
                     max_price=max_price,
+                    color=color,
                 )
+
+                # Sort cheapest-first when the user asked for cheap/affordable
+                # or specified a max price (implies budget consciousness)
+                if _is_price_conscious(message):
+                    products = _sort_by_price(products)
 
                 products = products[:5]
 
+                # Build a descriptive title
+                parts = []
+                if color:
+                    parts.append(color.lower())
+                if category:
+                    parts.append(category)
+                label = " ".join(parts) if parts else "products"
+
                 if max_price:
-                    title = (
-                        f"Here are some products"
-                        f"{' in the ' + category + ' category' if category else ''}"
-                        f" under Rs. {max_price:,.0f}:"
-                    )
+                    title = f"Here are some {label} under Rs. {max_price:,.0f}:"
                 else:
-                    title = "Here are some products matching your filters:"
+                    title = f"Here are some {label} matching your filters:"
 
                 return {
                     "message": format_product_list(

@@ -1,106 +1,167 @@
-﻿import { useState, useMemo } from 'react'
-import products from '../data/products'
+﻿import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useProducts } from '../hooks/useProducts'
+import { getFilterOptions } from '../api/productClient'
 import ProductCard from '../components/ProductCard'
 
-const CATEGORIES = [
-  { value: 'all', label: 'All Products' },
-  { value: 'eyeglasses', label: 'Eyeglasses' },
-  { value: 'sunglasses', label: 'Sunglasses' },
-  { value: 'watches', label: 'Watches' },
-  { value: 'perfumes', label: 'Perfumes' },
-  { value: 'prescription', label: 'Prescription' },
-]
-
-const BRANDS = ['Ray-Ban', 'Gucci', 'Prada', 'Oakley', 'Titan', 'Fastrack', 'Dior', 'Chanel', 'Tom Ford', 'YSL', 'Versace', 'Carolina Herrera']
-
-const GENDERS = [
-  { value: 'all', label: 'All' },
-  { value: 'men', label: 'Men' },
-  { value: 'women', label: 'Women' },
-  { value: 'unisex', label: 'Unisex' },
-]
 
 const SORT_OPTIONS = [
-  { value: 'featured', label: 'Featured' },
-  { value: 'newest', label: 'Newest' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'rating', label: 'Best Rated' },
-  { value: 'bestselling', label: 'Best Selling' },
+  { value: 'featured',   label: 'Featured' },
+  { value: '-createdAt', label: 'Newest' },
+  { value: 'price',      label: 'Price: Low to High' },
+  { value: '-price',     label: 'Price: High to Low' },
+  { value: '-ratings',   label: 'Best Rated' },
+  { value: '-isBestSeller', label: 'Best Selling' },
+]
+
+const PRICE_RANGES = [
+  { label: 'All Prices',        min: 0,     max: undefined },
+  { label: 'Under Rs 10,000',   min: 0,     max: 10000 },
+  { label: 'Rs 10,000 – 25,000', min: 10000, max: 25000 },
+  { label: 'Rs 25,000 – 40,000', min: 25000, max: 40000 },
+  { label: 'Above Rs 40,000',   min: 40000, max: undefined },
 ]
 
 function Shop() {
-  const [category, setCategory] = useState('all')
-  const [sortBy, setSortBy] = useState('featured')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Filter state — category and discount initialize from the URL
+  const [category,       setCategory]       = useState(searchParams.get('category') || '')
+  const [gender,         setGender]         = useState('')
   const [selectedBrands, setSelectedBrands] = useState([])
-  const [gender, setGender] = useState('all')
-  const [priceRange, setPriceRange] = useState([0, 60000])
+  const [priceRange,     setPriceRange]     = useState({ min: 0, max: undefined })
+  const [discount,       setDiscount]       = useState(searchParams.get('discount') === 'true')
+  const [sortBy,         setSortBy]         = useState('featured')
+  const [page,           setPage]           = useState(1)
+
+  // Filter options fetched from the backend — brands/genders are scoped to
+  // whichever category is currently selected (or global, when category is '')
+  const [filterOpts, setFilterOpts] = useState({ categories: [], brands: [], genders: [] })
+
+  useEffect(() => {
+    getFilterOptions(category ? { category } : {})
+      .then((data) => setFilterOpts(data))
+      .catch(() => {/* non-critical */})
+  }, [category])
+
+  // Keep local state in sync with the URL even when navigating between two
+  // /shop?category=X links without a full remount (e.g. clicking banner CTAs)
+  useEffect(() => {
+    setCategory(searchParams.get('category') || '')
+    setDiscount(searchParams.get('discount') === 'true')
+  }, [searchParams])
+
+  // Build the query object sent to useProducts / the API
+  const query = {
+    ...(category                  && { category }),
+    ...(gender                    && { gender }),
+    ...(selectedBrands.length > 0 && { brand: selectedBrands.join(',') }),
+    ...(priceRange.min > 0        && { minPrice: priceRange.min }),
+    ...(priceRange.max            && { maxPrice: priceRange.max }),
+    ...(discount                  && { discount: 'true' }),
+    ...(sortBy !== 'featured'     && { sort: sortBy }),
+    limit: 24,
+    page,
+  }
+
+  const { products, productCount, totalPages, loading, error } = useProducts(query)
+
+  // Reset to page 1 whenever filters change
+  const resetPage = useCallback(() => setPage(1), [])
+
+  const handleCategory = (val) => {
+    setCategory(val)
+    // Brand/gender picks from the previous category may not exist in the new
+    // one — clear them so there's no invisible stale filter narrowing results.
+    setSelectedBrands([])
+    setGender('')
+    resetPage()
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (val) next.set('category', val)
+      else next.delete('category')
+      return next
+    })
+  }
+
+  const handleGender = (val) => { setGender(val); resetPage() }
+  const handleSort   = (val) => { setSortBy(val); resetPage() }
+  const handlePrice  = (range) => { setPriceRange(range); resetPage() }
 
   const toggleBrand = (brand) => {
     setSelectedBrands((prev) =>
-      prev.includes(brand)
-        ? prev.filter((b) => b !== brand)
-        : [...prev, brand]
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
     )
+    resetPage()
+  }
+
+  const toggleDiscount = () => {
+    const next = !discount
+    setDiscount(next)
+    resetPage()
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      if (next) p.set('discount', 'true')
+      else p.delete('discount')
+      return p
+    })
   }
 
   const clearFilters = () => {
-    setCategory('all')
-    setGender('all')
+    setCategory('')
+    setGender('')
     setSelectedBrands([])
-    setPriceRange([0, 60000])
+    setPriceRange({ min: 0, max: undefined })
+    setDiscount(false)
     setSortBy('featured')
+    setPage(1)
+    setSearchParams({})
   }
 
   const activeFilterCount =
-    (category !== 'all' ? 1 : 0) +
-    (gender !== 'all' ? 1 : 0) +
+    (category ? 1 : 0) +
+    (gender ? 1 : 0) +
     selectedBrands.length +
-    (priceRange[0] > 0 || priceRange[1] < 60000 ? 1 : 0)
+    (priceRange.min > 0 || priceRange.max ? 1 : 0) +
+    (discount ? 1 : 0)
 
-  const filtered = useMemo(() => {
-    let result = [...products]
+  // Use backend categories if loaded, otherwise a sensible fallback
+  const categoryTabs = [
+    { value: '', label: 'All Products' },
+    ...( filterOpts.categories.length > 0
+      ? filterOpts.categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+      : [
+          { value: 'eyeglasses', label: 'Eyeglasses' },
+          { value: 'watches',    label: 'Watches' },
+          { value: 'perfumes',   label: 'Perfumes' },
+        ]
+    ),
+  ]
 
-    if (category !== 'all') {
-      result = result.filter((p) => p.category === category)
-    }
-    if (gender !== 'all') {
-      result = result.filter((p) => p.gender === gender)
-    }
-    if (selectedBrands.length > 0) {
-      result = result.filter((p) => selectedBrands.includes(p.brand))
-    }
-    result = result.filter(
-      (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
-    )
+  const brandList = filterOpts.brands.length > 0
+    ? filterOpts.brands
+    : ['Ray-Ban', 'Gucci', 'Prada', 'Oakley', 'Titan', 'Fastrack', 'Casio', 'Seiko', 'Citizen', 'Tissot']
 
-    switch (sortBy) {
-      case 'price-asc':
-        result.sort((a, b) => a.price - b.price)
-        break
-      case 'price-desc':
-        result.sort((a, b) => b.price - a.price)
-        break
-      case 'rating':
-        result.sort((a, b) => b.rating - a.rating)
-        break
-      case 'newest':
-        result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0))
-        break
-      case 'bestselling':
-        result.sort((a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0))
-        break
-      default:
-        break
-    }
-
-    return result
-  }, [category, gender, selectedBrands, priceRange, sortBy])
+  // Gender pills are now driven by the backend, scoped to the current category.
+  // "All" is always shown; the rest come from whatever genders actually exist
+  // among products in this category (e.g. perfumes might only have Men/Women/Unisex,
+  // watches might have all four).
+  const genderOptions = [
+    { value: '', label: 'All' },
+    ...(filterOpts.genders.length > 0
+      ? filterOpts.genders.map((g) => ({ value: g, label: g }))
+      : [
+          { value: 'Men',    label: 'Men' },
+          { value: 'Women',  label: 'Women' },
+          { value: 'Unisex', label: 'Unisex' },
+        ]
+    ),
+  ]
 
   return (
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
 
-     
+      {/* Page Header */}
       <div style={{
         backgroundColor: 'var(--color-navy)',
         padding: '64px 5rem 48px',
@@ -125,16 +186,12 @@ function Shop() {
         }}>
           Our Collection
         </h1>
-        <p style={{
-          color: 'rgba(255,255,255,0.5)',
-          fontSize: '1rem',
-          lineHeight: '1.6',
-        }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem', lineHeight: '1.6' }}>
           Discover our complete collection of premium eyewear, watches and fragrances
         </p>
       </div>
 
-      
+      {/* Category Tabs */}
       <div style={{
         backgroundColor: 'var(--color-white)',
         borderBottom: '1px solid var(--color-border)',
@@ -144,10 +201,10 @@ function Shop() {
         gap: '4px',
         overflowX: 'auto',
       }}>
-        {CATEGORIES.map((cat) => (
+        {categoryTabs.map((cat) => (
           <button
             key={cat.value}
-            onClick={() => setCategory(cat.value)}
+            onClick={() => handleCategory(cat.value)}
             style={{
               padding: '16px 20px',
               border: 'none',
@@ -157,9 +214,7 @@ function Shop() {
               backgroundColor: 'transparent',
               fontSize: '0.85rem',
               fontWeight: category === cat.value ? '600' : '400',
-              color: category === cat.value
-                ? 'var(--color-navy)'
-                : 'var(--color-muted)',
+              color: category === cat.value ? 'var(--color-navy)' : 'var(--color-muted)',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               whiteSpace: 'nowrap',
@@ -170,7 +225,7 @@ function Shop() {
         ))}
       </div>
 
-      
+      {/* Main Layout */}
       <div style={{
         display: 'flex',
         gap: '28px',
@@ -178,7 +233,7 @@ function Shop() {
         alignItems: 'flex-start',
       }}>
 
-       
+        {/* Sidebar Filters */}
         <aside style={{
           width: '240px',
           flexShrink: 0,
@@ -187,50 +242,35 @@ function Shop() {
           padding: '24px',
           border: '1px solid var(--color-border)',
           position: 'sticky',
-          top: '88px',
+          top: '80px',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
         }}>
-
-          
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{
               fontSize: '0.85rem',
               fontWeight: '700',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-navy)',
-            }}>
-              Filters
-            </h2>
+            }}>Filters</h2>
             {activeFilterCount > 0 && (
               <button
                 onClick={clearFilters}
-                style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--color-taupe)',
-                  fontWeight: '600',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
+                style={{ fontSize: '0.72rem', color: 'var(--color-taupe)', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Clear all
               </button>
             )}
           </div>
 
-         
           <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
 
-          {/* Gender Filter */}
+          {/* Gender */}
           <div style={{ marginBottom: '24px' }}>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',
@@ -239,10 +279,10 @@ function Shop() {
               Gender
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {GENDERS.map((g) => (
+              {genderOptions.map((g) => (
                 <button
                   key={g.value}
-                  onClick={() => setGender(g.value)}
+                  onClick={() => handleGender(g.value)}
                   style={{
                     padding: '5px 14px',
                     borderRadius: '20px',
@@ -261,14 +301,34 @@ function Shop() {
             </div>
           </div>
 
-         
           <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
 
-          
+          {/* On Sale */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={discount}
+                onChange={toggleDiscount}
+                style={{ accentColor: 'var(--color-navy)', width: '14px', height: '14px', cursor: 'pointer' }}
+              />
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                color: discount ? 'var(--color-navy)' : 'var(--color-muted)',
+              }}>
+                On Sale Only
+              </span>
+            </label>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
+
+          {/* Brand */}
           <div style={{ marginBottom: '24px' }}>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',
@@ -276,33 +336,18 @@ function Shop() {
             }}>
               Brand
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {BRANDS.map((brand) => (
-                <label
-                  key={brand}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                  }}
-                >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+              {brandList.map((brand) => (
+                <label key={brand} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={selectedBrands.includes(brand)}
                     onChange={() => toggleBrand(brand)}
-                    style={{
-                      accentColor: 'var(--color-navy)',
-                      width: '14px',
-                      height: '14px',
-                      cursor: 'pointer',
-                    }}
+                    style={{ accentColor: 'var(--color-navy)', width: '14px', height: '14px', cursor: 'pointer' }}
                   />
                   <span style={{
                     fontSize: '0.83rem',
-                    color: selectedBrands.includes(brand)
-                      ? 'var(--color-navy)'
-                      : 'var(--color-muted)',
+                    color: selectedBrands.includes(brand) ? 'var(--color-navy)' : 'var(--color-muted)',
                     fontWeight: selectedBrands.includes(brand) ? '600' : '400',
                   }}>
                     {brand}
@@ -312,14 +357,13 @@ function Shop() {
             </div>
           </div>
 
-          
           <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
 
-                 
+          {/* Price Range */}
           <div>
             <p style={{
-              fontSize: '0.72rem',
-              fontWeight: '700',
+              fontSize: '0.85rem',
+              fontWeight: '800',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               color: 'var(--color-muted)',
@@ -328,73 +372,53 @@ function Shop() {
               Price Range
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {[
-                { label: 'All Prices', min: 0, max: 60000 },
-                { label: 'Under Rs 10,000', min: 0, max: 10000 },
-                { label: 'Rs 10,000 – 25,000', min: 10000, max: 25000 },
-                { label: 'Rs 25,000 – 40,000', min: 25000, max: 40000 },
-                { label: 'Above Rs 40,000', min: 40000, max: 60000 },
-              ].map((range) => (
-                <button
-                  key={range.label}
-                  onClick={() => setPriceRange([range.min, range.max])}
-                  style={{
-                    textAlign: 'left',
-                    padding: '7px 10px',
-                    borderRadius: '7px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '0.82rem',
-                    backgroundColor: priceRange[0] === range.min && priceRange[1] === range.max
-                      ? 'var(--color-navy)'
-                      : 'transparent',
-                    color: priceRange[0] === range.min && priceRange[1] === range.max
-                      ? 'var(--color-taupe)'
-                      : 'var(--color-muted)',
-                    fontWeight: priceRange[0] === range.min && priceRange[1] === range.max
-                      ? '600' : '400',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {range.label}
-                </button>
-              ))}
+              {PRICE_RANGES.map((range) => {
+                const active = priceRange.min === range.min && priceRange.max === range.max
+                return (
+                  <button
+                    key={range.label}
+                    onClick={() => handlePrice({ min: range.min, max: range.max })}
+                    style={{
+                      textAlign: 'left',
+                      padding: '7px 10px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.82rem',
+                      backgroundColor: active ? 'var(--color-navy)' : 'transparent',
+                      color: active ? 'var(--color-taupe)' : 'var(--color-muted)',
+                      fontWeight: active ? '600' : '400',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {range.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
-
         </aside>
 
-       
+        {/* Product Grid */}
         <div style={{ flex: 1, minWidth: 0 }}>
 
-         
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '24px',
-          }}>
+          {/* Toolbar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)' }}>
               <span style={{ fontWeight: '600', color: 'var(--color-navy)' }}>
-                {filtered.length}
+                {loading ? '…' : productCount}
               </span> products found
               {activeFilterCount > 0 && (
-                <span style={{
-                  marginLeft: '8px',
-                  color: 'var(--color-taupe)',
-                  fontWeight: '600',
-                }}>
+                <span style={{ marginLeft: '8px', color: 'var(--color-taupe)', fontWeight: '600' }}>
                   · {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
                 </span>
               )}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)' }}>
-                Sort by:
-              </label>
+              <label style={{ fontSize: '0.78rem', color: 'var(--color-muted)' }}>Sort by:</label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => handleSort(e.target.value)}
                 style={{
                   padding: '8px 14px',
                   borderRadius: '7px',
@@ -407,16 +431,21 @@ function Shop() {
                 }}
               >
                 {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          
-          {filtered.length === 0 ? (
+          {/* States */}
+          {loading && (
+            <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>Loading products…</p>
+          )}
+          {error && (
+            <p style={{ color: '#e74c3c' }}>Couldn't load products: {error}</p>
+          )}
+
+          {!loading && !error && products.length === 0 && (
             <div style={{
               textAlign: 'center',
               padding: '80px 20px',
@@ -424,19 +453,10 @@ function Shop() {
               borderRadius: '12px',
               border: '1px solid var(--color-border)',
             }}>
-              <p style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: 'var(--color-navy)',
-                marginBottom: '8px',
-              }}>
+              <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-navy)', marginBottom: '8px' }}>
                 No products found
               </p>
-              <p style={{
-                fontSize: '0.85rem',
-                color: 'var(--color-muted)',
-                marginBottom: '16px',
-              }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: '16px' }}>
                 Try adjusting or clearing your filters
               </p>
               <button
@@ -455,15 +475,58 @@ function Shop() {
                 Clear Filters
               </button>
             </div>
-          ) : (
+          )}
+
+          {!loading && !error && products.length > 0 && (
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
               gap: '20px',
             }}>
-              {filtered.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {products.map((product) => (
+                <ProductCard key={product._id} product={product} />
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && !error && totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '40px' }}>
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '7px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: page === 1 ? 'transparent' : 'var(--color-navy)',
+                  color: page === 1 ? 'var(--color-muted)' : 'var(--color-taupe)',
+                  cursor: page === 1 ? 'default' : 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                }}
+              >
+                ← Prev
+              </button>
+              <span style={{ padding: '8px 16px', fontSize: '0.82rem', color: 'var(--color-navy)', fontWeight: '600' }}>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  backgroundColor: page === totalPages ? 'transparent' : 'var(--color-navy)',
+                  color: page === totalPages ? 'var(--color-muted)' : 'var(--color-taupe)',
+                  cursor: page === totalPages ? 'default' : 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                }}
+              >
+                Next →
+              </button>
             </div>
           )}
 

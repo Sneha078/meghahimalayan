@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
-import products from "../data/products";
+import { useProducts } from "../hooks/useProducts";
 import ProductCard from "./ProductCard";
 
 function FeaturedCollection() {
-    const featured = products.slice(0,8)
+    // Ask the backend to filter server-side (featured=true) instead of
+    // fetching a partial page and filtering in JS — getAllProducts
+    // defaults to only 12 results/page, so client-side filtering would
+    // silently miss most of the catalog otherwise.
+    const { products: featured, loading, error } = useProducts({ featured: true, limit: 8 })
 
     return (
         <section style={{
@@ -55,22 +59,33 @@ function FeaturedCollection() {
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent'
-                            e.currenttarget.style.color = 'var(--color-navy)'
+                            e.currentTarget.style.color = 'var(--color-navy)'
                         }}
                         >
                             VIEW ALL
                         </Link>
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                 gap: '20px',  
-            }}>
-                {featured.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                ))}
-            </div>
+            {/* Loading / error states — the grid below only renders once data is ready */}
+            {loading && (
+                <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>Loading products…</p>
+            )}
+            {error && (
+                <p style={{ color: '#e74c3c' }}>Couldn't load products: {error}</p>
+            )}
+
+            {!loading && !error && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                     gap: '20px',  
+                }}>
+                    {featured.map((product) => (
+                        // MongoDB documents use _id, not id
+                        <ProductCard key={product._id} product={product} />
+                    ))}
+                </div>
+            )}
         </section>
     )
 }

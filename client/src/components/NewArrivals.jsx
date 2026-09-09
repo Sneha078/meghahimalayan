@@ -1,13 +1,13 @@
 import { useRef } from 'react'
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation } from 'swiper/modules'
-import products from '../data/products'
+import { useProducts } from '../hooks/useProducts'
 import ProductCard from './ProductCard'
 
 function NewArrivals() {
-  const prevRef = useRef(null)
-  const nextRef = useRef(null)
-  const newProducts = products.filter((p) => p.isNew)
+  const scrollRef = useRef(null)
+  const { products: newProducts, loading, error } = useProducts({ new: true, limit: 8 })
+
+  const scrollBy = (amount) =>
+    scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
 
   return (
     <section style={{
@@ -47,7 +47,8 @@ function NewArrivals() {
         {/* Arrow Buttons */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            ref={prevRef}
+            onClick={() => scrollBy(-260)}
+            aria-label="Scroll left"
             style={{
               width: '44px',
               height: '44px',
@@ -74,7 +75,8 @@ function NewArrivals() {
             ←
           </button>
           <button
-            ref={nextRef}
+            onClick={() => scrollBy(260)}
+            aria-label="Scroll right"
             style={{
               width: '44px',
               height: '44px',
@@ -103,34 +105,67 @@ function NewArrivals() {
         </div>
       </div>
 
-      {/* Swiper */}
-      <Swiper
-        modules={[Navigation]}
-        navigation={{
-          prevEl: prevRef.current,
-          nextEl: nextRef.current,
-        }}
-        onBeforeInit={(swiper) => {
-          swiper.params.navigation.prevEl = prevRef.current
-          swiper.params.navigation.nextEl = nextRef.current
-        }}
-        slidesPerView={4}
-        spaceBetween={20}
-        grabCursor={true}
-        breakpoints={{
-          0: { slidesPerView: 1, spaceBetween: 12 },
-          640: { slidesPerView: 2, spaceBetween: 16 },
-          1024: { slidesPerView: 3, spaceBetween: 20 },
-          1280: { slidesPerView: 4, spaceBetween: 20 },
-        }}
-        style={{ width: '100%' }}
-      >
-        {newProducts.map((product) => (
-          <SwiperSlide key={product.id} style={{ height: 'auto' }}>
-            <ProductCard product={product} />
-          </SwiperSlide>
-        ))}
-      </Swiper>
+      {/* Loading / error states */}
+      {loading && (
+        <div style={{ display: 'flex', gap: '16px', overflow: 'hidden' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{
+              minWidth: '220px', height: '340px',
+              borderRadius: '12px', background: '#e5e7eb', flexShrink: 0,
+            }} />
+          ))}
+        </div>
+      )}
+      {error && (
+        <p style={{ color: '#e74c3c' }}>Couldn't load products: {error}</p>
+      )}
+      {!loading && !error && newProducts.length === 0 && (
+        <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>No new arrivals right now.</p>
+      )}
+
+      {/* Scrollable product row */}
+      {!loading && !error && newProducts.length > 0 && (
+        <div
+          ref={scrollRef}
+          style={{
+            display: 'flex',
+            gap: '20px',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            paddingBottom: '4px',
+            scrollbarWidth: 'none',
+            cursor: 'grab',
+          }}
+          onMouseDown={(e) => {
+            const el = scrollRef.current
+            if (!el) return
+            el.style.cursor = 'grabbing'
+            const startX = e.pageX - el.offsetLeft
+            const scrollLeft = el.scrollLeft
+
+            const onMove = (ev) => {
+              const x = ev.pageX - el.offsetLeft
+              el.scrollLeft = scrollLeft - (x - startX)
+            }
+            const onUp = () => {
+              el.style.cursor = 'grab'
+              window.removeEventListener('mousemove', onMove)
+              window.removeEventListener('mouseup', onUp)
+            }
+            window.addEventListener('mousemove', onMove)
+            window.addEventListener('mouseup', onUp)
+          }}
+        >
+          {newProducts.map((product) => (
+            <div
+              key={product._id}
+              style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start', flexShrink: 0 }}
+            >
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+      )}
 
     </section>
   )

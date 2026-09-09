@@ -305,18 +305,13 @@ const validateDuplicateProducts = (
   }
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STATUS HISTORY
-// ─────────────────────────────────────────────────────────────────────────────
-
-const addStatusHistory = (
-  order,
-  status
-) => {
+//Add a status change to the order history.
+const addStatusHistory = (order, status, changedBy = null, note = '') => {
   order.statusHistory.push({
     status,
     changedAt: new Date(),
+    changedBy,
+    note: note.trim().slice(0, 500),
   });
 };
 
@@ -1176,10 +1171,12 @@ export const cancelMyOrder =
             order.cancelledAt =
               new Date();
 
-            addStatusHistory(
-              order,
-              "Cancelled"
-            );
+          addStatusHistory(
+            order,
+            "Cancelled",
+            req.user._id,
+            'Order cancelled by customer'
+          );
 
             /*
              * Do not mark online payments
@@ -1400,10 +1397,8 @@ export const getAdminSingleOrder =
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const updateOrderStatus =
-  handleAsyncError(
-    async (req, res, next) => {
-      const { status } =
-        req.body;
+  handleAsyncError(async (req, res, next) => {
+    const { status, note= '' } = req.body;
 
       const validStatuses = [
         "Processing",
@@ -1587,20 +1582,21 @@ export const updateOrderStatus =
               order.cancelledAt =
                 new Date();
 
-              addStatusHistory(
-                order,
-                "Cancelled"
-              );
-            } else {
-              // Normal status change.
-              order.orderStatus =
-                status;
+            addStatusHistory(
+              order,
+              "Cancelled",
+              req.user._id,
+              'Order cancelled by admin'
+            );
+          } else {
+            order.orderStatus = status;
 
-              addStatusHistory(
-                order,
-                status
-              );
-            }
+            addStatusHistory(
+              order,
+              status,
+              req.user?._id, note
+            );
+          }
 
             // ─────────────────────────
             // STATUS TIMESTAMPS

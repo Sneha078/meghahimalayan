@@ -158,7 +158,7 @@ Try asking:
 
 "Find a fresh perfume for summer"
 
-"Recommend something similar to W005"
+"Recommend something similar"
 
-"What do people say about P006?"
+"What do people say about this product?"
 """.strip()

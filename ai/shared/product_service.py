@@ -3,6 +3,7 @@ Product data access layer.
 """
 
 from typing import Optional
+import re
 
 import pandas as pd
 from bson import ObjectId
@@ -130,10 +131,11 @@ def filter_products(
     max_price: Optional[float] = None,
     min_price: Optional[float] = None,
     gender: Optional[str] = None,
+    color: Optional[str] = None,
 ) -> list[dict]:
     query = {}
     if category:
-        query["category"] = category
+        query["category"] = {"$regex": f"^{category}$", "$options": "i"}
     price_filter = {}
     if min_price is not None:
         price_filter["$gte"] = min_price
@@ -143,6 +145,15 @@ def filter_products(
         query["price"] = price_filter
     if gender:
         query["gender"] = {"$in": [gender, "Unisex"]}
+    if color:
+        # Match against dialColor (watches) and frameColor (eyeglasses).
+        # Perfumes have no colour field so this naturally returns nothing
+        # for perfumes when a colour is requested, which is correct.
+        color_regex = {"$regex": color, "$options": "i"}
+        query["$or"] = [
+            {"dialColor": color_regex},
+            {"frameColor": color_regex},
+        ]
     products = products_collection.find(query)
     return [_product_to_dict(product) for product in products]
 
