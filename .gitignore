@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 .mypy_cache/
 .ruff_cache/
+.env/
 
 # ── Environment secrets (never commit) ───────────────────────
 .env

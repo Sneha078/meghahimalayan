@@ -1,4 +1,3 @@
-import HeroBanner from '../components/HeroBanner'
 import StatsBar from '../components/StatsBar'
 import CategorySection from '../components/CategorySection'
 import FeaturedCollection from '../components/FeaturedCollection'
@@ -10,11 +9,12 @@ import WhyChooseUs from '../components/WhyChooseUs'
 import OurStory from '../components/OurStory'
 import Testimonials from '../components/Testimonials'
 import FloatingAssistant from '../components/AIAssistant/FloatingAssistant'
+import SplitVideoSection from '../components/SplitVideoSection'
 
 function Home() {
   return (
     <main>
-      <HeroBanner />
+      <SplitVideoSection />
       <StatsBar />
       <CategorySection />
       <FeaturedCollection />

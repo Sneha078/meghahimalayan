@@ -137,15 +137,16 @@ function Analytics() {
                 </thead>
                 <tbody>
                   {topCustomers.map((customer, i) => (
-                    <tr key={customer._id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                    <tr key={customer._id || customer.id || i}
+                     style={{ borderTop: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>
                         {i + 1}
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>
-                        {customer.name}
+                        {customer.name || customer.user?.name || 'Unknown Customer'}
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: '0.82rem', color: '#64748b' }}>
-                        {customer.email}
+                        {customer.email || customer.user?.email || '-'}
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#0f172a' }}>
                         {customer.orderCount ?? customer.totalOrders ?? '—'}
