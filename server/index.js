@@ -23,8 +23,9 @@ import contactRoutes      from "./routes/contactRoutes.js";
 import analyticsRoutes    from "./routes/analyticsRoutes.js";
 import socialAuthRoutes   from "./routes/socialAuthRoutes.js";
 import returnRoutes       from "./routes/returnRoutes.js";
-import rewardRoutes from "./routes/rewards.routes.js"
-import paymentRoutes from "./routes/paymentRoutes.js"import notificationRoutes from "./routes/notificationRoutes.js";
+import rewardRoutes from "./routes/rewards.routes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
