@@ -174,7 +174,7 @@ function Dashboard() {
     setLoading(true)
     setError(null)
     getDashboardStats()
-      .then((data) => setStats(data))
+      .then((data) => setStats(data.stats))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
@@ -190,7 +190,7 @@ function Dashboard() {
   }, [liveNotifications])
 
   const totalOrders   = stats ? (stats.totalOrders   ?? 0) + liveOrders : null
-  const totalUsers    = stats ? (stats.totalUsers    ?? 0) + liveUsers  : null
+  const totalUsers    = stats ? (stats.totalCustomers ?? 0) + liveUsers  : null
 
   return (
     <div style={{ padding: '32px' }}>

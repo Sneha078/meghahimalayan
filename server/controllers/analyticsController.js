@@ -384,6 +384,7 @@ export const getAnalytics = handleAsyncError(async (req, res) => {
     monthlyStats,
     topProducts,
     categoryStats,
+    summaryStats,
   ] = await Promise.all([
     // ───────────────────────────────────────────────────────────────────────
     // 1. MONTHLY ORDERS + REVENUE
@@ -578,6 +579,63 @@ export const getAnalytics = handleAsyncError(async (req, res) => {
         },
       },
     ]),
+
+    // ───────────────────────────────────────────────────────────────────────
+    // 4. SUMMARY (totals + pending orders)
+    // ───────────────────────────────────────────────────────────────────────
+
+    Order.aggregate([
+      {
+        $match: {
+          isDeleted: false,
+          createdAt: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+
+          totalOrders: {
+            $sum: 1,
+          },
+
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                REVENUE_CONDITION,
+                "$totalPrice",
+                0,
+              ],
+            },
+          },
+
+          revenueOrderCount: {
+            $sum: {
+              $cond: [
+                REVENUE_CONDITION,
+                1,
+                0,
+              ],
+            },
+          },
+
+          pendingOrders: {
+            $sum: {
+              $cond: [
+                {
+                  $in: ["$orderStatus", ["Processing", "Confirmed", "Shipped"]],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]),
   ]);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -673,6 +731,18 @@ export const getAnalytics = handleAsyncError(async (req, res) => {
     };
   });
 
+  const summary = summaryStats?.[0] ?? {};
+
+  const totalRevenue = summary.totalRevenue ?? 0;
+  const totalOrders = summary.totalOrders ?? 0;
+  const revenueOrderCount = summary.revenueOrderCount ?? 0;
+  const pendingOrders = summary.pendingOrders ?? 0;
+
+  const avgOrderValue =
+    revenueOrderCount > 0
+      ? Math.round(totalRevenue / revenueOrderCount)
+      : 0;
+
   // ─────────────────────────────────────────────────────────────────────────
   // RESPONSE
   // ─────────────────────────────────────────────────────────────────────────
@@ -689,6 +759,12 @@ export const getAnalytics = handleAsyncError(async (req, res) => {
 
       endDate,
     },
+
+    totalRevenue,
+    totalOrders,
+    avgOrderValue,
+    pendingOrders,
+    revenueOrderCount,
 
     // Total recognized revenue by month
     monthlyRevenue,

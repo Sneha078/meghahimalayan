@@ -1,4 +1,5 @@
 import PointsLedger from "../models/PointsLedger.js";
+import Order from "../models/orderModel.js";
 
 // ---- Configuration — tune to your margins ----
 export const POINTS_PER_RUPEE = 1 / 100; // 1 point per Rs. 100 spent
@@ -7,8 +8,10 @@ export const POINTS_TO_RUPEE_RATE = 0.1; // 10 points = Rs. 1 at checkout
 export const MAX_DISCOUNT_PERCENT = 0.2; // points can cover at most 20% of an order
 
 /**
- * Award points for a completed order. Call from your order-success handler
- * (likely inside orderController.js, after payment/order creation succeeds).
+ * Award points for a completed order. Prefer calling awardOrderPoints()
+ * instead of this directly — it adds the idempotency guard that prevents
+ * double-crediting when an order could be marked "paid" from more than
+ * one code path (COD delivery vs. online payment verification).
  */
 export async function earnPoints(userId, orderTotal, orderId) {
   const amount = Math.floor(orderTotal * POINTS_PER_RUPEE);
@@ -24,6 +27,37 @@ export async function earnPoints(userId, orderTotal, orderId) {
     order: orderId,
     expiresAt,
   });
+}
+
+/**
+ * Award points for an order exactly once, no matter which code path
+ * triggers it (COD delivery, eSewa/Khalti verification, or bank transfer
+ * approval).
+ *
+ * Uses an atomic findOneAndUpdate with { pointsAwarded: { $ne: true } } in
+ * the filter, so if two requests somehow race to call this for the same
+ * order, only one of them will find a matching document to update — the
+ * second call gets `null` back and does nothing.
+ *
+ * Requires an Order schema field: pointsAwarded: { type: Boolean, default: false }
+ *
+ * Call this from wherever an order's payment is confirmed as final:
+ *   - updateOrderStatus, when a COD order transitions to "Delivered"
+ *   - verifyEsewa / verifyKhalti, on successful gateway verification
+ *   - reviewBankTransfer, when an admin approves a manual transfer
+ */
+export async function awardOrderPoints(orderId) {
+  const order = await Order.findOneAndUpdate(
+    { _id: orderId, pointsAwarded: { $ne: true } },
+    { $set: { pointsAwarded: true } },
+    { new: true }
+  );
+
+  // order is null if it doesn't exist, or if points were already awarded
+  // (someone else won the race, or this order was already credited).
+  if (!order) return null;
+
+  return earnPoints(order.user, order.totalPrice, order.orderNumber);
 }
 
 /**

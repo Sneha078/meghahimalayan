@@ -96,6 +96,7 @@ function FloatingAssistant() {
               borderRadius: '16px',
               padding: '18px 20px',
               boxShadow: '0 16px 36px rgba(13,32,49,0.28)',
+              border: '3px solid #C9A84C',
               cursor: 'pointer',
             }}
             onClick={handleOpen}
@@ -174,11 +175,11 @@ function FloatingAssistant() {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              border: '2px solid #C9A84C',
+              border: '4px solid #C9A84C',
               padding: 0,
               overflow: 'visible',
               backgroundColor: '#0d2031',
-              boxShadow: '0 10px 28px rgba(13,32,49,0.35)',
+              boxShadow: '0 10px 28px rgba(13,32,49,0.35), 0 0 0 4px rgba(201,168,76,0.4)',
               cursor: 'pointer',
             }}
           >

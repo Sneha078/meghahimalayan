@@ -8,6 +8,7 @@ import { restoreStock, releaseCouponUsage } from "../utils/stockUtils.js";
 import { ESEWA_CONFIG, BANK_ACCOUNT_INFO } from "../config/paymentConfig.js";
 import { generateEsewaSignature, verifyEsewaSignature } from "../utils/payments/esewaHelper.js";
 import { initiateKhaltiPayment, lookupKhaltiPayment } from "../utils/payments/khaltiHelper.js";
+import { awardOrderPoints } from "../services/pointsService.js";
 
 /**
  * Shared cleanup for a payment that failed/was rejected: restores stock,
@@ -34,6 +35,18 @@ async function cancelOrderForFailedPayment(orderId, failureNote) {
   } finally {
     await session.endSession();
   }
+}
+
+/**
+ * Fires awardOrderPoints without letting a points failure break the
+ * payment-verification response the customer is waiting on. Mirrors how
+ * orderController.js treats emails/notifications as non-critical side
+ * effects that happen after the main write has already succeeded.
+ */
+function awardPointsSafely(orderId) {
+  awardOrderPoints(orderId).catch((err) => {
+    console.error(`Failed to award points for order ${orderId}:`, err?.message || err);
+  });
 }
 
 // ─── eSewa ────────────────────────────────────────────────────────────────
@@ -111,6 +124,10 @@ export const verifyEsewa = handleAsyncError(async (req, res, next) => {
       },
     });
 
+    // Payment is verified and final at this point — award points now
+    // rather than waiting for delivery, same as Khalti and bank transfer.
+    awardPointsSafely(payment.order);
+
     return res.redirect(`${process.env.FRONTEND_URL}/order-confirmation?orderId=${payment.order}`);
   }
 
@@ -185,6 +202,10 @@ export const verifyKhalti = handleAsyncError(async (req, res) => {
       },
     });
 
+    // Payment is verified and final at this point — award points now
+    // rather than waiting for delivery, same as eSewa and bank transfer.
+    awardPointsSafely(payment.order);
+
     return res.redirect(`${process.env.FRONTEND_URL}/order-confirmation?orderId=${payment.order}`);
   }
 
@@ -257,6 +278,10 @@ export const reviewBankTransfer = handleAsyncError(async (req, res, next) => {
       note: "Bank transfer verified by admin",
     });
     await order.save();
+
+    // Payment is verified and final at this point — award points now
+    // rather than waiting for delivery, same as eSewa and Khalti.
+    awardPointsSafely(transfer.order);
   } else {
     // Same cleanup as a failed gateway payment — restore stock, release any
     // coupon usage, and cancel, so nothing is left silently deducted.

@@ -237,7 +237,6 @@ const orderSchema = new mongoose.Schema(
 
       default: "Processing",
       index: true,
-      index: true,
     },
 
     // Complete order status audit trail
@@ -405,6 +404,24 @@ const orderSchema = new mongoose.Schema(
       required: [true, "Total price is required"],
       default: 0,
       min: [0, "Total price cannot be negative"],
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // REWARD POINTS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Set to true the first (and only) time reward points are credited for
+    // this order — via awardOrderPoints() in services/pointsService.js.
+    //
+    // Acts as an idempotency guard: an order can be credited from either
+    // paymentController.js (eSewa/Khalti/Bank Transfer, on payment success)
+    // or orderController.js (COD, on delivery). awardOrderPoints() does an
+    // atomic findOneAndUpdate filtered on { pointsAwarded: { $ne: true } },
+    // so whichever path reaches the order first wins and no order can ever
+    // be credited twice.
+    pointsAwarded: {
+      type: Boolean,
+      default: false,
     },
 
     // ─────────────────────────────────────────────────────────────────────────

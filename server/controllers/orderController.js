@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 
+import { awardOrderPoints } from "../services/pointsService.js";
+
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
 import Coupon from "../models/couponModel.js";
@@ -918,6 +920,13 @@ export const createNewOrder =
          * Emails cannot roll back the order,
          * so they are intentionally dispatched
          * after the transaction.
+         *
+         * NOTE: reward points are NOT awarded here.
+         * A new order is always created with
+         * orderStatus "Processing" — points are
+         * only awarded once the order actually
+         * reaches "Delivered", which is handled
+         * in updateOrderStatus below.
          */
         void dispatchOrderEmails(
           createdOrder
@@ -1682,6 +1691,38 @@ export const updateOrderStatus =
               updatedOrder,
               updatedOrder.orderStatus
             );
+
+            // ─────────────────────────
+            // AWARD REWARD POINTS
+            // ─────────────────────────
+            //
+            // Covers COD orders, which only become
+            // "Paid" once delivered. Online orders
+            // (eSewa/Khalti/Bank Transfer) are already
+            // awarded earlier, at payment verification,
+            // in paymentController.js.
+            //
+            // awardOrderPoints() is safe to call from
+            // both places: it atomically checks the
+            // order's pointsAwarded flag before writing,
+            // so an order that was already credited at
+            // payment time (in the rare case it also
+            // passes through this branch) will not be
+            // credited twice.
+            //
+            if (
+              updatedOrder.orderStatus ===
+              "Delivered"
+            ) {
+              awardOrderPoints(
+                updatedOrder._id
+              ).catch((err) => {
+                console.error(
+                  `Failed to award points for ${updatedOrder.orderNumber}:`,
+                  err?.message || err
+                );
+              });
+            }
           }
 
           void notifyAdmins({
