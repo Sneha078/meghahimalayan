@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getRecentlyViewedIds } from "../utils/recentlyViewed";
 import { getProductById } from "../api/productClient";
@@ -18,9 +18,15 @@ const CUSTOMER_CARE_LINKS = [
 ];
 
 function AccountPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/')
+  }
 
   useEffect(() => {
     const ids = getRecentlyViewedIds();
@@ -45,12 +51,46 @@ function AccountPage() {
 
   return (
     <section style={{ maxWidth: "1080px", margin: "0 auto", padding: "40px 24px 64px" }}>
-      <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-taupe)", marginBottom: "6px" }}>
-        My Account
-      </p>
-      <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "1.6rem", fontWeight: 700, color: "#0d1a2a", marginBottom: "28px" }}>
-        Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+        <div>
+          <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-taupe)", marginBottom: "6px" }}>
+            My Account
+          </p>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "1.6rem", fontWeight: 700, color: "#0d1a2a" }}>
+            Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
+          </h1>
+        </div>
+
+        {/* Sign out button */}
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 18px',
+            backgroundColor: 'transparent',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            color: '#dc2626',
+            fontSize: '0.82rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          {/* Sign out icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign Out
+        </button>
+      </div>
 
       {/* Quick-link cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "14px", marginBottom: "24px" }}>
