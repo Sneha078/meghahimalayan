@@ -47,10 +47,10 @@ export function SocketProvider({ children }) {
 
     const socket = io(SOCKET_URL, {
       withCredentials: true,
-      auth: {
-        // socketAuth.js reads the cookie string from handshake.auth.cookie
-        cookie: document.cookie,
-      },
+      // Socket.IO will automatically send cookies (including httpOnly ones)
+      // when withCredentials is true and the server allows the origin.
+      // Do NOT pass auth.cookie manually — httpOnly cookies are inaccessible
+      // to JS via document.cookie and must be sent by the browser automatically.
       transports: ['polling', 'websocket'],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,

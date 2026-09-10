@@ -176,9 +176,9 @@ function Footer() {
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <FooterLink to="/shop">All Products</FooterLink>
-            <FooterLink to="/shop?filter=new">New Arrivals</FooterLink>
+            <FooterLink to="/#new-arrivals">New Arrivals</FooterLink>
             <FooterLink to="/shop?discount=true">Sale</FooterLink>
-            <FooterLink to="/brands">Brands</FooterLink>
+            <FooterLink to="/shop">Brands</FooterLink>
           </ul>
         </div>
 
