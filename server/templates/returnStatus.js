@@ -194,7 +194,7 @@ export const returnStatusTemplate = ({
 
     <div style="text-align:center;">
       <a
-        href="${frontendUrl}/returns/${returnId}"
+        href="${frontendUrl}/orders"
         style="${styles.button}"
       >
         View Return Details

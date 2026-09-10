@@ -100,7 +100,7 @@ export const adminNewOrderTemplate = ({
 
     <div style="text-align:center;">
       <a
-        href="${frontendUrl}/admin/order/${orderId}"
+        href="${frontendUrl}/admin/orders/${orderId}"
         style="${styles.button}"
       >
         Review Order
