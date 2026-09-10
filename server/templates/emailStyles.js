@@ -147,7 +147,7 @@ export const baseTemplate = (
     </div>
 
     <div style="${styles.footer}">
-      Mega Himalaya Pvt. Ltd. - Pokhara, Nepal
+      Mega Himalaya Pvt. Ltd. — Mahendra Pool, Pokhara 33700, Nepal
       <br>
 
       This is an automated email.
