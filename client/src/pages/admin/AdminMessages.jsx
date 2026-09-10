@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 import { getMessages, updateMessageStatus, deleteMessage } from '../../api/adminClient'
 
 const STATUS_STYLES = {
-  unread: { bg: '#dbeafe', color: '#1e40af', label: 'Unread' },
-  read:  { bg: '#f1f5f9', color: '#64748b', label: 'Read' },
-  resolved: { bg: '#dcfce7', color: '#15803d', label: 'Resolved' },
+  New:     { bg: '#dbeafe', color: '#1e40af', label: 'Unread' },
+  Read:    { bg: '#f1f5f9', color: '#64748b', label: 'Read'   },
+  Replied: { bg: '#fef9c3', color: '#854d0e', label: 'Replied' },
+  Closed:  { bg: '#dcfce7', color: '#15803d', label: 'Resolved' },
 }
 
 function AdminMessages() {
@@ -50,7 +51,7 @@ function AdminMessages() {
     }
   }
 
-  const statuses = ['All', 'unread', 'read', 'resolved']
+  const statuses = ['All', 'New', 'Read', 'Replied', 'Closed']
   const filtered = filter === 'All'
     ? messages
     : messages.filter((m) => m.status === filter)
@@ -63,7 +64,7 @@ function AdminMessages() {
           Messages
         </h1>
         <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-          {messages.filter((m) => m.status === 'unread').length} unread · {messages.length} total
+          {messages.filter((m) => m.status === 'New').length} unread · {messages.length} total
         </p>
       </div>
 
@@ -83,7 +84,7 @@ function AdminMessages() {
               textTransform: 'capitalize',
             }}
           >
-            {s}
+            {s === 'Closed' ? 'Resolved' : s === 'New' ? 'Unread' : s}
           </button>
         ))}
       </div>
@@ -118,7 +119,7 @@ function AdminMessages() {
                 key={msg._id}
                 style={{
                   backgroundColor: '#ffffff', borderRadius: '12px',
-                  border: `1px solid ${msg.status === 'unread' ? '#bfdbfe' : '#e2e8f0'}`,
+                  border: `1px solid ${msg.status === 'New' ? '#bfdbfe' : '#e2e8f0'}`,
                   overflow: 'hidden',
                 }}
               >
@@ -186,27 +187,36 @@ function AdminMessages() {
 
                    
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      {msg.status !== 'read' && (
+                      {msg.status !== 'Read' && msg.status !== 'Replied' && msg.status !== 'Closed' && (
                         <button
-                          onClick={() => handleStatus(msg._id, 'read')}
+                          onClick={() => handleStatus(msg._id, 'Read')}
                           disabled={updating === msg._id}
                           style={actionBtn('#f1f5f9', '#475569')}
                         >
                           Mark as Read
                         </button>
                       )}
-                      {msg.status !== 'resolved' && (
+                      {msg.status !== 'Replied' && (
                         <button
-                          onClick={() => handleStatus(msg._id, 'resolved')}
+                          onClick={() => handleStatus(msg._id, 'Replied')}
+                          disabled={updating === msg._id}
+                          style={actionBtn('#fef9c3', '#854d0e')}
+                        >
+                          Mark as Replied
+                        </button>
+                      )}
+                      {msg.status !== 'Closed' && (
+                        <button
+                          onClick={() => handleStatus(msg._id, 'Closed')}
                           disabled={updating === msg._id}
                           style={actionBtn('#dcfce7', '#15803d')}
                         >
                           Mark as Resolved
                         </button>
                       )}
-                      {msg.status !== 'unread' && (
+                      {msg.status !== 'New' && (
                         <button
-                          onClick={() => handleStatus(msg._id, 'unread')}
+                          onClick={() => handleStatus(msg._id, 'New')}
                           disabled={updating === msg._id}
                           style={actionBtn('#dbeafe', '#1e40af')}
                         >

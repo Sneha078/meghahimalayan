@@ -4,7 +4,13 @@ import PageBanner from "../components/PageBanner";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
 
 function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
+  });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -25,6 +31,7 @@ function Contact() {
       const res = await fetch(`${API_URL}/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",   // sends cookie so logged-in user is linked to the message
         body: JSON.stringify(form),
       });
 
@@ -109,6 +116,48 @@ function Contact() {
                   required
                   style={inputStyle}
                 />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--color-navy)", marginBottom: "6px", display: "block" }}>
+                  Phone <span style={{ fontWeight: "400", color: "var(--color-muted)" }}>(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="+977 98XXXXXXXX"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--color-navy)", marginBottom: "6px", display: "block" }}>
+                  Subject
+                </label>
+                <select
+                  name="subject"
+                  value={form.subject}
+                  onChange={handleChange}
+                  required
+                  style={{
+                    ...inputStyle,
+                    backgroundColor: "var(--color-white)",
+                    cursor: "pointer",
+                    appearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b6862' d='M6 8L0 0h12z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 14px center",
+                    paddingRight: "36px",
+                  }}
+                >
+                  <option value="" disabled>Select a subject…</option>
+                  <option value="Product Inquiry">Product Inquiry</option>
+                  <option value="Return & Refund">Return &amp; Refund</option>
+                  <option value="Wholesale / Bulk Order">Wholesale / Bulk Order</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div>
