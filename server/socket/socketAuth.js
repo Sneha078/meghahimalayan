@@ -6,9 +6,15 @@ import User from "../models/userModel.js";
 const socketAuth = async (socket, next) => {
   try {
     // ───────────────────────────────────────────────────
-    // 1. Extract token from handshake auth cookie string
+    // 1. Extract token from cookie header (sent automatically
+    //    by the browser when withCredentials: true).
+    //    httpOnly cookies are NOT accessible via JS / handshake.auth,
+    //    but ARE sent in the HTTP upgrade request headers.
     // ───────────────────────────────────────────────────
-    const cookieString = socket.handshake.auth?.cookie || "";
+    const cookieString =
+      socket.handshake.headers?.cookie ||
+      socket.handshake.auth?.cookie ||
+      "";
 
     const tokenMatch = cookieString.match(/token=([^;]+)/);
     const token = tokenMatch?.[1];

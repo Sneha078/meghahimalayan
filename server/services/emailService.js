@@ -46,17 +46,11 @@ const FRONTEND_URL =
 // ─────────────────────────────────────────────────────────────────────────────
 
 const getAllActiveAdminEmails = async () => {
-  const admins = await User.find({
-    role: "admin",
-    isActive: true,
-    isDeleted: false,
-  })
+  const admins = await User.find({ role: "admin" })
     .select("email")
     .lean();
 
-  return admins
-    .map((admin) => admin.email)
-    .filter(Boolean);
+  return admins.map((admin) => admin.email).filter(Boolean);
 };
 
 
@@ -314,6 +308,84 @@ export const sendWelcomeEmail = async (user) => {
 
     html,
   });
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — ORDER CANCELLED BY CUSTOMER
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const sendAdminOrderCancelledEmail = async (order, customer) => {
+  const adminEmails = await getAllActiveAdminEmails();
+
+  if (adminEmails.length === 0) return [];
+
+  const itemsList = (order.orderItems || [])
+    .map((i) => `• ${i.name} × ${i.quantity} — NPR ${i.price * i.quantity}`)
+    .join("\n");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;border:1px solid #e2e8f0;border-radius:8px">
+      <h2 style="color:#B91C1C;margin-bottom:4px">Order Cancelled by Customer</h2>
+      <p style="color:#4A5568;margin-top:0">A customer has cancelled their order.</p>
+
+      <table style="width:100%;border-collapse:collapse;margin:20px 0">
+        <tr><td style="padding:8px;color:#718096;width:140px">Order Number</td>
+            <td style="padding:8px;font-weight:600;color:#0D1B2E">${order.orderNumber}</td></tr>
+        <tr style="background:#F8FAFC">
+            <td style="padding:8px;color:#718096">Customer</td>
+            <td style="padding:8px;color:#0D1B2E">${customer?.name || "N/A"} &lt;${customer?.email || "N/A"}&gt;</td></tr>
+        <tr><td style="padding:8px;color:#718096">Order Total</td>
+            <td style="padding:8px;font-weight:600;color:#0D1B2E">NPR ${order.totalPrice}</td></tr>
+        <tr style="background:#F8FAFC">
+            <td style="padding:8px;color:#718096">Payment Method</td>
+            <td style="padding:8px;color:#0D1B2E">${order.paymentInfo?.method || "N/A"}</td></tr>
+        <tr><td style="padding:8px;color:#718096">Payment Status</td>
+            <td style="padding:8px;color:#0D1B2E">${order.paymentInfo?.status || "N/A"}</td></tr>
+        <tr style="background:#F8FAFC">
+            <td style="padding:8px;color:#718096">Cancelled At</td>
+            <td style="padding:8px;color:#0D1B2E">${new Date(order.cancelledAt || Date.now()).toLocaleString("en-NP", { timeZone: "Asia/Kathmandu" })}</td></tr>
+      </table>
+
+      <h4 style="color:#0D1B2E;margin-bottom:8px">Cancelled Items</h4>
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:14px;font-size:13px;color:#374151;white-space:pre-line">${itemsList}</div>
+
+      ${order.paymentInfo?.status === "Paid"
+        ? `<div style="margin-top:16px;padding:12px;background:#FFFBEB;border:1px solid #FCD34D;border-radius:6px;color:#92400E;font-size:13px">
+            ⚠️ <strong>This order was already paid.</strong> A manual refund may be required via ${order.paymentInfo?.method || "payment gateway"}.
+           </div>`
+        : ""}
+
+      <div style="margin-top:24px;text-align:center">
+        <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/admin/orders"
+           style="background:#0D1B2E;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px">
+          View in Admin Dashboard
+        </a>
+      </div>
+    </div>
+  `;
+
+  const results = await Promise.allSettled(
+    adminEmails.map((adminEmail) =>
+      sendEmail({
+        email: adminEmail,
+        subject: `Order Cancelled — ${order.orderNumber} | Customer: ${customer?.name || "N/A"}`,
+        text: `Order ${order.orderNumber} has been cancelled by customer ${customer?.name || "N/A"} (${customer?.email || "N/A"}).\n\nTotal: NPR ${order.totalPrice}\nPayment: ${order.paymentInfo?.method} — ${order.paymentInfo?.status}\n\nItems:\n${itemsList}`,
+        html,
+      })
+    )
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(
+        `Admin cancel email failed: ${adminEmails[index]}`,
+        result.reason?.message || result.reason
+      );
+    }
+  });
+
+  return results;
 };
 
 

@@ -195,10 +195,10 @@ function AdminProducts() {
                       <span style={{
                         padding: '3px 10px', borderRadius: '20px',
                         fontSize: '0.72rem', fontWeight: '700',
-                        backgroundColor: product.isOutOfStock ? '#fee2e2' : '#dcfce7',
-                        color: product.isOutOfStock ? '#dc2626' : '#15803d',
+                        backgroundColor: Number(product.stock) > 0 ? '#dcfce7' : '#fee2e2',
+                        color: Number(product.stock) > 0 ? '#15803d': '#dc2626,'
                       }}>
-                        {product.isOutOfStock ? 'Out of Stock' : 'In Stock'}
+                        {Number(product.stock)> 0 ? 'In stock' : 'Out of stock'}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>

@@ -176,9 +176,9 @@ function Footer() {
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <FooterLink to="/shop">All Products</FooterLink>
-            <FooterLink to="/shop?filter=new">New Arrivals</FooterLink>
+            <FooterLink to="/#new-arrivals">New Arrivals</FooterLink>
             <FooterLink to="/shop?discount=true">Sale</FooterLink>
-            <FooterLink to="/brands">Brands</FooterLink>
+            <FooterLink to="/shop">Brands</FooterLink>
           </ul>
         </div>
 
@@ -290,13 +290,13 @@ function Footer() {
 
 
       <div style={{
-        display:        'flex',
+        display: 'flex',
         justifyContent: 'space-between',
-        alignItems:     'center',
-        padding:        '1.25rem 5rem',
-        fontSize:       '0.78rem',
-        flexWrap:       'wrap',
-        gap:            '0.5rem',
+        alignItems: 'center',
+        padding: '1.25rem 5rem',
+        fontSize:  '0.78rem',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
       }}>
         <p style={{ color: 'rgba(255,255,255,0.35)' }}>
           © 2026 Mega Himalaya Optical House, Pokhara. All rights reserved.

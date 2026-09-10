@@ -23,16 +23,16 @@ const contactSchema = new mongoose.Schema(
     trim: true,
   },
 
-  //define main category for a message
+  //define main category for a message — optional, defaults to "Other"
   subject: {
     type: String,
-    required: [true, "Please select a subject"],
     enum: [
       "Product Inquiry",
       "Return & Refund",
       "Wholesale / Bulk Order",
       "Other"
     ],
+    default: "Other",
   },
 
   //store customer actual message

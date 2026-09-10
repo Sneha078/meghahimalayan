@@ -10,9 +10,9 @@ import { notifyAdmins } from "../services/notificationService.js";
 export const createContactMessage = handleAsyncError(async (req, res, next) => {
   const { name, email, phone, subject, message } = req.body;
 
-  if (!name || !email || !subject || !message) {
+  if (!name || !email || !message) {
     return next(
-      new HandleError("Name, email, subject and message are required", 400)
+      new HandleError("Name, email and message are required", 400)
     );
   }
 
@@ -20,9 +20,8 @@ export const createContactMessage = handleAsyncError(async (req, res, next) => {
     name,
     email,
     phone: phone || "",
-    subject,
+    subject: subject || "Other",   // default to "Other" when not sent by frontend
     message,
-    // Link to the authenticated user if they are logged in
     user: req.user ? req.user._id : null,
   });
 
