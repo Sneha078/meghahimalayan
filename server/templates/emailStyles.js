@@ -147,7 +147,7 @@ export const baseTemplate = (
     </div>
 
     <div style="${styles.footer}">
-      Mega Himalaya Pvt. Ltd. — Kathmandu, Nepal
+      Mega Himalaya Pvt. Ltd. - Pokhara, Nepal
       <br>
 
       This is an automated email.
