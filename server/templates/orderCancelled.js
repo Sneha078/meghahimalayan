@@ -79,7 +79,7 @@ export const orderCancelledTemplate = ({
 
     <div style="text-align:center;">
       <a
-        href="${frontendUrl}/orders/${orderId}"
+        href="${frontendUrl}/orders"
         style="${styles.button}"
       >
         View Order Details
