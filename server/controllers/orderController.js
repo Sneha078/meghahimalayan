@@ -16,7 +16,6 @@ import {
   sendAdminNewOrderEmail,
   sendOrderStatusEmail,
   sendOrderCancelledEmail,
-  sendAdminOrderCancelledEmail,
 } from "../services/emailService.js";
 
 import { notifyAdmins } from "../services/notificationService.js";
@@ -451,36 +450,31 @@ const dispatchOrderStatusEmail = async (
 
 // Sends the customer email when an order is cancelled
 // (customer-initiated or admin-initiated).
-// Also notifies all admins by email.
-const dispatchOrderCancelledEmail = async (order) => {
+const dispatchOrderCancelledEmail = async (
+  order
+) => {
   try {
-    const customer = await User.findById(order.user)
+    const customer = await User.findById(
+      order.user
+    )
       .select("name email phone")
       .lean();
 
     if (!customer) {
-      console.error(`Customer not found for cancellation email: ${order.orderNumber}`);
+      console.error(
+        `Customer not found for cancellation email: ${order.orderNumber}`
+      );
+
       return;
     }
 
-    // Customer cancellation confirmation
-    void sendOrderCancelledEmail(order, customer).catch((err) => {
-      console.error(
-        `Customer cancellation email failed for ${order.orderNumber}:`,
-        err?.message || err
-      );
-    });
-
-    // Admin notification email
-    void sendAdminOrderCancelledEmail(order, customer).catch((err) => {
-      console.error(
-        `Admin cancellation email failed for ${order.orderNumber}:`,
-        err?.message || err
-      );
-    });
+    await sendOrderCancelledEmail(
+      order,
+      customer
+    );
   } catch (err) {
     console.error(
-      `Failed to dispatch cancellation emails for ${order.orderNumber}:`,
+      `Order cancellation email failed for ${order.orderNumber}:`,
       err?.message || err
     );
   }
