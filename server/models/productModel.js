@@ -247,8 +247,12 @@ const productSchema = new mongoose.Schema(
 
 //pre-save middleware
 //runs before a product is saved to mongodb
-productSchema.pre("save", function (next) {
-  this.isOutOfStock = this.stock === 0;
+productSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate()
+  if (update.stock !== undefined) {
+    update.isOutofStock = 
+      update.stock === 0;
+  }
   next();
 });
 

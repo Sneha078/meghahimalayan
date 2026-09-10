@@ -43,15 +43,24 @@ import OrderFailed from './pages/OrderFailed'
 
 
 function ScrollToTop() {
-  const {pathname, search } = useLocation()
+  const { pathname, search, hash } = useLocation()
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'auto',
-    })
-  }, [pathname, search])
+    if (hash) {
+      const id = hash.replace('#', '')
+      const attempt = (retries = 0) => {
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else if (retries < 10) {
+          setTimeout(() => attempt(retries + 1), 100)
+        }
+      }
+      setTimeout(() => attempt(), 50)
+      return
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname, search, hash])
   return null
 }
 
