@@ -31,6 +31,7 @@ import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminMessages from './pages/admin/AdminMessages'
 import AdminReturns from './pages/admin/AdminReturns'
 import AdminReturnDetail from './pages/admin/AdminReturnDetail'
+import AdminNotifications from './pages/admin/AdminNotifications'
 import Shipping from './pages/Shipping'
 import Returns from './pages/Returns'
 import ReturnRequest from './pages/ReturnRequest'
@@ -146,6 +147,11 @@ function App() {
 <Route path="/admin/returns/:id" element={
   <AdminRoute>
     <AdminLayout><AdminReturnDetail /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/notifications" element={
+  <AdminRoute>
+    <AdminLayout><AdminNotifications /></AdminLayout>
   </AdminRoute>
 } />
 

@@ -14,7 +14,7 @@ export const NOTIFICATION_EVENTS = [
   'notification:new-user',
 ]
 
-const TYPE_ICON = {
+export const TYPE_ICON = {
   ORDER:   '🛒',
   RETURN:  '↩️',
   MESSAGE: '✉️',
@@ -22,13 +22,34 @@ const TYPE_ICON = {
   SYSTEM:  '⚙️',
 }
 
-const TYPE_LINK = {
-  ORDER:   (d) => d?.orderId   ? `/admin/orders/${d.orderId}`   : '/admin/orders',
-  RETURN:  (d) => d?.returnId  ? `/admin/returns/${d.returnId}` : '/admin/returns',
-  MESSAGE: (d) => '/admin/messages',
-  USER:    (d) => d?.userId    ? `/admin/users`                 : '/admin/users',
-  SYSTEM:  ()  => '/admin/dashboard',
+export function getNotificationLink(n) {
+  if (!n) return '/admin/dashboard'
+  if (n.link) return n.link
+
+  const type = (n.type || '').toUpperCase()
+  const data = n.data || {}
+
+  switch (type) {
+    case 'ORDER':
+      return data.orderId ? `/admin/orders/${data.orderId}` : '/admin/orders'
+    case 'RETURN':
+      return data.returnId ? `/admin/returns/${data.returnId}` : '/admin/returns'
+    case 'MESSAGE':
+      return '/admin/messages'
+    case 'USER':
+      return '/admin/users'
+    case 'SYSTEM':
+    default:
+      return '/admin/dashboard'
+  }
 }
+
+export function getNotificationIcon(n) {
+  if (n?.icon) return n.icon
+  const type = (n?.type || '').toUpperCase()
+  return TYPE_ICON[type] ?? '🔔'
+}
+
 
 export function SocketProvider({ children }) {
   const { user } = useAuth()
@@ -73,8 +94,8 @@ export function SocketProvider({ children }) {
           ...payload,
           // Ensure a local _id fallback if server didn't send one
           _id: payload._id ?? `local-${Date.now()}`,
-          icon: TYPE_ICON[payload.type] ?? '🔔',
-          link: TYPE_LINK[payload.type]?.(payload.data) ?? '/admin/dashboard',
+          icon: getNotificationIcon(payload),
+          link: getNotificationLink(payload),
           readByMe: false,
         }
 
@@ -98,14 +119,12 @@ export function SocketProvider({ children }) {
   }, [isAdmin])
 
   const markOneRead = (id) => {
-    setLiveNotifications((prev) =>
-      prev.map((n) => (n._id === id ? { ...n, readByMe: true } : n))
-    )
+    setLiveNotifications((prev) => prev.filter((n) => n._id !== id))
     setUnreadCount((n) => Math.max(0, n - 1))
   }
 
   const markAllRead = () => {
-    setLiveNotifications((prev) => prev.map((n) => ({ ...n, readByMe: true })))
+    setLiveNotifications([])
     setUnreadCount(0)
   }
 
@@ -126,5 +145,3 @@ export function SocketProvider({ children }) {
 export function useSocket() {
   return useContext(SocketContext)
 }
-
-export { TYPE_ICON, TYPE_LINK }

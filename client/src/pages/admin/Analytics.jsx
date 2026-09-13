@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getAnalytics, getTopCustomers } from '../../api/adminClient'
 
 function Analytics() {
@@ -110,52 +111,71 @@ function Analytics() {
                 label: 'Total Revenue',
                 value: `Rs. ${(analytics.totalRevenue ?? 0).toLocaleString()}`,
                 color: '#16a34a',
+                link: '/admin/orders',
               },
               {
                 label: 'Total Orders',
                 value: analytics.totalOrders ?? 0,
                 color: '#2563eb',
+                link: '/admin/orders',
               },
               {
                 label: 'Avg Order Value',
                 value: `Rs. ${(analytics.avgOrderValue ?? 0).toLocaleString()}`,
                 color: '#9333ea',
+                link: '/admin/orders',
               },
               {
                 label: 'Pending Orders',
                 value: analytics.pendingOrders ?? 0,
                 color: '#ea580c',
+                link: '/admin/orders?status=Processing',
               },
             ].map((card) => (
-              <div
+              <Link
                 key={card.label}
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: '1px solid #e2e8f0',
-                }}
+                to={card.link}
+                style={{ textDecoration: 'none' }}
               >
-                <p
+                <div
                   style={{
-                    fontSize: '0.78rem',
-                    color: '#64748b',
-                    marginBottom: '8px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: '1px solid #e2e8f0',
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  {card.label}
-                </p>
+                  <p
+                    style={{
+                      fontSize: '0.78rem',
+                      color: '#64748b',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    {card.label}
+                  </p>
 
-                <p
-                  style={{
-                    fontSize: '1.4rem',
-                    fontWeight: '800',
-                    color: card.color,
-                  }}
-                >
-                  {card.value}
-                </p>
-              </div>
+                  <p
+                    style={{
+                      fontSize: '1.4rem',
+                      fontWeight: '800',
+                      color: card.color,
+                    }}
+                  >
+                    {card.value}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
 
