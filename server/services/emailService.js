@@ -163,15 +163,23 @@ export const sendOrderStatusEmail = async (
     );
   }
 
-  if (!user?.email) {
+  const recipientEmail = user?.email || order?.shippingInfo?.email;
+
+  if (!recipientEmail) {
     throw new Error(
       "Cannot send order status email: customer email missing"
     );
   }
 
+  const recipientUser = {
+    ...user,
+    email: recipientEmail,
+    name: user?.name || order?.shippingInfo?.name || "Customer",
+  };
+
   const html = orderStatusTemplate({
     order,
-    user,
+    user: recipientUser,
     status,
     frontendUrl: FRONTEND_URL,
   });
@@ -188,7 +196,7 @@ export const sendOrderStatusEmail = async (
   };
 
   return sendEmail({
-    email: user.email,
+    email: recipientEmail,
     subject: subjects[status],
 
     text:

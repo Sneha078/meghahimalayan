@@ -331,10 +331,10 @@ const getPagination = (query) => {
 
   const limit = Math.min(
     Math.max(
-      parseInt(query.limit, 10) || 10,
+      parseInt(query.limit, 10) || 100,
       1
     ),
-    100
+    500
   );
 
   return {
@@ -356,24 +356,34 @@ const dispatchOrderEmails = async (
   order
 ) => {
   try {
-    const customer = await User.findById(
-      order.user
-    )
-      .select("name email phone")
-      .lean();
+    const userId = order.user?._id || order.user;
+    let customer = null;
+    if (userId) {
+      customer = await User.findById(userId)
+        .select("name email phone")
+        .lean();
+    }
 
-    if (!customer) {
+    const recipientEmail = customer?.email || order.shippingInfo?.email;
+    const recipientName = customer?.name || order.shippingInfo?.name || "Customer";
+
+    if (!recipientEmail) {
       console.error(
-        `Customer not found for order ${order.orderNumber}`
+        `Customer email missing for order ${order.orderNumber}`
       );
-
       return;
     }
+
+    const recipientUser = {
+      _id: userId,
+      name: recipientName,
+      email: recipientEmail,
+    };
 
     // Customer confirmation email.
     void sendOrderConfirmationEmail(
       order,
-      customer
+      recipientUser
     ).catch((err) => {
       console.error(
         `Order confirmation email failed for ${order.orderNumber}:`,
@@ -388,7 +398,7 @@ const dispatchOrderEmails = async (
     ) {
       void sendAdminNewOrderEmail(
         order,
-        customer
+        recipientUser
       ).catch((err) => {
         console.error(
           `Admin new-order email failed for ${order.orderNumber}:`,
@@ -406,7 +416,7 @@ const dispatchOrderEmails = async (
 
 
 // Sends customer email for supported status changes.
-const dispatchOrderStatusEmail = async (
+export const dispatchOrderStatusEmail = async (
   order,
   status
 ) => {
@@ -421,23 +431,33 @@ const dispatchOrderStatusEmail = async (
   }
 
   try {
-    const customer = await User.findById(
-      order.user
-    )
-      .select("name email phone")
-      .lean();
+    const userId = order.user?._id || order.user;
+    let customer = null;
+    if (userId) {
+      customer = await User.findById(userId)
+        .select("name email phone")
+        .lean();
+    }
 
-    if (!customer) {
+    const recipientEmail = customer?.email || order.shippingInfo?.email;
+    const recipientName = customer?.name || order.shippingInfo?.name || "Customer";
+
+    if (!recipientEmail) {
       console.error(
-        `Customer not found for status email: ${order.orderNumber}`
+        `Cannot send status email for order ${order.orderNumber}: recipient email missing`
       );
-
       return;
     }
 
+    const recipientUser = {
+      _id: userId,
+      name: recipientName,
+      email: recipientEmail,
+    };
+
     await sendOrderStatusEmail(
       order,
-      customer,
+      recipientUser,
       status
     );
   } catch (err) {
