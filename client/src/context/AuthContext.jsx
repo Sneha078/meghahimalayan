@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { fetchCurrentUser, loginUser, registerUser, logoutUser } from '../api/authClient'
+import { fetchCurrentUser, loginUser, registerUser, logoutUser, googleLoginUser } from '../api/authClient'
 
 const AuthContext = createContext()
 
@@ -25,13 +25,21 @@ export function AuthProvider({ children}) {
         setUser(data.user)
         return data
     }
+
     const logout = async() => {
         await logoutUser()
         setUser(null)
     }
 
+    // Called after @react-oauth/google useGoogleLogin returns access_token
+    const googleLogin = async (accessToken) => {
+        const data = await googleLoginUser({ accessToken })
+        setUser(data.user)
+        return data
+    }
+
     return(
-        <AuthContext.Provider value={{ user, loading, login, signup, logout}}>
+        <AuthContext.Provider value={{ user, loading, login, signup, logout, googleLogin }}>
             {children}
         </AuthContext.Provider>
     )

@@ -69,3 +69,16 @@ export async function resetPassword({ token, password, confirmPassword }) {
   })
   return handleResponse(res)
 }
+
+
+// Sends Google access token to backend for verification.
+// Backend verifies with Google userinfo endpoint, finds or creates user, issues JWT cookie.
+export async function googleLoginUser({ idToken, accessToken }) {
+  const res = await fetch(`${API_URL}/auth/google`, {
+    method: 'POST',
+    credentials: 'include',          // saves the httpOnly JWT cookie
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken, accessToken }),
+  })
+  return handleResponse(res)
+}
