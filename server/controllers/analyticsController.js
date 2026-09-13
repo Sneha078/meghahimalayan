@@ -162,10 +162,11 @@ export const getDashboardStats = handleAsyncError(async (req, res) => {
         isDeleted: false,
       }),
 
-      // Only normal customers
+      // All active registered users
       User.countDocuments({
-        role: "user",
-        isDeleted: false,
+        isDeleted: {
+          $ne: true,
+        },
       }),
 
       // All active products
