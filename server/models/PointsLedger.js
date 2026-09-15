@@ -44,4 +44,25 @@ const pointsLedgerSchema = new mongoose.Schema(
 
 pointsLedgerSchema.index({ user: 1, type: 1, settled: 1 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// IDEMPOTENCY GUARD
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Ensures at most one "earn" entry can ever exist per order, enforced by
+// MongoDB itself rather than application-level flags/locks. This is what
+// makes earnPoints()/awardOrderPoints() in pointsService.js safe to call
+// more than once for the same order — a second attempt will hit a
+// duplicate-key error (code 11000) instead of creating a second entry.
+//
+// partialFilterExpression scopes the uniqueness constraint to type: "earn"
+// only, so "redeem" and "expire" entries (which don't carry a meaningful
+// unique order relationship) are unaffected.
+pointsLedgerSchema.index(
+  { order: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { type: "earn", order: { $ne: null } },
+  }
+);
+
 export default mongoose.model("PointsLedger", pointsLedgerSchema);

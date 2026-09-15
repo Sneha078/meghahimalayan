@@ -192,7 +192,7 @@ function Navbar() {
               onFocus={() => { if (searchValue.trim().length >= SEARCH_MIN_CHARS) setDropdownOpen(true); }}
               onKeyDown={handleKeyDown}
               className={`bg-transparent text-base outline-none w-full ${
-                scrolled ? "text-[#0d1a2a] placeholder-gray-400" : "text-white placeholder-white/50"
+                scrolled ? "text-#0d1a2a placeholder-gray-400" : "white placeholder-white/50"
               }`}
             />
 

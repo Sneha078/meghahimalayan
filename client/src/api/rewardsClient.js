@@ -28,14 +28,17 @@ export async function getCatalog(maxPoints) {
   return data;
 }
 
-export async function redeemProduct(productId) {
+// shippingInfo is required now — redeeming creates a real Order that needs
+// a delivery address, same shape checkout uses:
+// { name, address, city, state, pincode, phoneNo }
+export async function redeemProduct(productId, shippingInfo) {
   const res = await fetch(`${BASE}/redeem`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify({ productId }),
+    body: JSON.stringify({ productId, shippingInfo }),
   });
 
   const data = await res.json();
@@ -44,6 +47,8 @@ export async function redeemProduct(productId) {
     throw new Error(data.message || "Redemption failed");
   }
 
+  // Now returns { success, message, order, balance } — RewardsPage.jsx
+  // uses data.order to show the order number after a successful redeem.
   return data;
 }
 

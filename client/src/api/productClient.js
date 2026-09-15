@@ -185,3 +185,15 @@ export async function submitReturnRequest(payload) {
   }
   return res.json()
 }
+
+// get/api/v1/invoice/order/:id/invoice - returns a PDF blob
+export async function downloadInvoice(orderId){
+  const res = await fetch(`${API_URL}/invoice/order/${orderId}/invoice`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed tp download invoice')
+  }
+  return res.blob()
+}
