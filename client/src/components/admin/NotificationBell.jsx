@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useSocket } from '../../context/SocketContext'
+import { useSocket, getNotificationLink, getNotificationIcon } from '../../context/SocketContext'
 import {
   getNotifications,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
 } from '../../api/notificationClient'
+
 
 function timeAgo(date) {
   const seconds = Math.floor((Date.now() - new Date(date)) / 1000)
@@ -54,22 +55,22 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Merge live notifications (newest) on top of history, deduplicate by _id
+  // Filter unread notifications and merge live + history
+  const isUnread = (n) =>
+    n.readByMe === false || (!n.readBy || n.readBy.length === 0)
+
   const merged = [
     ...liveNotifications,
     ...history.filter((h) => !liveNotifications.some((l) => l._id === h._id)),
-  ].slice(0, 30)
+  ]
+    .filter(isUnread)
+    .slice(0, 30)
 
   const handleMarkOne = async (notification) => {
-    if (notification.readByMe || notification.readBy?.length > 0) return
     try {
       await markAsRead(notification._id)
       markOneRead(notification._id)
-      setHistory((prev) =>
-        prev.map((n) =>
-          n._id === notification._id ? { ...n, readBy: ['me'] } : n
-        )
-      )
+      setHistory((prev) => prev.filter((n) => n._id !== notification._id))
     } catch (_) {}
   }
 
@@ -77,12 +78,9 @@ export default function NotificationBell() {
     try {
       await markAllAsRead()
       markAllRead()
-      setHistory((prev) => prev.map((n) => ({ ...n, readBy: ['me'] })))
+      setHistory([])
     } catch (_) {}
   }
-
-  const isUnread = (n) =>
-    n.readByMe === false && (!n.readBy || n.readBy.length === 0)
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -197,7 +195,8 @@ export default function NotificationBell() {
 
             {!historyLoading && merged.map((n) => {
               const unread = isUnread(n)
-              const link = n.link ?? '/admin/dashboard'
+              const link = getNotificationLink(n)
+              const icon = getNotificationIcon(n)
 
               return (
                 <Link
@@ -211,37 +210,38 @@ export default function NotificationBell() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '12px',
-                    padding: '14px 20px',
-                    borderBottom: '1px solid #f8fafc',
-                    backgroundColor: unread ? '#f0f9ff' : '#ffffff',
+                    padding: '14px 18px',
+                    borderBottom: '1px solid #e2e8f0',
+                    borderLeft: unread ? '4px solid #2563eb' : '4px solid transparent',
+                    backgroundColor: unread ? '#eff6ff' : '#ffffff',
                     textDecoration: 'none',
-                    transition: 'background-color 0.15s ease',
+                    transition: 'all 0.15s ease',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = unread ? '#f0f9ff' : '#ffffff' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = unread ? '#dbeafe' : '#f8fafc' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = unread ? '#eff6ff' : '#ffffff' }}
                 >
                   {/* Icon */}
                   <div style={{
                     width: '36px',
                     height: '36px',
                     borderRadius: '10px',
-                    backgroundColor: '#f1f5f9',
+                    backgroundColor: unread ? '#dbeafe' : '#f1f5f9',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1rem',
+                    fontSize: '1.05rem',
                     flexShrink: 0,
                   }}>
-                    {n.icon ?? '🔔'}
+                    {icon}
                   </div>
 
                   {/* Text */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
-                      fontSize: '0.82rem',
+                      fontSize: '0.83rem',
                       fontWeight: unread ? '700' : '500',
-                      color: '#0f172a',
+                      color: unread ? '#1e40af' : '#0f172a',
                       marginBottom: '3px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -251,7 +251,7 @@ export default function NotificationBell() {
                     </p>
                     <p style={{
                       fontSize: '0.76rem',
-                      color: '#64748b',
+                      color: unread ? '#3b82f6' : '#64748b',
                       lineHeight: '1.4',
                       overflow: 'hidden',
                       display: '-webkit-box',
@@ -260,7 +260,7 @@ export default function NotificationBell() {
                     }}>
                       {n.message}
                     </p>
-                    <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px' }}>
+                    <p style={{ fontSize: '0.7rem', color: unread ? '#60a5fa' : '#94a3b8', marginTop: '4px' }}>
                       {timeAgo(n.createdAt)}
                     </p>
                   </div>
@@ -268,10 +268,11 @@ export default function NotificationBell() {
                   {/* Unread dot */}
                   {unread && (
                     <div style={{
-                      width: '8px',
-                      height: '8px',
+                      width: '9px',
+                      height: '9px',
                       borderRadius: '50%',
                       backgroundColor: '#2563eb',
+                      boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.2)',
                       flexShrink: 0,
                       marginTop: '4px',
                     }} />
@@ -289,7 +290,7 @@ export default function NotificationBell() {
               textAlign: 'center',
             }}>
               <Link
-                to="/admin/dashboard"
+                to="/admin/notifications"
                 onClick={() => setOpen(false)}
                 style={{ fontSize: '0.78rem', fontWeight: '600', color: '#2563eb', textDecoration: 'none' }}
               >

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getAllOrders } from '../../api/adminClient'
 
 const STATUS_COLORS = {
@@ -12,10 +12,19 @@ const STATUS_COLORS = {
 }
 
 function AdminOrders() {
+  const [searchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
+
   const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
-  const [filter, setFilter]   = useState('All')
+  const [filter, setFilter]   = useState(statusParam || 'All')
+
+  useEffect(() => {
+    if (statusParam) {
+      setFilter(statusParam)
+    }
+  }, [statusParam])
 
   useEffect(() => {
     getAllOrders()

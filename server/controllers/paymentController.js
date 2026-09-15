@@ -9,6 +9,7 @@ import { ESEWA_CONFIG, BANK_ACCOUNT_INFO } from "../config/paymentConfig.js";
 import { generateEsewaSignature, verifyEsewaSignature } from "../utils/payments/esewaHelper.js";
 import { initiateKhaltiPayment, lookupKhaltiPayment } from "../utils/payments/khaltiHelper.js";
 import { awardOrderPoints, refundPointsForOrder } from "../services/pointsService.js";
+import { dispatchOrderStatusEmail } from "./orderController.js";
 
 /**
  * Shared cleanup for a payment that failed/was rejected: restores stock,
@@ -120,7 +121,7 @@ export const verifyEsewa = handleAsyncError(async (req, res, next) => {
     payment.gatewayResponse = decoded;
     await payment.save();
 
-    await Order.findByIdAndUpdate(payment.order, {
+    const updatedOrder = await Order.findByIdAndUpdate(payment.order, {
       "paymentInfo.status": "Paid",
       "paymentInfo.method": "eSewa",
       "paymentInfo.id": decoded.transaction_code,
@@ -130,7 +131,11 @@ export const verifyEsewa = handleAsyncError(async (req, res, next) => {
       $push: {
         statusHistory: { status: "Confirmed", changedAt: new Date(), note: "Payment verified via eSewa" },
       },
-    });
+    }, { new: true });
+
+    if (updatedOrder) {
+      void dispatchOrderStatusEmail(updatedOrder, "Confirmed");
+    }
 
     // Payment is verified and final at this point — award points now
     // rather than waiting for delivery, same as Khalti and bank transfer.
@@ -198,7 +203,7 @@ export const verifyKhalti = handleAsyncError(async (req, res) => {
     payment.gatewayResponse = lookupRes;
     await payment.save();
 
-    await Order.findByIdAndUpdate(payment.order, {
+    const updatedOrder = await Order.findByIdAndUpdate(payment.order, {
       "paymentInfo.status": "Paid",
       "paymentInfo.method": "Khalti",
       "paymentInfo.id": lookupRes.transaction_id,
@@ -208,7 +213,11 @@ export const verifyKhalti = handleAsyncError(async (req, res) => {
       $push: {
         statusHistory: { status: "Confirmed", changedAt: new Date(), note: "Payment verified via Khalti" },
       },
-    });
+    }, { new: true });
+
+    if (updatedOrder) {
+      void dispatchOrderStatusEmail(updatedOrder, "Confirmed");
+    }
 
     // Payment is verified and final at this point — award points now
     // rather than waiting for delivery, same as eSewa and bank transfer.
@@ -286,6 +295,7 @@ export const reviewBankTransfer = handleAsyncError(async (req, res, next) => {
       note: "Bank transfer verified by admin",
     });
     await order.save();
+    void dispatchOrderStatusEmail(order, "Confirmed");
 
     // Payment is verified and final at this point — award points now
     // rather than waiting for delivery, same as eSewa and Khalti.

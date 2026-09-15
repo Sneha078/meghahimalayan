@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { path: '/admin/users',      label: 'Users'       },
   { path: '/admin/coupons',    label: 'Coupons'     },
   { path: '/admin/messages',   label: 'Messages'    },
+  { path: '/admin/notifications', label: 'Notifications' },
 ]
 
 function AdminLayoutInner({ children }) {
