@@ -8,7 +8,7 @@ import { restoreStock, releaseCouponUsage } from "../utils/stockUtils.js";
 import { ESEWA_CONFIG, BANK_ACCOUNT_INFO } from "../config/paymentConfig.js";
 import { generateEsewaSignature, verifyEsewaSignature } from "../utils/payments/esewaHelper.js";
 import { initiateKhaltiPayment, lookupKhaltiPayment } from "../utils/payments/khaltiHelper.js";
-import { awardOrderPoints } from "../services/pointsService.js";
+import { awardOrderPoints, refundPointsForOrder } from "../services/pointsService.js";
 
 /**
  * Shared cleanup for a payment that failed/was rejected: restores stock,
@@ -24,6 +24,14 @@ async function cancelOrderForFailedPayment(orderId, failureNote) {
 
       await restoreStock(order.orderItems, session);
       await releaseCouponUsage(order.couponCode, session);
+
+      // Return any points spent as a checkout discount — the customer's
+      // payment never actually went through, so they shouldn't lose the
+      // points they used toward it either. Same transaction as the
+      // stock/coupon restoration above.
+      if (order.pointsRedeemed > 0) {
+        await refundPointsForOrder(order._id, session);
+      }
 
       order.orderStatus = "Cancelled";
       order.cancelledAt = new Date();

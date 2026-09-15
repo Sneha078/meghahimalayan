@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 
-import { awardOrderPoints } from "../services/pointsService.js";
+import { awardOrderPoints, calculateDiscount, spendPointsForOrder, refundPointsForOrder, POINTS_TO_RUPEE_RATE } from "../services/pointsService.js";
 
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
@@ -27,7 +27,10 @@ import { notifyAdmins } from "../services/notificationService.js";
 
 // Generates a human-readable order reference.
 // Example: MH-1750000000000-A1B2C3D4
-const generateOrderNumber = () => {
+// Exported so other flows that create real Order documents — like reward
+// redemption in rewardsController.js — use the same numbering scheme
+// instead of duplicating this logic.
+export const generateOrderNumber = () => {
   const timestamp = Date.now().toString();
 
   const random = crypto
@@ -182,7 +185,9 @@ const calculateTaxPrice = () => 0;
 // SHIPPING VALIDATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-const validateShippingInfo = (
+// Exported so reward redemption (rewardsController.js) validates shipping
+// info the same way checkout does, instead of duplicating these rules.
+export const validateShippingInfo = (
   shippingInfo
 ) => {
   if (!shippingInfo) {
@@ -494,6 +499,7 @@ export const createNewOrder =
         orderItems,
         paymentInfo,
         couponCode,
+        pointsToRedeem,
       } = req.body;
 
       // Validate before starting transaction.
@@ -715,6 +721,45 @@ export const createNewOrder =
             }
 
             // ─────────────────────────────
+            // POINTS DISCOUNT
+            // ─────────────────────────────
+            //
+            // Computed server-side only — never trust a discount amount
+            // sent by the frontend. calculateDiscount() caps this at
+            // MAX_DISCOUNT_PERCENT of itemsPrice (currently 20%), so a
+            // customer can never zero out an order using only points.
+            //
+            // pointsUsed is derived FROM the (possibly capped) discount,
+            // not the other way around — so if the requested points would
+            // exceed the cap, we only spend the points that correspond to
+            // the discount actually given, not all requested points.
+            // ─────────────────────────────
+
+            const requestedPoints = Math.max(
+              0,
+              Math.floor(Number(pointsToRedeem) || 0)
+            );
+
+            let pointsDiscount = 0;
+            let pointsUsed = 0;
+
+            if (requestedPoints > 0) {
+              const rawDiscount = calculateDiscount(
+                requestedPoints,
+                itemsPrice
+              );
+
+              pointsUsed = Math.min(
+                requestedPoints,
+                Math.ceil(rawDiscount / POINTS_TO_RUPEE_RATE)
+              );
+
+              pointsDiscount = Math.round(
+                pointsUsed * POINTS_TO_RUPEE_RATE
+              );
+            }
+
+            // ─────────────────────────────
             // SHIPPING + TAX
             // ─────────────────────────────
 
@@ -736,7 +781,8 @@ export const createNewOrder =
               itemsPrice +
                 taxPrice +
                 shippingPrice -
-                discount
+                discount -
+                pointsDiscount
             );
 
             if (
@@ -892,6 +938,11 @@ export const createNewOrder =
                 couponCode:
                   appliedCoupon,
 
+                pointsRedeemed:
+                  pointsUsed,
+
+                pointsDiscount,
+
                 totalPrice,
 
                 isDeleted: false,
@@ -900,6 +951,26 @@ export const createNewOrder =
             await order.save({
               session,
             });
+
+            // Spend the points atomically as part of THIS transaction —
+            // if anything above fails, this never runs; if this fails
+            // (e.g. balance changed underneath us), everything above rolls
+            // back too. See spendPointsForOrder() in pointsService.js.
+            if (pointsUsed > 0) {
+              try {
+                await spendPointsForOrder(
+                  req.user._id,
+                  pointsUsed,
+                  order._id,
+                  session
+                );
+              } catch (err) {
+                throw new HandleError(
+                  err.message || "Unable to apply points discount",
+                  err.status || 400
+                );
+              }
+            }
 
             createdOrder = order;
           }
@@ -1198,6 +1269,13 @@ export const cancelMyOrder =
             await order.save({
               session,
             });
+
+            // Return any points spent as a checkout discount on this
+            // order — same transaction, so it rolls back together with
+            // everything else above if anything fails.
+            if (order.pointsRedeemed > 0) {
+              await refundPointsForOrder(order._id, session);
+            }
 
             cancelledOrder =
               order;
@@ -1652,6 +1730,16 @@ export const updateOrderStatus =
             await order.save({
               session,
             });
+
+            // Return any points spent as a checkout discount on this
+            // order, if an admin is cancelling it — same transaction as
+            // the stock/coupon restoration above.
+            if (
+              status === "Cancelled" &&
+              order.pointsRedeemed > 0
+            ) {
+              await refundPointsForOrder(order._id, session);
+            }
 
             updatedOrder =
               order;

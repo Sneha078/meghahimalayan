@@ -4,6 +4,7 @@ import readline from "readline";
 
 import Product from "../models/productModel.js";
 import connectDB from "../config/db.js";
+import { POINTS_PER_RUPEE, POINTS_TO_RUPEE_RATE } from "../services/pointsService.js";
 
 // ============================================================
 // CONFIGURATION
@@ -17,59 +18,127 @@ const CATEGORIES = [
   "perfumes",
 ];
 
-// Exactly four reward point values per tier.
-// Each category receives one product at each value.
-const POINT_TIERS = [
-  {
-    key: "200-500",
-    points: [250, 350, 425, 500],
-  },
-  {
-    key: "501-800",
-    points: [550, 650, 725, 800],
-  },
-  {
-    key: "801-1300",
-    points: [850, 1000, 1150, 1300],
-  },
-  {
-    key: "1300+",
-    points: [1500, 1800, 2200, 2500],
-  },
+// ------------------------------------------------------------
+// REWARD ECONOMICS
+// ------------------------------------------------------------
+//
+// IMPORTANT: pointsCost is derived from POINTS_PER_RUPEE (the
+// EARN rate — 1 point per Rs. 100 spent), NOT from
+// POINTS_TO_RUPEE_RATE (the checkout-discount CONVERSION rate).
+//
+// These two rates are not calibrated against each other in this
+// system — POINTS_TO_RUPEE_RATE implies a ~0.1% cashback rate,
+// so deriving catalog prices from it (even with a "loyalty
+// discount" applied) requires several HUNDRED times a product's
+// own price in prior spend to earn. That doesn't make redemption
+// harder — it makes it permanently unreachable, for every product,
+// at every price point.
+//
+// Instead, REDEMPTION_SPEND_MULTIPLIER answers a directly useful
+// question: "how many times a product's price should a customer
+// have to have spent, cumulatively, before they can redeem it for
+// free?" That's the actual lever for "can't give out expensive
+// products too cheap" — tune this number up or down as needed.
+//
+// Example at the default value of 8, for a Rs. 5,000 product:
+//
+//   pointsCost = ceil(5,000 × 8 × 0.01) = 400 points
+//
+// Earning 400 points requires spending 400 / 0.01 = Rs. 40,000 —
+// 8× the item's own price. That's a real, reachable loyalty goal.
+// ------------------------------------------------------------
+
+const REDEMPTION_SPEND_MULTIPLIER = 8;
+
+// Never allow a reward to cost less than this.
+const MIN_REWARD_POINTS = 200;
+
+// ============================================================
+// PRICE GROUPS
+// ============================================================
+//
+// These are NOT point-cost bands — they're only used to divide
+// each category's inventory into four price groups so the
+// catalog features a spread (entry-level through exclusive)
+// instead of clustering at one end. The actual pointsCost is
+// calculated from product.price via the formula above.
+// ============================================================
+
+const PRICE_GROUPS = [
+  { key: "entry" },
+  { key: "popular" },
+  { key: "premium" },
+  { key: "exclusive" },
 ];
 
-// Total rewards per category = 4 tiers × 4 products
-const PRODUCTS_PER_TIER = PRODUCTS_PER_CATEGORY;
+const PRODUCTS_PER_GROUP = PRODUCTS_PER_CATEGORY;
 
 const TOTAL_PRODUCTS_PER_CATEGORY =
-  POINT_TIERS.length * PRODUCTS_PER_CATEGORY;
+  PRICE_GROUPS.length * PRODUCTS_PER_CATEGORY;
+
+// ============================================================
+// POINT CALCULATION
+// ============================================================
+
+function calculateRewardPoints(price) {
+  const numericPrice = Number(price) || 0;
+
+  if (numericPrice <= 0) {
+    return 0;
+  }
+
+  const points = Math.ceil(
+    numericPrice * REDEMPTION_SPEND_MULTIPLIER * POINTS_PER_RUPEE
+  );
+
+  return Math.max(MIN_REWARD_POINTS, points);
+}
 
 // ============================================================
 // QUALITY SCORE
 // ============================================================
 //
-// Price determines WHICH PRICE GROUP a product belongs to.
-//
-// Rating / bestseller / featured / new arrival determine
-// WHICH products are preferred INSIDE that price group.
-//
-// This means a cheap bestseller can beat another cheap product,
-// but it can NEVER jump into a higher-priced reward tier.
+// Price determines WHICH price group a product belongs to.
+// Rating / bestseller / featured / new arrival determine WHICH
+// products are preferred INSIDE that price group. A cheap
+// bestseller can beat another cheap product, but it can NEVER
+// jump into a higher-priced reward group.
 //
 
 function getQualityScore(product) {
   const rating = Number(product.ratings) || 0;
-
   const bestseller = product.isBestSeller ? 1 : 0;
   const featured = product.isFeatured ? 1 : 0;
   const newArrival = product.isNewArrival ? 1 : 0;
 
-  return (
-    rating * 10 +
-    bestseller * 5 +
-    featured * 2 +
-    newArrival * 1
-  );
+  return rating * 10 + bestseller * 5 + featured * 2 + newArrival * 1;
+}
+
+// ============================================================
+// POINT UNIQUENESS / ORDERING
+// ============================================================
+
+function createIncreasingPointCosts(products) {
+  const sorted = [...products].sort((a, b) => {
+    const priceA = Number(a.price) || 0;
+    const priceB = Number(b.price) || 0;
+    if (priceA !== priceB) return priceA - priceB;
+    return a._id.toString().localeCompare(b._id.toString());
+  });
+
+  let previousPoints = 0;
+
+  return sorted.map((product) => {
+    let pointsCost = calculateRewardPoints(product.price);
+
+    if (pointsCost <= previousPoints) {
+      pointsCost = previousPoints + 1;
+    }
+
+    previousPoints = pointsCost;
+
+    return { ...product, pointsCost };
+  });
 }
 
 // ============================================================
@@ -79,29 +148,13 @@ function getQualityScore(product) {
 async function selectRewardProducts() {
   const selected = [];
 
-  const selectedProductIds = new Set();
-
   for (const category of CATEGORIES) {
     console.log("\n========================================");
     console.log(`CATEGORY: ${category.toUpperCase()}`);
     console.log("========================================");
 
-    // ----------------------------------------------------------
-    // Get eligible products
-    // ----------------------------------------------------------
-
     const candidates = await Product.find({
       category,
-
-      // Existing reward products are protected.
-      // Only products with no reward points or points < 200
-      // are eligible for assignment.
-      $or: [
-        { pointsCost: { $exists: false } },
-        { pointsCost: { $lt: 200 } },
-      ],
-
-      // Do not give rewards to products with no stock.
       stock: { $gt: 0 },
     })
       .select(
@@ -109,246 +162,83 @@ async function selectRewardProducts() {
       )
       .lean();
 
-    console.log(
-      `Eligible products: ${candidates.length}`
-    );
+    console.log(`Eligible products: ${candidates.length}`);
 
-    if (
-      candidates.length <
-      TOTAL_PRODUCTS_PER_CATEGORY
-    ) {
+    if (candidates.length < TOTAL_PRODUCTS_PER_CATEGORY) {
       throw new Error(
-        `Not enough ${category} products. ` +
-          `Need ${TOTAL_PRODUCTS_PER_CATEGORY}, ` +
-          `found ${candidates.length}.`
+        `Not enough ${category} products. Need ${TOTAL_PRODUCTS_PER_CATEGORY}, found ${candidates.length}.`
       );
     }
-
-    // ----------------------------------------------------------
-    // STEP 1 — Sort by PRICE
-    // ----------------------------------------------------------
-    //
-    // Price is ALWAYS the primary ordering.
-    //
-    // Rating/bestseller are NOT allowed to change the price
-    // ordering between reward tiers.
-    //
 
     candidates.sort((a, b) => {
       const priceA = Number(a.price) || 0;
       const priceB = Number(b.price) || 0;
-
-      if (priceA !== priceB) {
-        return priceA - priceB;
-      }
-
-      // Same price:
-      // better products are preferred.
+      if (priceA !== priceB) return priceA - priceB;
       const qualityA = getQualityScore(a);
       const qualityB = getQualityScore(b);
-
-      if (qualityB !== qualityA) {
-        return qualityB - qualityA;
-      }
-
-      return a._id
-        .toString()
-        .localeCompare(b._id.toString());
+      if (qualityB !== qualityA) return qualityB - qualityA;
+      return a._id.toString().localeCompare(b._id.toString());
     });
 
-    // ----------------------------------------------------------
-    // STEP 2 — Divide the category into four PRICE GROUPS
-    // ----------------------------------------------------------
-    //
-    // Example:
-    //
-    // Lowest-price group  → 200-500
-    // Lower-middle group  → 501-800
-    // Upper-middle group  → 801-1300
-    // Highest-price group → 1300+
-    //
-    // We use the complete category inventory rather than simply
-    // taking the 16 cheapest products.
-    //
-
     const totalCandidates = candidates.length;
-
-    const baseGroupSize = Math.floor(
-      totalCandidates / POINT_TIERS.length
-    );
-
+    const baseGroupSize = Math.floor(totalCandidates / PRICE_GROUPS.length);
     const priceGroups = [];
 
-    for (
-      let tierIndex = 0;
-      tierIndex < POINT_TIERS.length;
-      tierIndex++
-    ) {
-      const start =
-        tierIndex * baseGroupSize;
-
+    for (let groupIndex = 0; groupIndex < PRICE_GROUPS.length; groupIndex++) {
+      const start = groupIndex * baseGroupSize;
       const end =
-        tierIndex === POINT_TIERS.length - 1
+        groupIndex === PRICE_GROUPS.length - 1
           ? totalCandidates
-          : (tierIndex + 1) * baseGroupSize;
-
-      const group = candidates.slice(
-        start,
-        end
-      );
-
-      priceGroups.push(group);
+          : (groupIndex + 1) * baseGroupSize;
+      priceGroups.push(candidates.slice(start, end));
     }
 
-    // ----------------------------------------------------------
-    // STEP 3 — Choose the best 4 PRODUCTS inside each
-    // PRICE GROUP using QUALITY
-    // ----------------------------------------------------------
+    for (let groupIndex = 0; groupIndex < PRICE_GROUPS.length; groupIndex++) {
+      const groupConfig = PRICE_GROUPS[groupIndex];
+      const group = priceGroups[groupIndex];
 
-    for (
-      let tierIndex = 0;
-      tierIndex < POINT_TIERS.length;
-      tierIndex++
-    ) {
-      const tier = POINT_TIERS[tierIndex];
-
-      const group = priceGroups[tierIndex];
-
-      if (
-        group.length <
-        PRODUCTS_PER_TIER
-      ) {
-        throw new Error(
-          `Not enough products in price group ` +
-            `${tier.key} for ${category}.`
-        );
+      if (group.length < PRODUCTS_PER_GROUP) {
+        throw new Error(`Not enough products in price group ${groupConfig.key} for ${category}.`);
       }
 
-      console.log(
-        `\nPRICE GROUP: ${tier.key}`
-      );
-
-      // --------------------------------------------------------
-      // Rank by QUALITY inside this price group.
-      //
-      // Rating is strongest.
-      // Bestseller is second.
-      // Featured and new arrival provide small bonuses.
-      // --------------------------------------------------------
+      console.log(`\nPRICE GROUP: ${groupConfig.key}`);
 
       group.sort((a, b) => {
-        const qualityA =
-          getQualityScore(a);
-
-        const qualityB =
-          getQualityScore(b);
-
-        if (qualityB !== qualityA) {
-          return qualityB - qualityA;
-        }
-
-        // If quality is equal, lower price wins.
-        const priceA =
-          Number(a.price) || 0;
-
-        const priceB =
-          Number(b.price) || 0;
-
-        if (priceA !== priceB) {
-          return priceA - priceB;
-        }
-
-        return a._id
-          .toString()
-          .localeCompare(b._id.toString());
+        const qualityA = getQualityScore(a);
+        const qualityB = getQualityScore(b);
+        if (qualityB !== qualityA) return qualityB - qualityA;
+        const priceA = Number(a.price) || 0;
+        const priceB = Number(b.price) || 0;
+        if (priceA !== priceB) return priceA - priceB;
+        return a._id.toString().localeCompare(b._id.toString());
       });
 
-      // Pick exactly 4 high-quality products.
-      const chosen = group.slice(
-        0,
-        PRODUCTS_PER_TIER
-      );
-
-      // --------------------------------------------------------
-      // STEP 4 — Sort the chosen products by PRICE again.
-      //
-      // This is VERY important.
-      //
-      // Even if a more expensive product has a higher rating,
-      // it cannot receive a lower points value than a cheaper
-      // product in the same tier.
-      // --------------------------------------------------------
+      const chosen = group.slice(0, PRODUCTS_PER_GROUP);
 
       chosen.sort((a, b) => {
-        const priceA =
-          Number(a.price) || 0;
-
-        const priceB =
-          Number(b.price) || 0;
-
-        if (priceA !== priceB) {
-          return priceA - priceB;
-        }
-
-        return a._id
-          .toString()
-          .localeCompare(b._id.toString());
+        const priceA = Number(a.price) || 0;
+        const priceB = Number(b.price) || 0;
+        if (priceA !== priceB) return priceA - priceB;
+        return a._id.toString().localeCompare(b._id.toString());
       });
 
-      // --------------------------------------------------------
-      // STEP 5 — Assign increasing points according to price
-      // --------------------------------------------------------
+      const productsWithPoints = createIncreasingPointCosts(chosen);
 
-      chosen.forEach((product, index) => {
-        const pointsCost =
-          tier.points[index];
+      for (const product of productsWithPoints) {
+        selected.push({ ...product, tier: groupConfig.key });
 
-        selected.push({
-          ...product,
-          pointsCost,
-          tier: tier.key,
-        });
+        const spendRequired = product.pointsCost / POINTS_PER_RUPEE;
+        const checkoutDiscountValue = product.pointsCost * POINTS_TO_RUPEE_RATE;
 
-        selectedProductIds.add(
-          product._id.toString()
-        );
-
-        console.log(
-          `  ${product.name}`
-        );
-
-        console.log(
-          `    Price: Rs. ${Number(
-            product.price
-          ).toLocaleString()}`
-        );
-
-        console.log(
-          `    Rating: ${Number(
-            product.ratings || 0
-          ).toFixed(1)}`
-        );
-
-        console.log(
-          `    Bestseller: ${
-            product.isBestSeller
-              ? "Yes"
-              : "No"
-          }`
-        );
-
-        console.log(
-          `    Featured: ${
-            product.isFeatured
-              ? "Yes"
-              : "No"
-          }`
-        );
-
-        console.log(
-          `    Reward: ${pointsCost} points`
-        );
-      });
+        console.log(`\n  ${product.name}`);
+        console.log(`    Price: Rs. ${Number(product.price).toLocaleString()}`);
+        console.log(`    Rating: ${Number(product.ratings || 0).toFixed(1)}`);
+        console.log(`    Bestseller: ${product.isBestSeller ? "Yes" : "No"}`);
+        console.log(`    Featured: ${product.isFeatured ? "Yes" : "No"}`);
+        console.log(`    Reward: ${Number(product.pointsCost).toLocaleString()} points`);
+        console.log(`    Requires ~Rs. ${spendRequired.toLocaleString()} of prior spend to earn`);
+        console.log(`    (For comparison, worth only Rs. ${checkoutDiscountValue.toFixed(2)} as a checkout discount)`);
+      }
     }
   }
 
@@ -360,44 +250,21 @@ async function selectRewardProducts() {
 // ============================================================
 
 function displayPreview(products) {
-  console.log("\n\n");
+  console.log("\n\n============================================================");
+  console.log("                 REWARD PRODUCT PREVIEW");
+  console.log("============================================================");
 
-  console.log(
-    "============================================================"
-  );
+  for (const group of PRICE_GROUPS) {
+    console.log(`\n### ${group.key.toUpperCase()} ###`);
 
-  console.log(
-    "                 REWARD PRODUCT PREVIEW"
-  );
-
-  console.log(
-    "============================================================"
-  );
-
-  for (const tier of POINT_TIERS) {
-    console.log(`\n### ${tier.key} ###`);
-
-    const tierProducts = products.filter(
-      (product) =>
-        product.tier === tier.key
-    );
+    const groupProducts = products.filter((p) => p.tier === group.key);
 
     for (const category of CATEGORIES) {
-      console.log(
-        `\n  ${category.toUpperCase()}`
-      );
+      console.log(`\n  ${category.toUpperCase()}`);
 
-      const categoryProducts =
-        tierProducts
-          .filter(
-            (product) =>
-              product.category === category
-          )
-          .sort(
-            (a, b) =>
-              Number(a.pointsCost) -
-              Number(b.pointsCost)
-          );
+      const categoryProducts = groupProducts
+        .filter((p) => p.category === category)
+        .sort((a, b) => Number(a.pointsCost) - Number(b.pointsCost));
 
       for (const product of categoryProducts) {
         const hasImage =
@@ -405,64 +272,22 @@ function displayPreview(products) {
           product.image.length > 0 &&
           Boolean(product.image[0]?.url);
 
-        console.log(
-          `    • ${product.name}`
-        );
+        const spendRequired = Number(product.pointsCost) / POINTS_PER_RUPEE;
 
-        console.log(
-          `      Price: Rs. ${Number(
-            product.price
-          ).toLocaleString()}`
-        );
-
-        console.log(
-          `      Rating: ${Number(
-            product.ratings || 0
-          ).toFixed(1)}`
-        );
-
-        console.log(
-          `      Bestseller: ${
-            product.isBestSeller
-              ? "Yes"
-              : "No"
-          }`
-        );
-
-        console.log(
-          `      Reward: ${Number(
-            product.pointsCost
-          ).toLocaleString()} points`
-        );
-
-        console.log(
-          `      Image: ${
-            hasImage
-              ? "✓ Cloudinary image exists"
-              : "⚠ NO IMAGE"
-          }`
-        );
-
-        console.log(
-          `      ID: ${product._id}`
-        );
+        console.log(`    • ${product.name}`);
+        console.log(`      Price: Rs. ${Number(product.price).toLocaleString()}`);
+        console.log(`      Reward: ${Number(product.pointsCost).toLocaleString()} points`);
+        console.log(`      Requires ~Rs. ${spendRequired.toLocaleString()} of prior spend`);
+        console.log(`      Image: ${hasImage ? "✓ Cloudinary image exists" : "⚠ NO IMAGE"}`);
+        console.log(`      ID: ${product._id}`);
       }
     }
   }
 
-  console.log("\n");
-
-  console.log(
-    "============================================================"
-  );
-
-  console.log(
-    `TOTAL PRODUCTS SELECTED: ${products.length}`
-  );
-
-  console.log(
-    "============================================================"
-  );
+  console.log(`\n============================================================`);
+  console.log(`TOTAL PRODUCTS SELECTED: ${products.length}`);
+  console.log(`REDEMPTION_SPEND_MULTIPLIER: ${REDEMPTION_SPEND_MULTIPLIER}x`);
+  console.log("============================================================");
 }
 
 // ============================================================
@@ -470,245 +295,104 @@ function displayPreview(products) {
 // ============================================================
 
 function verifySelection(products) {
-  const expected =
-    POINT_TIERS.length *
-    CATEGORIES.length *
-    PRODUCTS_PER_CATEGORY;
-
-  // ----------------------------------------------------------
-  // Total count
-  // ----------------------------------------------------------
+  const expected = PRICE_GROUPS.length * CATEGORIES.length * PRODUCTS_PER_CATEGORY;
 
   if (products.length !== expected) {
-    throw new Error(
-      `Expected ${expected} products, ` +
-        `but selected ${products.length}.`
-    );
+    throw new Error(`Expected ${expected} products, but selected ${products.length}.`);
   }
 
-  // ----------------------------------------------------------
-  // Verify every tier/category has exactly 4 products
-  // ----------------------------------------------------------
-
-  for (const tier of POINT_TIERS) {
+  for (const group of PRICE_GROUPS) {
     for (const category of CATEGORIES) {
-      const matching = products.filter(
-        (product) =>
-          product.tier === tier.key &&
-          product.category === category
-      );
-
-      if (
-        matching.length !==
-        PRODUCTS_PER_CATEGORY
-      ) {
-        throw new Error(
-          `${tier.key} / ${category}: ` +
-            `expected ${PRODUCTS_PER_CATEGORY}, ` +
-            `got ${matching.length}.`
-        );
+      const matching = products.filter((p) => p.tier === group.key && p.category === category);
+      if (matching.length !== PRODUCTS_PER_CATEGORY) {
+        throw new Error(`${group.key} / ${category}: expected ${PRODUCTS_PER_CATEGORY}, got ${matching.length}.`);
       }
     }
   }
 
-  // ----------------------------------------------------------
-  // Verify no duplicate products
-  // ----------------------------------------------------------
-
-  const ids = products.map((product) =>
-    product._id.toString()
-  );
-
-  const uniqueIds = new Set(ids);
-
-  if (uniqueIds.size !== ids.length) {
-    throw new Error(
-      "Duplicate product detected."
-    );
+  const ids = products.map((p) => p._id.toString());
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("Duplicate product detected.");
   }
-
-  // ----------------------------------------------------------
-  // Verify points belong to correct tier
-  // ----------------------------------------------------------
 
   for (const product of products) {
-    const tier = POINT_TIERS.find(
-      (t) => t.key === product.tier
-    );
-
-    if (!tier) {
-      throw new Error(
-        `Unknown tier: ${product.tier}`
-      );
-    }
-
-    if (
-      !tier.points.includes(
-        product.pointsCost
-      )
-    ) {
-      throw new Error(
-        `Invalid points ${product.pointsCost} ` +
-          `for tier ${product.tier}.`
-      );
+    if (!Number.isFinite(Number(product.pointsCost)) || Number(product.pointsCost) < MIN_REWARD_POINTS) {
+      throw new Error(`Invalid points ${product.pointsCost} for ${product.name}.`);
     }
   }
-
-  // ----------------------------------------------------------
-  // Verify price increases from one tier to the next
-  // ----------------------------------------------------------
-  //
-  // This prevents something like:
-  //
-  // Rs. 15,000 → 1300+
-  // Rs. 2,000  → 1500
-  //
-  // from ever being accepted.
-  //
 
   for (const category of CATEGORIES) {
     let previousMaxPrice = -Infinity;
 
-    for (const tier of POINT_TIERS) {
-      const tierProducts = products
-        .filter(
-          (product) =>
-            product.category === category &&
-            product.tier === tier.key
-        )
-        .sort(
-          (a, b) =>
-            Number(a.price) -
-            Number(b.price)
-        );
+    for (const group of PRICE_GROUPS) {
+      const groupProducts = products
+        .filter((p) => p.category === category && p.tier === group.key)
+        .sort((a, b) => Number(a.price) - Number(b.price));
 
-      const currentMinPrice =
-        Number(tierProducts[0].price);
+      const currentMinPrice = Number(groupProducts[0].price);
+      const currentMaxPrice = Number(groupProducts[groupProducts.length - 1].price);
 
-      const currentMaxPrice =
-        Number(
-          tierProducts[
-            tierProducts.length - 1
-          ].price
-        );
-
-      if (
-        currentMinPrice <=
-        previousMaxPrice
-      ) {
+      if (currentMinPrice <= previousMaxPrice) {
         throw new Error(
-          `PRICE ORDER VIOLATION: ${category} / ${tier.key}. ` +
-            `A higher reward tier contains a product ` +
-            `that is not more expensive than the previous tier. ` +
-            `Previous max: Rs. ${previousMaxPrice.toLocaleString()}, ` +
+          `PRICE ORDER VIOLATION: ${category} / ${group.key}. A higher price group contains a product ` +
+            `that is not more expensive than the previous group. Previous max: Rs. ${previousMaxPrice.toLocaleString()}, ` +
             `Current min: Rs. ${currentMinPrice.toLocaleString()}`
         );
       }
 
-      previousMaxPrice =
-        currentMaxPrice;
+      previousMaxPrice = currentMaxPrice;
     }
   }
 
-  // ----------------------------------------------------------
-  // Verify prices increase with points INSIDE each tier
-  // ----------------------------------------------------------
-
   for (const category of CATEGORIES) {
-    for (const tier of POINT_TIERS) {
-      const tierProducts = products
-        .filter(
-          (product) =>
-            product.category === category &&
-            product.tier === tier.key
-        )
-        .sort(
-          (a, b) =>
-            Number(a.pointsCost) -
-            Number(b.pointsCost)
-        );
+    for (const group of PRICE_GROUPS) {
+      const groupProducts = products
+        .filter((p) => p.category === category && p.tier === group.key)
+        .sort((a, b) => Number(a.pointsCost) - Number(b.pointsCost));
 
-      for (
-        let i = 1;
-        i < tierProducts.length;
-        i++
-      ) {
-        const previous =
-          tierProducts[i - 1];
+      for (let i = 1; i < groupProducts.length; i++) {
+        const previous = groupProducts[i - 1];
+        const current = groupProducts[i];
 
-        const current =
-          tierProducts[i];
-
-        if (
-          Number(current.price) <=
-          Number(previous.price)
-        ) {
+        if (Number(current.price) <= Number(previous.price)) {
           throw new Error(
-            `PRICE ORDER VIOLATION: ${category} / ${tier.key}. ` +
-              `${current.name} (Rs. ${current.price}) ` +
-              `must cost more than ` +
-              `${previous.name} (Rs. ${previous.price}).`
+            `PRICE ORDER VIOLATION: ${category} / ${group.key}. ${current.name} (Rs. ${current.price}) must cost more than ${previous.name} (Rs. ${previous.price}).`
+          );
+        }
+
+        if (Number(current.pointsCost) <= Number(previous.pointsCost)) {
+          throw new Error(
+            `POINT ORDER VIOLATION: ${category} / ${group.key}. ${current.name} must require more points than ${previous.name}.`
           );
         }
       }
     }
   }
 
-  // ----------------------------------------------------------
-  // Verify reward points increase correctly
-  // ----------------------------------------------------------
-
   for (const category of CATEGORIES) {
     const categoryProducts = products
-      .filter(
-        (product) =>
-          product.category === category
-      )
-      .sort(
-        (a, b) =>
-          Number(a.pointsCost) -
-          Number(b.pointsCost)
-      );
+      .filter((p) => p.category === category)
+      .sort((a, b) => Number(a.price) - Number(b.price));
 
-    for (
-      let i = 1;
-      i < categoryProducts.length;
-      i++
-    ) {
-      const previous =
-        categoryProducts[i - 1];
+    for (let i = 1; i < categoryProducts.length; i++) {
+      const previous = categoryProducts[i - 1];
+      const current = categoryProducts[i];
 
-      const current =
-        categoryProducts[i];
+      if (Number(current.price) <= Number(previous.price)) {
+        throw new Error(`PRICE ORDER VIOLATION: ${category}. ${current.name} must cost more than ${previous.name}.`);
+      }
 
-      if (
-        Number(current.pointsCost) <=
-        Number(previous.pointsCost)
-      ) {
-        throw new Error(
-          `POINT ORDER VIOLATION: ${category}. ` +
-            `${current.name} must have more points ` +
-            `than ${previous.name}.`
-        );
+      if (Number(current.pointsCost) <= Number(previous.pointsCost)) {
+        throw new Error(`POINT ORDER VIOLATION: ${category}. ${current.name} must require more points than ${previous.name}.`);
       }
     }
   }
 
-  console.log(
-    "\n✓ Selection verification passed."
-  );
-
-  console.log(
-    "✓ Exactly 48 unique products selected."
-  );
-
-  console.log(
-    "✓ Price increases with reward points."
-  );
-
-  console.log(
-    "✓ Rating/bestseller quality filtering applied."
-  );
+  console.log("\n✓ Selection verification passed.");
+  console.log(`✓ Exactly ${products.length} unique products selected.`);
+  console.log("✓ Product price determines reward point value (via the earn rate, not the discount rate).");
+  console.log("✓ Price increases with reward points.");
+  console.log("✓ Rating/bestseller quality filtering applied.");
 
   return true;
 }
@@ -719,23 +403,12 @@ function verifySelection(products) {
 
 function askForConfirmation() {
   return new Promise((resolve) => {
-    const rl =
-      readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-    rl.question(
-      "\n⚠️  Apply these changes to MongoDB? Type YES to continue: ",
-      (answer) => {
-        rl.close();
-
-        resolve(
-          answer.trim().toUpperCase() ===
-            "YES"
-        );
-      }
-    );
+    rl.question("\n⚠️ Apply these changes to MongoDB? Type YES to continue: ", (answer) => {
+      rl.close();
+      resolve(answer.trim().toUpperCase() === "YES");
+    });
   });
 }
 
@@ -744,96 +417,33 @@ function askForConfirmation() {
 // ============================================================
 
 async function applyUpdates(products) {
-  console.log("\n");
-
-  console.log(
-    "============================================================"
-  );
-
-  console.log(
-    "                    UPDATING MONGODB"
-  );
-
-  console.log(
-    "============================================================\n"
-  );
+  console.log("\n============================================================");
+  console.log("                    UPDATING MONGODB");
+  console.log("============================================================\n");
 
   let updated = 0;
   let skipped = 0;
 
   for (const product of products) {
-    // --------------------------------------------------------
-    // IMPORTANT SAFETY CHECK
-    //
-    // Only update if this product still does not have a
-    // reward value >= 200.
-    //
-    // This prevents overwriting an existing reward if the
-    // database changed between preview and confirmation.
-    // --------------------------------------------------------
-
-    const result =
-      await Product.updateOne(
-        {
-          _id: product._id,
-
-          $or: [
-            {
-              pointsCost: {
-                $exists: false,
-              },
-            },
-            {
-              pointsCost: {
-                $lt: 200,
-              },
-            },
-          ],
-        },
-        {
-          $set: {
-            pointsCost:
-              product.pointsCost,
-          },
-        }
-      );
+    const result = await Product.updateOne(
+      { _id: product._id },
+      { $set: { pointsCost: product.pointsCost } }
+    );
 
     if (result.modifiedCount === 1) {
       updated++;
-
-      console.log(
-        `✓ ${product.name} → ${product.pointsCost} points`
-      );
+      console.log(`✓ ${product.name} → ${Number(product.pointsCost).toLocaleString()} points`);
     } else {
       skipped++;
-
-      console.log(
-        `⚠ Skipped: ${product.name}`
-      );
+      console.log(`⚠ No change: ${product.name}`);
     }
   }
 
-  console.log("\n");
-
-  console.log(
-    "============================================================"
-  );
-
-  console.log(
-    "                    UPDATE COMPLETE"
-  );
-
-  console.log(
-    "============================================================"
-  );
-
-  console.log(
-    `Updated: ${updated}`
-  );
-
-  console.log(
-    `Skipped: ${skipped}`
-  );
+  console.log("\n============================================================");
+  console.log("                    UPDATE COMPLETE");
+  console.log("============================================================");
+  console.log(`Updated: ${updated}`);
+  console.log(`Unchanged: ${skipped}`);
 }
 
 // ============================================================
@@ -841,100 +451,37 @@ async function applyUpdates(products) {
 // ============================================================
 
 async function showFinalSummary() {
-  const rewards =
-    await Product.find({
-      pointsCost: {
-        $gte: 200,
-      },
-    })
-      .select(
-        "name category price pointsCost image"
-      )
-      .sort({
-        pointsCost: 1,
-      })
-      .lean();
+  const rewards = await Product.find({ pointsCost: { $gte: MIN_REWARD_POINTS } })
+    .select("name category price pointsCost image")
+    .sort({ pointsCost: 1 })
+    .lean();
 
-  console.log("\n");
+  console.log("\n============================================================");
+  console.log("                   FINAL REWARD SUMMARY");
+  console.log("============================================================");
+  console.log(`\nTotal reward products: ${rewards.length}`);
+  console.log(`REDEMPTION_SPEND_MULTIPLIER: ${REDEMPTION_SPEND_MULTIPLIER}x`);
 
-  console.log(
-    "============================================================"
-  );
+  console.log("\nReward products:");
 
-  console.log(
-    "                   FINAL REWARD SUMMARY"
-  );
+  for (const category of CATEGORIES) {
+    console.log(`\n${category.toUpperCase()}`);
 
-  console.log(
-    "============================================================"
-  );
+    const categoryRewards = rewards
+      .filter((p) => p.category === category)
+      .sort((a, b) => Number(a.pointsCost) - Number(b.pointsCost));
 
-  console.log(
-    `\nTotal reward products: ${rewards.length}`
-  );
+    for (const product of categoryRewards) {
+      const spendRequired = Number(product.pointsCost) / POINTS_PER_RUPEE;
 
-  for (const tier of POINT_TIERS) {
-    console.log(`\n${tier.key}`);
-
-    for (const category of CATEGORIES) {
-      const count =
-        rewards.filter(
-          (product) => {
-            const points =
-              Number(
-                product.pointsCost
-              );
-
-            let belongsToTier = false;
-
-            if (
-              tier.key === "200-500"
-            ) {
-              belongsToTier =
-                points >= 200 &&
-                points <= 500;
-            }
-
-            if (
-              tier.key === "501-800"
-            ) {
-              belongsToTier =
-                points >= 501 &&
-                points <= 800;
-            }
-
-            if (
-              tier.key === "801-1300"
-            ) {
-              belongsToTier =
-                points >= 801 &&
-                points <= 1300;
-            }
-
-            if (
-              tier.key === "1300+"
-            ) {
-              belongsToTier =
-                points >= 1301;
-            }
-
-            return (
-              product.category ===
-                category &&
-              belongsToTier
-            );
-          }
-        ).length;
-
-      console.log(
-        `  ${category}: ${count}`
-      );
+      console.log(`  • ${product.name}`);
+      console.log(`    Price: Rs. ${Number(product.price).toLocaleString()}`);
+      console.log(`    Reward: ${Number(product.pointsCost).toLocaleString()} points`);
+      console.log(`    Requires ~Rs. ${spendRequired.toLocaleString()} of prior spend`);
     }
   }
 
-  console.log(
-    "\n============================================================\n"
-  );
+  console.log("\n============================================================\n");
 }
 
 // ============================================================
@@ -942,202 +489,81 @@ async function showFinalSummary() {
 // ============================================================
 
 async function main() {
-  const isPreview =
-    process.argv.includes(
-      "--preview"
-    );
-
-  const isApply =
-    process.argv.includes(
-      "--apply"
-    );
-
-  // ----------------------------------------------------------
-  // Validate command
-  // ----------------------------------------------------------
+  const isPreview = process.argv.includes("--preview");
+  const isApply = process.argv.includes("--apply");
 
   if (!isPreview && !isApply) {
     console.log(`
 Usage:
-
   Preview only:
     node scripts/assignRewardPoints.js --preview
 
   Apply changes:
     node scripts/assignRewardPoints.js --apply
 `);
-
     process.exitCode = 1;
     return;
   }
 
   try {
-    console.log("\n");
-
-    console.log(
-      "============================================================"
-    );
-
-    console.log(
-      "              REWARD POINT ASSIGNMENT TOOL"
-    );
-
-    console.log(
-      "============================================================"
-    );
+    console.log("\n============================================================");
+    console.log("              REWARD POINT ASSIGNMENT TOOL");
+    console.log("============================================================");
+    console.log(`\nPOINTS_PER_RUPEE (earn rate): ${POINTS_PER_RUPEE}`);
+    console.log(`REDEMPTION_SPEND_MULTIPLIER: ${REDEMPTION_SPEND_MULTIPLIER}x`);
+    console.log(`MIN_REWARD_POINTS: ${MIN_REWARD_POINTS}`);
 
     if (isPreview) {
-      console.log(
-        "\nMODE: PREVIEW ONLY"
-      );
-
-      console.log(
-        "✓ NO DATABASE CHANGES WILL BE MADE."
-      );
+      console.log("\nMODE: PREVIEW ONLY");
+      console.log("✓ NO DATABASE CHANGES WILL BE MADE.");
     }
 
     if (isApply) {
-      console.log(
-        "\nMODE: APPLY"
-      );
-
-      console.log(
-        "⚠ DATABASE CHANGES REQUIRE CONFIRMATION."
-      );
+      console.log("\nMODE: APPLY");
+      console.log("⚠ DATABASE CHANGES REQUIRE CONFIRMATION.");
+      console.log("⚠ Existing reward point values will be recalculated.");
     }
-
-    // --------------------------------------------------------
-    // Connect
-    // --------------------------------------------------------
 
     await connectDB();
+    console.log("\n✓ MongoDB connected.");
 
-    console.log(
-      "\n✓ MongoDB connected."
-    );
+    const existingRewards = await Product.countDocuments({ pointsCost: { $gte: MIN_REWARD_POINTS } });
+    console.log(`✓ Existing reward products: ${existingRewards}`);
 
-    // --------------------------------------------------------
-    // Existing rewards
-    // --------------------------------------------------------
+    console.log("\nSelecting reward products...");
+    const selectedProducts = await selectRewardProducts();
 
-    const existingRewards =
-      await Product.countDocuments({
-        pointsCost: {
-          $gte: 200,
-        },
-      });
-
-    console.log(
-      `✓ Existing reward products: ${existingRewards}`
-    );
-
-    // --------------------------------------------------------
-    // Select
-    // --------------------------------------------------------
-
-    console.log(
-      "\nSelecting reward products..."
-    );
-
-    const selectedProducts =
-      await selectRewardProducts();
-
-    // --------------------------------------------------------
-    // Verify
-    // --------------------------------------------------------
-
-    verifySelection(
-      selectedProducts
-    );
-
-    // --------------------------------------------------------
-    // Preview
-    // --------------------------------------------------------
-
-    displayPreview(
-      selectedProducts
-    );
-
-    // --------------------------------------------------------
-    // Preview mode
-    // --------------------------------------------------------
+    verifySelection(selectedProducts);
+    displayPreview(selectedProducts);
 
     if (isPreview) {
-      console.log(
-        "\n============================================================"
-      );
-
-      console.log(
-        "                   PREVIEW COMPLETE"
-      );
-
-      console.log(
-        "✓ No products were modified."
-      );
-
-      console.log(
-        "============================================================\n"
-      );
-
+      console.log("\n============================================================");
+      console.log("                   PREVIEW COMPLETE");
+      console.log("✓ No products were modified.");
+      console.log("============================================================\n");
       return;
     }
 
-    // --------------------------------------------------------
-    // Apply confirmation
-    // --------------------------------------------------------
-
-    const confirmed =
-      await askForConfirmation();
+    const confirmed = await askForConfirmation();
 
     if (!confirmed) {
-      console.log(
-        "\n❌ Cancelled."
-      );
-
-      console.log(
-        "✓ No products were modified.\n"
-      );
-
+      console.log("\n❌ Cancelled.");
+      console.log("✓ No products were modified.\n");
       return;
     }
 
-    // --------------------------------------------------------
-    // Apply
-    // --------------------------------------------------------
-
-    await applyUpdates(
-      selectedProducts
-    );
-
-    // --------------------------------------------------------
-    // Final summary
-    // --------------------------------------------------------
-
+    await applyUpdates(selectedProducts);
     await showFinalSummary();
 
-    console.log(
-      "✓ Reward points assignment finished successfully.\n"
-    );
+    console.log("✓ Reward points assignment finished successfully.\n");
   } catch (error) {
-    console.error(
-      "\n❌ ERROR:"
-    );
-
-    console.error(
-      error.message
-    );
-
-    console.log(
-      "\n✓ No database updates were performed by the script after this error."
-    );
+    console.error("\n❌ ERROR:");
+    console.error(error.message);
+    console.log("\n⚠ Any updates already completed before this error remain in MongoDB.");
   } finally {
     await mongoose.connection.close();
-
-    console.log(
-      "MongoDB connection closed."
-    );
+    console.log("MongoDB connection closed.");
   }
 }
 
 main();
-

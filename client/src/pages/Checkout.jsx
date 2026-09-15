@@ -8,6 +8,7 @@ import {
   redirectToEsewa,
   redirectToKhalti,
 } from "../api/paymentClient";
+import PointsRedeemBox from "./PointsRedeemBox";
 
 
 const STEPS = ["Delivery", "Payment", "Review"];
@@ -32,8 +33,15 @@ function Checkout() {
   // 'cod' | 'esewa' | 'khalti'
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
+  // Points redeemed as a checkout discount. pointsDiscount is only for
+  // instant UI feedback (mirrors the server's formula) — the server
+  // recomputes the real discount from pointsUsed when the order is
+  // actually created, and is the final authority on the charged amount.
+  const [pointsUsed, setPointsUsed] = useState(0);
+  const [pointsDiscount, setPointsDiscount] = useState(0);
+
   const shipping = subtotal >= 5000 ? 0 : 200;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal + shipping - pointsDiscount);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -130,6 +138,9 @@ function Checkout() {
       status: "Pending",
     },
     taxPrice: 0,
+    // Server recomputes the actual discount from this point count — the
+    // value shown on-screen (pointsDiscount) is never sent or trusted.
+    pointsToRedeem: pointsUsed,
   });
 
   const handlePlaceOrder = async () => {
@@ -1059,6 +1070,17 @@ function Checkout() {
             }}
           />
 
+          {/* Points redemption — appears above the totals breakdown so the
+              customer chooses how many points to use before seeing the
+              final total below. */}
+          <PointsRedeemBox
+            subtotal={subtotal}
+            onChange={(points, discount) => {
+              setPointsUsed(points);
+              setPointsDiscount(discount);
+            }}
+          />
+
           {/* Subtotal & Shipping */}
           <div
             style={{
@@ -1122,6 +1144,34 @@ function Checkout() {
                 {shipping === 0 ? "FREE" : `Rs. ${shipping}`}
               </span>
             </div>
+
+            {pointsDiscount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--color-muted)",
+                  }}
+                >
+                  Points discount ({((pointsDiscount / subtotal) * 100).toFixed(1)}%)
+                </span>
+
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    color: "#15803D",
+                  }}
+                >
+                  -Rs. {pointsDiscount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
           </div>
 
           <div
@@ -1151,7 +1201,6 @@ function Checkout() {
 
             <span
               style={{
-                fontFamily: "var(--font-serif)",
                 fontSize: "1.2rem",
                 fontWeight: "800",
                 color: "var(--color-navy)",
