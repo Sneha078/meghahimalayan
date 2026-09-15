@@ -122,7 +122,7 @@ function Checkout() {
       country: "Nepal",
     },
     orderItems: cartItems.map((item) => ({
-      product: item._id ?? item.id,
+      product: item.productId ?? item._id ?? item.id,
       quantity: item.quantity,
     })),
     paymentInfo: {
