@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { getMyOrders, cancelOrder } from '../api/productClient'
 import { useAuth } from '../context/AuthContext'
 import OrderTimeline from '../components/OrderTimeline'
 import { getMyOrders, cancelOrder, downloadInvoice } from '../api/productClient'

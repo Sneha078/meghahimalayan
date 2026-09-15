@@ -1,11 +1,55 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import PointsRedeemBox from './PointsRedeemBox'
 
 function Cart() {
-  const { cartItems, updateQuantity, removeItem, subtotal } = useCart()
+  const {
+    cartItems, updateQuantity, removeItem, subtotal,
+    couponCode, discount, applyCoupon, removeCoupon,
+  } = useCart()
+  const { user } = useAuth()
+
+  const [couponInput, setCouponInput] = useState('')
+  const [couponMessage, setCouponMessage] = useState(null)
+  const [applyingCoupon, setApplyingCoupon] = useState(false)
+
+  // Points redeemed as a preview discount — same pattern as Checkout.jsx.
+  // pointsUsed/pointsDiscount aren't persisted from here; the real
+  // redemption is (re)applied at Checkout when the order is created.
+  const [pointsUsed, setPointsUsed] = useState(0)
+  const [pointsDiscount, setPointsDiscount] = useState(0)
 
   const shipping = subtotal >= 5000 ? 0 : 200
-  const total = subtotal + shipping
+
+  // Coupon discount comes off the subtotal first; the points cap (see
+  // PointsRedeemBox) is based on what's actually still owed after the
+  // coupon, not the raw pre-coupon subtotal — matches Checkout.jsx.
+  const discounted = Math.max(0, subtotal - discount)
+  const total = Math.max(0, discounted + shipping - pointsDiscount)
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim()
+    if (!code) return
+
+    setApplyingCoupon(true)
+    setCouponMessage(null)
+    try {
+      await applyCoupon(code)
+      setCouponInput('')
+      setCouponMessage({ type: 'success', text: `Coupon "${code.toUpperCase()}" applied` })
+    } catch (err) {
+      setCouponMessage({ type: 'error', text: err.message || 'Failed to apply coupon' })
+    } finally {
+      setApplyingCoupon(false)
+    }
+  }
+
+  const handleRemoveCoupon = async () => {
+    setCouponMessage(null)
+    await removeCoupon()
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -387,7 +431,121 @@ function Cart() {
               </p>
             )}
 
+            {discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  Coupon Discount
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#15803D' }}>
+                  − Rs. {discount.toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {pointsDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.88rem', color: 'var(--color-muted)' }}>
+                  Points discount ({((pointsDiscount / Math.max(discounted, 1)) * 100).toFixed(1)}%)
+                </span>
+                <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#15803D' }}>
+                  − Rs. {pointsDiscount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+
           </div>
+
+          {/* Coupon Section */}
+          <div style={{
+            border: '1px solid var(--color-border)',
+            borderRadius: '10px',
+            padding: '14px',
+            marginBottom: '16px',
+            backgroundColor: 'var(--color-sbg)',
+          }}>
+            {couponCode ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p style={{ fontSize: '0.68rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-taupe)', marginBottom: '4px' }}>
+                    Applied Coupon
+                  </p>
+                  <p style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-navy)', letterSpacing: '0.05em' }}>
+                    {couponCode}
+                  </p>
+                </div>
+                <button
+                  onClick={handleRemoveCoupon}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.75rem', color: 'var(--color-error)', fontWeight: '500',
+                    padding: '4px 8px', borderRadius: '6px',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-white)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  ✕ Remove
+                </button>
+              </div>
+            ) : (
+              <>
+                <p style={{ fontSize: '0.68rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-taupe)', marginBottom: '8px' }}>
+                  Have a coupon?
+                </p>
+                {user ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      placeholder="ENTER COUPON CODE"
+                      style={{
+                        flex: 1, padding: '10px 12px', border: '1px solid var(--color-border)',
+                        borderRadius: '8px', fontSize: '0.8rem', letterSpacing: '0.05em',
+                        textTransform: 'uppercase', outline: 'none', color: 'var(--color-navy)',
+                        backgroundColor: 'var(--color-white)',
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleApplyCoupon() }}
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={applyingCoupon}
+                      style={{
+                        padding: '10px 16px', backgroundColor: 'var(--color-navy)', color: 'var(--color-taupe)',
+                        border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700',
+                        letterSpacing: '0.08em', cursor: applyingCoupon ? 'wait' : 'pointer', opacity: applyingCoupon ? 0.6 : 1,
+                      }}
+                    >
+                      {applyingCoupon ? '…' : 'APPLY'}
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', lineHeight: '1.5' }}>
+                    <Link to="/login" style={{ color: 'var(--color-navy)', fontWeight: '600' }}>Log in</Link> to apply coupon codes.
+                  </p>
+                )}
+                {couponMessage && (
+                  <p style={{
+                    marginTop: '8px', fontSize: '0.75rem', lineHeight: '1.5',
+                    color: couponMessage.type === 'error' ? 'var(--color-error)' : '#15803D',
+                  }}>
+                    {couponMessage.text}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Redeem Points — preview only, applied for real at Checkout.
+              Same pattern (and same basis: post-coupon subtotal) as
+              PointsRedeemBox's usage in Checkout.jsx. */}
+          {user && (
+            <PointsRedeemBox
+              subtotal={discounted}
+              onChange={(points, pointsDisc) => {
+                setPointsUsed(points)
+                setPointsDiscount(pointsDisc)
+              }}
+            />
+          )}
 
           {/* Divider */}
           <div style={{ borderTop: '1px solid var(--color-border)', margin: '20px 0' }} />
