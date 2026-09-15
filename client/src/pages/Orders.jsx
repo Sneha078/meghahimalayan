@@ -995,6 +995,37 @@ function Orders() {
                       </div>
                     </div>
 
+                    {/* Download Invoice */}
+                    
+
+{order.orderStatus === 'Delivered' &&
+  order.paymentInfo?.status === 'Paid' && (
+    <button
+      onClick={() =>
+        handleDownloadInvoice(order._id, order.orderNumber)
+      }
+      disabled={downloadingInvoice === order._id}
+      style={{
+        padding: '8px 20px',
+        borderRadius: '8px',
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-white)',
+        color: 'var(--color-navy)',
+        fontSize: '0.78rem',
+        fontWeight: '600',
+        cursor:
+          downloadingInvoice === order._id
+            ? 'not-allowed'
+            : 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      {downloadingInvoice === order._id
+        ? 'Downloading…'
+        : 'Download Invoice'}
+    </button>
+  )}
+
                     {/* ==================================================
                         ORDER TIMELINE
                         ================================================== */}

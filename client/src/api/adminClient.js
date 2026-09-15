@@ -159,3 +159,16 @@ export const deleteReturn = (id) =>
     method: 'DELETE',
     credentials: 'include',
   }).then(handleResponse)
+
+  //--------------------------------------
+  // Bank transfer review
+  // assumption: body is {status:'paid' | 'failed', note},matching the paid/pending/failed convention already used for paymentInfo.status. 
+  // adjust here id the backend contract differs.
+  //------------------------------------
+
+  export const reviewBankTransfer = (id, status, note = '') => fetch (`${API_URL}/payment/bank-transfer/${id}/review`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({status, note}),
+  }).then(handleResponse)

@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { getAllOrders } from '../../api/adminClient'
+import { Link } from 'react-router-dom'
+import { getAllOrders, reviewBankTransfer } from '../../api/adminClient'
 
 const STATUS_COLORS = {
   Processing: { bg: '#fef9c3', color: '#854d0e' },
@@ -12,19 +11,11 @@ const STATUS_COLORS = {
 }
 
 function AdminOrders() {
-  const [searchParams] = useSearchParams()
-  const statusParam = searchParams.get('status')
-
-  const [orders, setOrders]   = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
-  const [filter, setFilter]   = useState(statusParam || 'All')
-
-  useEffect(() => {
-    if (statusParam) {
-      setFilter(statusParam)
-    }
-  }, [statusParam])
+  const [orders, setOrders]       = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(null)
+  const [filter, setFilter]       = useState('All')
+  const [reviewing, setReviewing] = useState(null)
 
   useEffect(() => {
     getAllOrders()
@@ -38,6 +29,38 @@ function AdminOrders() {
   const filtered = filter === 'All'
     ? orders
     : orders.filter((o) => o.orderStatus === filter)
+
+  // ============================================================
+  // BANK TRANSFER REVIEW
+  // ============================================================
+
+  const handleReview = async (orderId, newStatus) => {
+    if (newStatus === 'Failed' && !window.confirm('Reject this bank transfer?')) {
+      return
+    }
+
+    setReviewing(orderId)
+
+    try {
+      const note = newStatus === 'Failed'
+        ? (window.prompt('Reason (optional):') ?? '')
+        : ''
+
+      await reviewBankTransfer(orderId, newStatus, note)
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === orderId
+            ? { ...o, paymentInfo: { ...o.paymentInfo, status: newStatus } }
+            : o
+        )
+      )
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setReviewing(null)
+    }
+  }
 
   return (
     <div style={{ padding: '32px' }}>
@@ -106,7 +129,7 @@ function AdminOrders() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc' }}>
-                  {['Order #', 'Customer', 'Items', 'Total', 'Status', 'Date', ''].map((h) => (
+                  {['Order #', 'Customer', 'Items', 'Total', 'Status', 'Payment', 'Date', ''].map((h) => (
                     <th key={h} style={{
                       padding: '12px 16px', textAlign: 'left',
                       fontSize: '0.75rem', fontWeight: '700',
@@ -121,6 +144,11 @@ function AdminOrders() {
               <tbody>
                 {filtered.map((order) => {
                   const s = STATUS_COLORS[order.orderStatus] ?? STATUS_COLORS.Processing
+
+                  const isPendingBankTransfer =
+                    order.paymentInfo?.method === 'Bank Transfer' &&
+                    order.paymentInfo?.status === 'Pending'
+
                   return (
                     <tr key={order._id} style={{ borderTop: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>
@@ -144,6 +172,53 @@ function AdminOrders() {
                           {order.orderStatus}
                         </span>
                       </td>
+
+                      {/* ==========================================================
+                          PAYMENT / BANK TRANSFER REVIEW
+                          ========================================================== */}
+                      <td style={{ padding: '14px 16px', fontSize: '0.82rem', color: '#475569' }}>
+                        {isPendingBankTransfer ? (
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => handleReview(order._id, 'Paid')}
+                              disabled={reviewing === order._id}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #bbf7d0',
+                                backgroundColor: reviewing === order._id ? '#f3f4f6' : '#f0fdf4',
+                                color: reviewing === order._id ? '#9ca3af' : '#15803d',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: reviewing === order._id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {reviewing === order._id ? '…' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleReview(order._id, 'Failed')}
+                              disabled={reviewing === order._id}
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #fecaca',
+                                backgroundColor: reviewing === order._id ? '#f3f4f6' : '#fef2f2',
+                                color: reviewing === order._id ? '#9ca3af' : '#dc2626',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: reviewing === order._id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span>
+                            {order.paymentInfo?.method ?? '—'} · {order.paymentInfo?.status ?? '—'}
+                          </span>
+                        )}
+                      </td>
+
                       <td style={{ padding: '14px 16px', fontSize: '0.82rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                         {new Date(order.createdAt).toLocaleDateString('en-US', {
                           month: 'short', day: 'numeric', year: 'numeric',
