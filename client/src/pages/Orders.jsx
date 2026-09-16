@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+
 import OrderTimeline from '../components/OrderTimeline'
-import { getMyOrders, cancelOrder, downloadInvoice } from '../api/productClient'
 
 const STATUS_STYLES = {
   Processing: { bg: '#fef9c3', color: '#854d0e' },
