@@ -1,11 +1,16 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 function AdminLoginPage() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      navigate('/admin/dashboard', { replace: true })
+    }
+  }, [user, navigate])
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})

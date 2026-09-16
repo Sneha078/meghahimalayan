@@ -155,7 +155,7 @@ function Checkout() {
 
       if (paymentMethod === "cod") {
         clearCart();
-        navigate("/order-confirmation");
+        navigate(`/order-confirmation?orderId=${orderId}`)
         return;
       }
 
