@@ -1,7 +1,7 @@
 // src/pages/Orders.jsx
 
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { getMyOrders, cancelOrder, downloadInvoice } from '../api/productClient'
 import { useAuth } from '../context/AuthContext'
 import OrderTimeline from '../components/OrderTimeline'
@@ -26,7 +26,10 @@ const STATUS_FILTERS = [
 function Orders() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  const returnSuccess = location.state?.returnSuccess
 
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -59,6 +62,14 @@ function Orders() {
   // ============================================================
   // CANCEL ORDER
   // ============================================================
+
+  // Clear the return-success flag from history state so the
+  // banner doesn't reappear on refresh.
+  useEffect(() => {
+    if (location.state?.returnSuccess) {
+      window.history.replaceState({}, '', location.pathname)
+    }
+  }, [location])
 
   const handleCancel = async (orderId) => {
     if (
@@ -260,6 +271,45 @@ function Orders() {
           maxWidth: '900px',
         }}
       >
+        {/* ======================================================
+            RETURN SUBMITTED NOTICE
+            ====================================================== */}
+
+        {returnSuccess && (
+          <div
+            style={{
+              padding: '14px 18px',
+              marginBottom: '20px',
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '10px',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.88rem',
+                fontWeight: '700',
+                color: '#15803d',
+              }}
+            >
+              Return request submitted successfully
+            </p>
+
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: '0.8rem',
+                color: '#166534',
+              }}
+            >
+              Our team will review your return. You'll receive an
+              email once it's approved or rejected, and can track its
+              status in your order timeline.
+            </p>
+          </div>
+        )}
+
         {/* ======================================================
             REWARDS NAVIGATION NOTICE
             ====================================================== */}

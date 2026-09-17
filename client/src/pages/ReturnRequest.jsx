@@ -6,12 +6,11 @@ import { getMySingleOrder, submitReturnRequest } from '../api/productClient'
 import PageBanner from '../components/PageBanner'
 
 const RETURN_REASONS = [
-  'Wrong item received',
-  'Item damaged or defective',
-  'Item not as described',
-  'Changed my mind',
-  'Size / fit issue',
-  'Duplicate order',
+  'Wrong Item Received',
+  'Damaged Item',
+  'Not As Described',
+  'Changed Mind',
+  'Missing Parts/Accessories',
   'Other',
 ]
 
@@ -122,8 +121,13 @@ function ReturnRequest() {
     }
 
     if (isCOD) {
-      if (!bankDetails.accountName.trim() || !bankDetails.accountNumber.trim() || !bankDetails.bankName.trim()) {
-        setSubmitError('Please fill in all bank / account details for your refund.')
+      if (refundMethod === 'bank_transfer') {
+        if (!bankDetails.accountName.trim() || !bankDetails.accountNumber.trim() || !bankDetails.bankName.trim()) {
+          setSubmitError('Please fill in all bank details for your refund.')
+          return
+        }
+      } else if (!bankDetails.accountNumber.trim()) {
+        setSubmitError('Please enter your registered mobile number.')
         return
       }
     }
@@ -159,11 +163,47 @@ function ReturnRequest() {
         })
       )
 
+      const REFUND_METHOD_MAP = {
+        bank_transfer: 'Bank Transfer',
+        esewa: 'eSewa/Khalti',
+        khalti: 'eSewa/Khalti',
+      }
+
+      const method = isCOD
+        ? REFUND_METHOD_MAP[refundMethod]
+        : 'Original Payment Method'
+
       const payload = {
         orderId,
+
+        reason: selectedItems[0]
+          ? items[
+              selectedItems[0].product?._id ??
+              selectedItems[0].product ??
+              selectedItems[0]._id
+            ].reason
+          : 'Other',
+
         items: returnItems,
-        refundMethod: isCOD ? refundMethod : paymentMethod.toLowerCase().replace(' ', '_'),
-        ...(isCOD && refundMethod === 'bank_transfer' ? { bankDetails } : {}),
+
+        refundMethod: method,
+
+        ...(isCOD
+          ? {
+              refundDetails:
+                refundMethod === 'bank_transfer'
+                  ? {
+                      accountHolderName: bankDetails.accountName,
+                      accountNumber: bankDetails.accountNumber,
+                      bankName: bankDetails.bankName,
+                    }
+                  : {
+                      walletProvider:
+                        refundMethod === 'esewa' ? 'eSewa' : 'Khalti',
+                      walletId: bankDetails.accountNumber,
+                    },
+            }
+          : {}),
       }
 
       await submitReturnRequest(payload)

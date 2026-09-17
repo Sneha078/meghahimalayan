@@ -135,15 +135,43 @@ function AdminReturnDetail() {
         restockable: insp.restockable ?? false,
       }
     })
+
+    // Warn if any item condition was not explicitly selected
+    const hasUnselected = (ret.items ?? []).some((item) => {
+      const productId = item.product?._id ?? item.product
+      return !inspections[productId]?.itemCondition
+    })
+
+    if (hasUnselected) {
+      setActionError('Please select the item condition for each product before marking as received.')
+      return
+    }
+
+    setActionError('')
     runAction({ status: 'Item Received', itemInspections, adminRemarks: adminRemarks || undefined })
   }
 
   const submitRefundApproval = () => {
+    // Send status: 'Item Received' as a self-transition so the backend
+    // accepts the refund field updates without changing the status.
+    // Also include empty itemInspections to satisfy the backend validation
+    // when the current status is already 'Item Received'.
+    const itemInspections = (ret.items ?? []).map((item) => {
+      const productId = item.product?._id ?? item.product
+      const insp = inspections[productId] ?? {}
+      return {
+        productId,
+        itemCondition: insp.itemCondition ?? item.itemCondition ?? 'Opened/Good',
+        restockable: insp.restockable ?? item.restockable ?? false,
+      }
+    })
+
     runAction({
-      status: 'Item Received', // self-transition — just updates refund fields
+      status: 'Item Received',
       refundMethod,
       refundDetails,
       refundAmount: Number(refundAmount),
+      itemInspections,
       adminRemarks: adminRemarks || undefined,
     })
   }
@@ -454,6 +482,7 @@ function AdminReturnDetail() {
                 disabled={actionLoading || !refundMethod || !refundAmount}
                 onClick={submitRefundApproval}
                 style={secondaryBtn}
+                title={!refundMethod ? 'Select a refund method first' : !refundAmount ? 'Enter refund amount first' : ''}
               >
                 Save Refund Approval
               </button>
@@ -462,13 +491,15 @@ function AdminReturnDetail() {
                 disabled={actionLoading || !(ret.refund?.approvedAmount > 0) || ret.refundStatus === 'Succeeded'}
                 onClick={submitProcessRefund}
                 style={primaryBtn}
+                title={!(ret.refund?.approvedAmount > 0) ? 'Save refund approval first' : ret.refundStatus === 'Succeeded' ? 'Refund already processed' : ''}
               >
                 Process Refund &amp; Complete
               </button>
             </div>
 
             <p style={{ fontSize: '0.76rem', color: '#94a3b8', marginTop: '8px' }}>
-              Save the refund method/amount first, then process the payout once you've sent the money manually.
+              Step 1: Fill in refund method and amount, then click <strong>Save Refund Approval</strong>.<br/>
+              Step 2: Once saved (Approved amount will update), click <strong>Process Refund &amp; Complete</strong> after sending the money manually.
             </p>
           </div>
         )}
