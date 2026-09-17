@@ -57,7 +57,7 @@ function Cart() {
     setCouponMessage(null)
     await removeCoupon()
   }
-
+//to have coupon
   const handleApplyOffer = async (code) => {
     setCouponInput(code)
     setApplyingCoupon(true)
