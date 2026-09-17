@@ -39,6 +39,19 @@ const validateDiscountFields = ({
   return null;
 };
 
+// Blank maxDiscount means "no cap" for percentage coupons.
+// Number(null) and Number("") both coerce to 0, which would
+// wrongly cap the discount at Rs. 0.
+const normalizeMaxDiscount = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+  return Number(value);
+};
+
 // Discount calculation according to coupon type
 const calculateDiscount = (coupon, subtotal) => {
   let discount;
@@ -46,7 +59,7 @@ const calculateDiscount = (coupon, subtotal) => {
     discount = (subtotal * coupon.value) / 100;
 
     if (
-      coupon.maxDiscount !== null &&
+      coupon.maxDiscount &&
       discount > coupon.maxDiscount
     ) {
       discount = coupon.maxDiscount;
@@ -285,7 +298,7 @@ export const createCoupon = handleAsyncError(
     // maxDiscount is only meaningful for percentage coupons
     const finalMaxDiscount =
       type === "percentage"
-        ? Number(maxDiscount)
+        ? normalizeMaxDiscount(maxDiscount)
         : null;
 
     // Create coupon
@@ -352,6 +365,14 @@ export const updateCoupon = handleAsyncError(
         updateData[field] =
           req.body[field];
       }
+    }
+
+    // Blank maxDiscount means "no cap", not a Rs. 0 cap
+    if (updateData.maxDiscount !== undefined) {
+      updateData.maxDiscount =
+        normalizeMaxDiscount(
+          updateData.maxDiscount
+        );
     }
 
     // Normalize code

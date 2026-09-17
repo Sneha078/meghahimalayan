@@ -55,8 +55,7 @@ const calculateCouponDiscount = (coupon, itemsPrice) => {
   }
 
   if (
-    coupon.maxDiscount !== null &&
-    coupon.maxDiscount !== undefined &&
+    coupon.maxDiscount &&
     discount > coupon.maxDiscount
   ) {
     discount = coupon.maxDiscount;

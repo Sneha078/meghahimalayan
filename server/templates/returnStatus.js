@@ -11,6 +11,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RETURN_EMAIL_STATUSES = new Set([
+  "Submitted",
   "Approved",
   "Rejected",
   "Item Received",
@@ -19,6 +20,11 @@ const RETURN_EMAIL_STATUSES = new Set([
 ]);
 
 const statusMessages = {
+  Submitted: (returnNumber) => ({
+    heading: "Your return request has been submitted",
+    body: `We've received your return request <strong>${returnNumber}</strong>. Our team will review it, and we'll email you as soon as your return is approved or rejected.`,
+  }),
+
   Approved: (returnNumber) => ({
     heading: "Your return request has been approved",
     body: `Great news! Your return <strong>${returnNumber}</strong> has been approved. Please ship the item(s) back to us before the shipping deadline shown below.`,

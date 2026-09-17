@@ -439,6 +439,7 @@ export const sendOrderCancelledEmail = async (
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RETURN_EMAIL_STATUSES = new Set([
+  "Submitted",
   "Approved",
   "Rejected",
   "Item Received",
@@ -447,6 +448,10 @@ const RETURN_EMAIL_STATUSES = new Set([
 ]);
 
 const returnEmailSubjects = {
+  Submitted:
+    (returnNumber) =>
+      `Return Request Submitted — ${returnNumber} | Mega Himalaya`,
+
   Approved:
     (returnNumber) =>
       `Return Approved — ${returnNumber} | Mega Himalaya`,

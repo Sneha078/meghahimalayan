@@ -83,10 +83,7 @@ const calculateCouponDiscount = (
     discount = Number(coupon.value);
   }
 
-  if (
-    coupon.maxDiscount !== null &&
-    coupon.maxDiscount !== undefined
-  ) {
+  if (Number(coupon.maxDiscount)) {
     discount = Math.min(
       discount,
       Number(coupon.maxDiscount)

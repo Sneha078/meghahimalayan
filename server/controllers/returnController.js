@@ -107,6 +107,7 @@ const ALLOWED_TRANSITIONS = {
 
 // Statuses that trigger a customer email.
 const RETURN_EMAIL_STATUSES = [
+  "Submitted",
   "Approved",
   "Rejected",
   "Item Received",
@@ -925,6 +926,11 @@ export const createReturnRequest = handleAsyncError(
        */
       void dispatchAdminNewReturnEmail(
         returnDoc
+      );
+
+      void dispatchReturnStatusEmail(
+        returnDoc,
+        "Submitted"
       );
 
       void notifyAdmins({
