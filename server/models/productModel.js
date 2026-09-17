@@ -28,6 +28,32 @@ const reviewSchema = new mongoose.Schema(
       required: true,
       trim: true,
     }, //customer review
+
+    // Review photos uploaded to cloudinary
+    images: [
+      {
+        public_id: {
+          type: String,
+          default: "",
+        },
+        url: {
+          type: String,
+          required: true,
+        },
+      }
+    ],
+    videos: [
+      {
+        public_id: {
+          type: String,
+          default: ""
+        },
+        url: {
+          type: String,
+          required: true,
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

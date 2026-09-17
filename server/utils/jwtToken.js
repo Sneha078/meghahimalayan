@@ -15,8 +15,11 @@ export const sendToken = (user, statusCode, res) => {
     httpOnly: true,         
     sameSite: "lax",         // CSRF protection while allowing cross-origin GET
     secure: process.env.NODE_ENV === "production", // HTTPS only in production
+    path: '/'
   };
-
+ console.log("Sending authentication cookie")
+ console.log("Cookie options:", cookieOptions)
+ console.log("Token exists:", !!token)
   res.status(statusCode).cookie("token", token, cookieOptions).json({
     success: true,
     token,

@@ -5,10 +5,15 @@ import {
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  getActiveCoupons,
 } from "../controllers/couponController.js";
 import { verifyUserAuth, roleBasedAccess } from "../middleware/userAuth.js";
 
 const router = express.Router();
+
+// Public routes (no auth required)
+router.get("/coupons/active", getActiveCoupons);
+router.get("/coupons/public", getActiveCoupons); // Alias for frontend compatibility
 
 //  Customer — preview discount before checkout 
 router.post("/coupon/validate", verifyUserAuth, validateCoupon);
