@@ -93,6 +93,24 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PUBLIC DISCOVERY
+    // ─────────────────────────────────────────────────────────────────────
+    //
+    // Controls whether this coupon appears in the storefront's public
+    // "Available Offers" list (Cart page). Defaults to false so every
+    // existing coupon stays exactly as hidden/code-only as it is today —
+    // an admin has to explicitly opt a coupon into public listing.
+    //
+    // Coupons meant for one-off customer-service use, influencer codes
+    // given out privately, etc. should stay isPublic: false — they still
+    // work perfectly fine when someone enters the code manually, they
+    // just won't be advertised in-app.
+    isPublic: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -101,6 +119,13 @@ const couponSchema = new mongoose.Schema(
 
 // Useful for finding active/non-expired coupons
 couponSchema.index({
+  isActive: 1,
+  expiresAt: 1,
+});
+
+// Useful for the public "Available Offers" listing query
+couponSchema.index({
+  isPublic: 1,
   isActive: 1,
   expiresAt: 1,
 });

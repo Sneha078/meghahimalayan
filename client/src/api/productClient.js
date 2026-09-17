@@ -23,7 +23,7 @@ export function fileToBase64(file) {
     reader.onload = () => resolve(reader.result)
     reader.onerror = reject
     reader.readAsDataURL(file)
-  })
+  });
 }
 
 export async function getProducts(params = {}) {
@@ -72,13 +72,36 @@ export async function getProductReviews(productId) {
 export async function submitReview({ productId, rating, comment, images = [], videos = [] }) {
   const imageBase64 = await Promise.all(images.map(fileToBase64))
   const videoBase64 = await Promise.all(videos.map(fileToBase64))
+  
   const res = await fetch(`${API_URL}/review`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productId, rating, comment, images: imageBase64, video: videoBase64 }),
+    body: JSON.stringify({ productId, rating, comment, images: imageBase64, videos: videoBase64 }),
   });
   return handleResponse(res);
+}
+
+// DELETE /api/v1/reviews?productId=<productId>&id=<reviewId>
+// One review per user per product, but the backend still keys the delete
+// off the review's own _id (not just productId) — it looks it up inside
+// product.reviews via product.reviews.id(req.query.id). Both params are
+// required or the backend 400s.
+// Ownership is enforced server-side (user can only delete their own review;
+// admins can delete any), so this is safe to call directly.
+export async function deleteReview(productId, reviewId) {
+  const res = await fetch(
+    `${API_URL}/reviews?productId=${productId}&id=${reviewId}`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+    }
+  )
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to delete review')
+  }
+  return res.json()
 }
 
 // POST /api/v1/order/new
@@ -186,14 +209,21 @@ export async function submitReturnRequest(payload) {
   return res.json()
 }
 
-// get/api/v1/invoice/order/:id/invoice - returns a PDF blob
+// GET /api/v1/invoice/order/:id/invoice — returns a PDF blob
 export async function downloadInvoice(orderId){
   const res = await fetch(`${API_URL}/invoice/order/${orderId}/invoice`, {
     credentials: 'include',
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed tp download invoice')
+    throw new Error(data.message || 'Failed to download invoice')
   }
   return res.blob()
+}
+
+// Get /api/v1/coupons/public - no auth required
+export async function getPublicCoupons(){
+  const res = await fetch(`${API_URL}/coupons/public`)
+  const data = await handleResponse(res)
+  return data.coupons ?? []
 }

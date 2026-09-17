@@ -14,7 +14,7 @@ import PointsRedeemBox from "./PointsRedeemBox";
 const STEPS = ["Delivery", "Payment", "Review"];
 
 function Checkout() {
-  const { cartItems, subtotal, clearCart } = useCart();
+  const { cartItems, subtotal, discount, clearCart } = useCart();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -41,7 +41,12 @@ function Checkout() {
   const [pointsDiscount, setPointsDiscount] = useState(0);
 
   const shipping = subtotal >= 5000 ? 0 : 200;
-  const total = Math.max(0, subtotal + shipping - pointsDiscount);
+
+  // Coupon discount is applied to the subtotal first; the points cap
+  // (see PointsRedeemBox) is based on what's actually still owed after
+  // the coupon, not the raw pre-coupon subtotal.
+  const discounted = Math.max(0, subtotal - discount);
+  const total = Math.max(0, discounted + shipping - pointsDiscount);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1072,12 +1077,13 @@ function Checkout() {
 
           {/* Points redemption — appears above the totals breakdown so the
               customer chooses how many points to use before seeing the
-              final total below. */}
+              final total below. Cap is based on the post-coupon subtotal,
+              not the raw cart subtotal. */}
           <PointsRedeemBox
-            subtotal={subtotal}
-            onChange={(points, discount) => {
+            subtotal={discounted}
+            onChange={(points, pointsDisc) => {
               setPointsUsed(points);
-              setPointsDiscount(discount);
+              setPointsDiscount(pointsDisc);
             }}
           />
 
@@ -1145,6 +1151,34 @@ function Checkout() {
               </span>
             </div>
 
+            {discount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--color-muted)",
+                  }}
+                >
+                  Coupon Discount
+                </span>
+
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    color: "#15803D",
+                  }}
+                >
+                  − Rs. {discount.toLocaleString()}
+                </span>
+              </div>
+            )}
+
             {pointsDiscount > 0 && (
               <div
                 style={{
@@ -1158,7 +1192,7 @@ function Checkout() {
                     color: "var(--color-muted)",
                   }}
                 >
-                  Points discount ({((pointsDiscount / subtotal) * 100).toFixed(1)}%)
+                  Points discount ({((pointsDiscount / Math.max(discounted, 1)) * 100).toFixed(1)}%)
                 </span>
 
                 <span

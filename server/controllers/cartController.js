@@ -48,9 +48,15 @@ const calculateCouponDiscount = (coupon, itemsPrice) => {
   if (!coupon) return 0;
   let discount = 0;
 
-  if (coupon.type === "percentage") {
+  // Compare case-insensitively — the stored value may be "Percentage"/
+  // "Flat" (as shown in the admin UI) rather than lowercase, and a strict
+  // === check here was silently producing a 0 discount for any coupon
+  // whose type wasn't exactly lowercase "percentage"/"flat".
+  const type = String(coupon.type || "").trim().toLowerCase();
+
+  if (type === "percentage") {
     discount = (itemsPrice * coupon.value) / 100;
-  } else if (coupon.type === "flat") {
+  } else if (type === "flat" || type === "fixed") {
     discount = coupon.value;
   }
 

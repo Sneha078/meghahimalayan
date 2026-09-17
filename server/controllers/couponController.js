@@ -9,7 +9,39 @@ const normalizeCouponCode = (code) => {
   const normalized = code.trim().toUpperCase();
   return normalized || null;
 };
-
+// GET /api/v1/coupons/active
+export const getActiveCoupons = handleAsyncError(async (req, res) => {
+  const now = new Date();
+ 
+  const coupons = await Coupon.find({
+    isPublic: true,
+    isActive: true,
+    $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+    $expr: {
+      $or: [
+        { $eq: ["$usageLimit", null] },
+        { $lt: ["$usedCount", "$usageLimit"] },
+      ],
+    },
+  })
+    .select("code description type value minOrder maxDiscount expiresAt")
+    .sort({ createdAt: -1 })
+    .lean();
+ 
+  res.status(200).json({
+    success: true,
+    coupons,
+  });
+});
+ 
+// ─────────────────────────────────────────────────────────────────────────
+// ROUTE — add this to wherever your coupon routes are registered
+// (likely couponRoutes.js), as a PUBLIC route (no auth middleware),
+// distinct from any existing admin coupon routes:
+//
+//   import { getActiveCoupons } from "../controllers/couponController.js";
+//   router.get("/coupons/active", getActiveCoupons);
+// ─────────────────────────────────────────────────────────────────────────
 //Discount rules checking
 const validateDiscountFields = ({
   type,
@@ -26,7 +58,9 @@ const validateDiscountFields = ({
   }
   if (
     maxDiscount !== null &&
-    maxDiscount !== undefined
+    maxDiscount !== undefined &&
+    maxDiscount !== "" &&
+    maxDiscount !== 0
   ) {
     const numericMaxDiscount = Number(maxDiscount);
     if (
@@ -297,8 +331,8 @@ export const createCoupon = handleAsyncError(
     }
     // maxDiscount is only meaningful for percentage coupons
     const finalMaxDiscount =
-      type === "percentage"
-        ? normalizeMaxDiscount(maxDiscount)
+      type === "percentage" && maxDiscount !== null && maxDiscount !== undefined && maxDiscount !== ""
+        ? Number(maxDiscount)
         : null;
 
     // Create coupon

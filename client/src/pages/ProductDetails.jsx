@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getProductById, getProductReviews, submitReview } from '../api/productClient'
+import { getProductById, getProductReviews, submitReview, deleteReview } from '../api/productClient'
 import { useCart } from '../context/CartContext'
 import RecommendedProducts from '../components/RecommendedProducts'
 import SentimentSummary from '../components/SentimentSummary'
@@ -70,6 +70,14 @@ function ProductDetail() {
   const [submitting, setSubmitting]       = useState(false)
   const [submitError, setSubmitError]     = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [deletingReview, setDeletingReview] = useState(false)
+  const [editingReviewId, setEditingReviewId] = useState(null)
+  // Tracks whether the last successful submit was an edit, since
+  // editingReviewId gets cleared right after — the success banner needs
+  // this to say "updated" vs "submitted".
+  const [lastSubmitWasEdit, setLastSubmitWasEdit] = useState(false)
+  const photoInputRef = useRef(null)
+  const videoInputRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -136,6 +144,14 @@ function ProductDetail() {
   const handleSubmitReview = async (e) => {
     e.preventDefault()
     if (!reviewForm.comment.trim()) return
+    
+    console.log('handleSubmitReview called with:', {
+      reviewImages: reviewImages.length,
+      reviewVideos: reviewVideos.length,
+      imageFiles: reviewImages.map(f => ({ name: f.name, size: f.size, type: f.type })),
+      videoFiles: reviewVideos.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    })
+    
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -147,16 +163,77 @@ function ProductDetail() {
         videos: reviewVideos,
       })
       setSubmitSuccess(true)
+      setLastSubmitWasEdit(editingReviewId !== null)
       setReviewForm({ rating: 5, comment: '' })
       setReviewImages([])
       setReviewVideos([])
+      setEditingReviewId(null)
+      
+      // Clear file inputs
+      if (photoInputRef.current) photoInputRef.current.value = ''
+      if (videoInputRef.current) videoInputRef.current.value = ''
+      
       // Reload reviews to include the new one
       const updated = await getProductReviews(id)
       setReviews(updated)
     } catch (err) {
-      setSubmitError(err.message.includes('401') ? 'Please log in to leave a review.' : 'Failed to submit review. Please try again.')
+      console.error('Review submission error:', err)
+      let errorMessage = 'Failed to submit review. Please try again.'
+      
+      if (err.message.includes('401')) {
+        errorMessage = 'Please log in to leave a review.'
+      } else if (err.message.includes('400')) {
+        errorMessage = err.message.includes('API error') 
+          ? err.message.replace('API error 400: ', '')
+          : 'Invalid review data. Please check your input.'
+      } else if (err.message.includes('413')) {
+        errorMessage = 'Files are too large. Please use smaller images/videos.'
+      }
+      
+      setSubmitError(errorMessage)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // ── Edit own review ────────────────────────────────────────────────────────
+  // submitReview is an upsert (one review per user per product), so editing
+  // just means pre-filling the form with the existing review and letting the
+  // normal submit flow overwrite it. Photos/video aren't pre-filled — the
+  // user would need to re-attach them if they want to change those too,
+  // since we only have URLs here, not the original files.
+  const handleEditReview = (review) => {
+    setEditingReviewId(review._id)
+    setReviewForm({ rating: review.rating, comment: review.comment })
+    setSubmitSuccess(false)
+    setSubmitError(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null)
+    setReviewForm({ rating: 5, comment: '' })
+    setSubmitError(null)
+  }
+
+  // ── Delete own review ─────────────────────────────────────────────────────
+  // Needs both the product id and the review's own _id — the backend
+  // route is DELETE /reviews?productId=<productId>&id=<reviewId>.
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Delete your review? This can\'t be undone.')) return
+
+    setDeletingReview(true)
+    try {
+      await deleteReview(id, reviewId)
+      const updated = await getProductReviews(id)
+      setReviews(updated)
+      setSubmitSuccess(false)
+      if (editingReviewId === reviewId) {
+        handleCancelEdit()
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete review. Please try again.')
+    } finally {
+      setDeletingReview(false)
     }
   }
 
@@ -213,6 +290,9 @@ function ProductDetail() {
   const reviewCount = product.numOfReviews ?? 0
   const isNew        = product.isNewArrival ?? false
   const isBestseller = product.isBestSeller ?? false
+
+  // Current user's id, for matching against a review's owner (r.user).
+  const currentUserId = user?._id ?? user?.id ?? null
 
   // Watch / eyeglasses / perfume specific spec fields
   const specs = product.category === 'watches'
@@ -610,7 +690,16 @@ function ProductDetail() {
               )}
               {!reviewsLoading && reviews.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {reviews.map((r) => (
+                  {reviews.map((r) => {
+                    // r.user may come back as a plain ID string or a
+                    // populated object with _id — handle both.
+                    const reviewOwnerId = r.user?._id ?? r.user ?? null
+                    const isOwnReview =
+                      currentUserId != null &&
+                      reviewOwnerId != null &&
+                      String(reviewOwnerId) === String(currentUserId)
+
+                    return (
                     <div key={r._id} style={{
                       backgroundColor: 'var(--color-white)',
                       borderRadius: '12px',
@@ -633,9 +722,82 @@ function ProductDetail() {
                             ))}
                           </div>
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
-                          {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
+                            {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+
+                          {isOwnReview && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {/* Edit */}
+                              <button
+                                onClick={() => handleEditReview(r)}
+                                aria-label="Edit review"
+                                title="Edit review"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'var(--color-muted)',
+                                  transition: 'background-color 0.15s ease, color 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'var(--color-sbg)'
+                                  e.currentTarget.style.color = 'var(--color-navy)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent'
+                                  e.currentTarget.style.color = 'var(--color-muted)'
+                                }}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                onClick={() => handleDeleteReview(r._id)}
+                                disabled={deletingReview}
+                                aria-label="Delete review"
+                                title="Delete review"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: deletingReview ? 'not-allowed' : 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: deletingReview ? '#d1a3a3' : 'var(--color-error)',
+                                  transition: 'background-color 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!deletingReview) e.currentTarget.style.backgroundColor = '#fef2f2'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent'
+                                }}
+                              >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                  <path d="M10 11v6" />
+                                  <path d="M14 11v6" />
+                                  <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <p style={{ fontSize: '0.88rem', color: 'var(--color-muted)', lineHeight: '1.6' }}>
                         {r.comment}
@@ -667,7 +829,8 @@ function ProductDetail() {
                         </div>
                       )}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -681,15 +844,30 @@ function ProductDetail() {
               position: 'sticky',
               top: '88px',
             }}>
-              <h3 style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '1.15rem',
-                fontWeight: '700',
-                color: 'var(--color-navy)',
-                marginBottom: '20px',
-              }}>
-                Write a Review
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: '1.15rem',
+                  fontWeight: '700',
+                  color: 'var(--color-navy)',
+                  margin: 0,
+                }}>
+                  {editingReviewId ? 'Edit Your Review' : 'Write a Review'}
+                </h3>
+
+                {editingReviewId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '0.78rem', fontWeight: '600', color: 'var(--color-muted)',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
 
               {submitSuccess && (
                 <div style={{
@@ -697,7 +875,7 @@ function ProductDetail() {
                   backgroundColor: '#dcfce7', color: '#15803d',
                   fontSize: '0.85rem', fontWeight: '600', marginBottom: '16px',
                 }}>
-                  ✓ Review submitted successfully!
+                  ✓ Review {lastSubmitWasEdit ? 'updated' : 'submitted'} successfully!
                 </div>
               )}
 
@@ -757,13 +935,57 @@ function ProductDetail() {
                   <label style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>
                     Add Photos <span style={{ textTransform: 'none', fontWeight: '400', letterSpacing: 'normal' }}>(up to 3, 5MB each)</span>
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                    style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
-                  />
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    padding: '8px 8px 8px 8px',
+                    backgroundColor: 'var(--color-white)',
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-sbg)',
+                        color: 'var(--color-navy)',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Choose Files
+                    </button>
+
+                    <span style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--color-muted)',
+                      textAlign: 'right',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {reviewImages.length > 0
+                        ? reviewImages.map((f) => f.name).join(', ')
+                        : 'No file chosen'}
+                    </span>
+
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
                   {reviewImages.length > 0 && (
                     <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '4px' }}>
                       {reviewImages.length} image{reviewImages.length > 1 ? 's' : ''} selected
@@ -776,12 +998,56 @@ function ProductDetail() {
                   <label style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>
                     Add Video <span style={{ textTransform: 'none', fontWeight: '400', letterSpacing: 'normal' }}>(1 max, 25MB)</span>
                   </label>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoChange}
-                    style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
-                  />
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    padding: '8px 8px 8px 8px',
+                    backgroundColor: 'var(--color-white)',
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-sbg)',
+                        color: 'var(--color-navy)',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Choose File
+                    </button>
+
+                    <span style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--color-muted)',
+                      textAlign: 'right',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {reviewVideos.length > 0
+                        ? reviewVideos[0].name
+                        : 'No file chosen'}
+                    </span>
+
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
                   {reviewVideos.length > 0 && (
                     <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '4px' }}>
                       {reviewVideos.length} video selected
@@ -813,7 +1079,9 @@ function ProductDetail() {
                     transition: 'background-color 0.2s ease',
                   }}
                 >
-                  {submitting ? 'Submitting…' : 'Submit Review'}
+                  {submitting
+                    ? (editingReviewId ? 'Updating…' : 'Submitting…')
+                    : (editingReviewId ? 'Update Review' : 'Submit Review')}
                 </button>
 
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', textAlign: 'center', marginTop: '10px' }}>

@@ -4,65 +4,51 @@ import handleAsyncError from "../middleware/handleAsyncError.js"; //asynchronous
 import APIFunctionality from "../utils/apiFunctionality.js"; //Product search/filter/sort/pagination ko common logic handle garcha.
 import cloudinary from "../config/cloudinary.js"; //product images upload/del in cloudinary
 
-//Helper functions
 
-//product id or slug through product find
+// Helper functions
+
+// Product lookup by ObjectId or slug
 const findProduct = async (id) => {
   const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-
-  return isObjectId
-    ? Product.findById(id)
-    : Product.findOne({ slug: id });
+  return isObjectId ? Product.findById(id) : Product.findOne({ slug: id });
 };
 
-//Product images upload from cloudinary
-const uploadImages = async (images) => {
-  const links = [];
-
-  for (const img of images) {
-    const result = await cloudinary.uploader.upload(img, {
-      folder: "products",
-    });
-
-    links.push({
-      public_id: result.public_id,
-      url: result.secure_url,
-    });
-  }
-
-  return links;
-};
-
-// Delete image from cloudinary using public_id
-const destroyImages = async (images) => {
-  for (const img of images) {
-    if (img.public_id) {
-      await cloudinary.uploader.destroy(img.public_id);
-    }
-  }
-};
-
+// Unified async concurrent media upload
 const uploadMedia = async (files, resourceType = "image", folder = "products") => {
-  const links = []
-  for (const file of files) {
-    const result = await cloudinary.uploader.upload(file, {
-      folder, 
+  if (!Array.isArray(files) || files.length === 0) return [];
+
+  const uploadPromises = files.map((file) =>
+    cloudinary.uploader.upload(file, {
+      folder,
       resource_type: resourceType,
     })
-    links.push({ public_id: result.public_id, url: result.secure_url})
-  }
-  return links
-}
+  );
 
-const destroyMedia = async (DataTransferItemList, resourceType = "image") => {
-  for (const item of items) {
-    if (item.public_id ) {
-      await cloudinary.uploader.destroy(item.public_id, {
+  const results = await Promise.all(uploadPromises);
+  return results.map((result) => ({
+    public_id: result.public_id,
+    url: result.secure_url,
+  }));
+};
+
+// Unified async concurrent media destruction
+const destroyMedia = async (items, resourceType = "image") => {
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  const destroyPromises = items
+    .filter((item) => item && item.public_id)
+    .map((item) =>
+      cloudinary.uploader.destroy(item.public_id, {
         resource_type: resourceType,
       })
-    }
-  }
-}
+    );
+
+  await Promise.all(destroyPromises);
+};
+
+// Aliases for backward compatibility in existing handlers
+const uploadImages = (images) => uploadMedia(images, "image", "products");
+const destroyImages = (images) => destroyMedia(images, "image");
 
 //Get all products
 // GET /api/v1/products
@@ -212,6 +198,14 @@ export const getProductReviews = handleAsyncError(async (req, res, next) => {
 // PUT /api/v1/review
 // One review per user per product.
 // Sending again updates the existing review.
+//
+// Media handling on update: images/videos are always fully replaced with
+// whatever was submitted this time (which may be an empty array). Any
+// previously stored media that isn't in the new submission is destroyed on
+// Cloudinary. This means editing a review without re-attaching photos or
+// video will delete the old ones — that's intentional, not a bug: the
+// frontend treats "submit with no files" as "no photos/video on this
+// review" rather than "leave them alone".
 
 export const createOrUpdateReview = handleAsyncError(
   async (req, res, next) => {
@@ -239,13 +233,22 @@ export const createOrUpdateReview = handleAsyncError(
       return next(new HandleError("Product not found", 404));
     }
 
-    let imageLinks;
-    let videoLinks;
-    if (Array.isArray(images) && images.length > 0) {
-      imageLinks = await uploadMedia(images, "image", "reviews/images")
-    }
-    if (Array.isArray(videos) && videos.length > 0){
-      videoLinks = await uploadMedia(videos, "video", "reviews/videos")
+    // Always resolve to a concrete array (possibly empty) — this makes the
+    // update branch below a real "replace with whatever was submitted"
+    // instead of "replace only if something non-empty was submitted".
+    let imageLinks = [];
+    let videoLinks = [];
+    
+    try {
+      imageLinks = Array.isArray(images) && images.length > 0
+        ? await uploadMedia(images, "image", "reviews/images")
+        : [];
+      
+      videoLinks = Array.isArray(videos) && videos.length > 0
+        ? await uploadMedia(videos, "video", "reviews/videos")
+        : [];
+    } catch (uploadError) {
+      return next(new HandleError(`Failed to upload media: ${uploadError.message}`, 400));
     }
 
     //check if review has already been created
@@ -259,22 +262,22 @@ export const createOrUpdateReview = handleAsyncError(
       existing.rating = Number(rating)
       existing.comment = comment
 
-      if (imageLinks) {
-        await destroyMedia(existing.images || [], "image")
-        existing.images = imageLinks
-      }
-      if (videoLinks) {
-        await destroyMedia(existing.videos || [], "video")
-        existing.videos = videoLinks
-      }
+      // Full replace on every edit: destroy whatever old media existed,
+      // then set the new (possibly empty) set. Submitting with nothing
+      // attached clears photos/video from the review.
+      await destroyMedia(existing.images || [], "image")
+      existing.images = imageLinks
+
+      await destroyMedia(existing.videos || [], "video")
+      existing.videos = videoLinks
     } else {
       product.reviews.push({
         user: req.user._id,
         name: req.user.name,
         rating: Number(rating),
         comment,
-        images: imageLinks || [],
-        videos: videoLinks || []
+        images: imageLinks,
+        videos: videoLinks
       });
     }
 

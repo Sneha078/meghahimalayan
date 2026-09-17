@@ -105,7 +105,7 @@ function Orders() {
   // Invoice
   const handleDownloadInvoice = async (orderId, orderNumber) => {
     setDownloadingInvoice(orderId)
-    try{
+    try {
       const blob = await downloadInvoice(orderId)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -114,9 +114,8 @@ function Orders() {
       document.body.appendChild(a)
       a.click()
       a.remove()
-      window.URL.revokeObjectUrl(url)
-    }
-    catch(err) {
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
       alert(err.message)
     } finally {
       setDownloadingInvoice(null)
@@ -1041,39 +1040,38 @@ function Orders() {
                             Return Items
                           </Link>
                         )}
+
+                        {/* Download Invoice */}
+
+                        {order.orderStatus === 'Delivered' &&
+                          order.paymentInfo?.status === 'Paid' && (
+                            <button
+                              onClick={() =>
+                                handleDownloadInvoice(order._id, order.orderNumber)
+                              }
+                              disabled={downloadingInvoice === order._id}
+                              style={{
+                                padding: '8px 20px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-border)',
+                                backgroundColor: 'var(--color-white)',
+                                color: 'var(--color-navy)',
+                                fontSize: '0.78rem',
+                                fontWeight: '600',
+                                cursor:
+                                  downloadingInvoice === order._id
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              {downloadingInvoice === order._id
+                                ? 'Downloading…'
+                                : 'Download Invoice'}
+                            </button>
+                          )}
                       </div>
                     </div>
-
-                    {/* Download Invoice */}
-                    
-
-{order.orderStatus === 'Delivered' &&
-  order.paymentInfo?.status === 'Paid' && (
-    <button
-      onClick={() =>
-        handleDownloadInvoice(order._id, order.orderNumber)
-      }
-      disabled={downloadingInvoice === order._id}
-      style={{
-        padding: '8px 20px',
-        borderRadius: '8px',
-        border: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-white)',
-        color: 'var(--color-navy)',
-        fontSize: '0.78rem',
-        fontWeight: '600',
-        cursor:
-          downloadingInvoice === order._id
-            ? 'not-allowed'
-            : 'pointer',
-        transition: 'all 0.2s ease',
-      }}
-    >
-      {downloadingInvoice === order._id
-        ? 'Downloading…'
-        : 'Download Invoice'}
-    </button>
-  )}
 
                     {/* ==================================================
                         ORDER TIMELINE

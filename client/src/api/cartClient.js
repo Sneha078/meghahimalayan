@@ -68,3 +68,14 @@ export async function removeCoupon() {
   });
   return handleResponse(res);
 }
+
+// Public "Available Offers" list for the Cart page — doesn't need
+// credentials to READ (guests can see what's on offer), but included
+// anyway for consistency with every other call here; harmless on an
+// unauthenticated route.
+export async function getActiveCoupons() {
+  const res = await fetch(`${API_URL}/coupons/active`, {
+    credentials: "include",
+  });
+  return handleResponse(res);
+}
