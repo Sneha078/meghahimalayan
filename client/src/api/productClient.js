@@ -209,6 +209,32 @@ export async function submitReturnRequest(payload) {
   return res.json()
 }
 
+// GET /api/v1/returns/me — customer's own return requests
+export async function getMyReturns(params = {}) {
+  const query = new URLSearchParams(params).toString()
+  const res = await fetch(`${API_URL}/returns/me${query ? `?${query}` : ''}`, {
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to fetch returns')
+  }
+  return res.json()
+}
+
+// PUT /api/v1/returns/:id/cancel — cancel a pending return request
+export async function cancelReturn(returnId) {
+  const res = await fetch(`${API_URL}/returns/${returnId}/cancel`, {
+    method: 'PUT',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to cancel return')
+  }
+  return res.json()
+}
+
 // GET /api/v1/invoice/order/:id/invoice — returns a PDF blob
 export async function downloadInvoice(orderId){
   const res = await fetch(`${API_URL}/invoice/order/${orderId}/invoice`, {

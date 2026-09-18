@@ -304,7 +304,13 @@ function Orders() {
             >
               Our team will review your return. You'll receive an
               email once it's approved or rejected, and can track its
-              status in your order timeline.
+              status in your order timeline.{' '}
+              <Link
+                to="/my-returns"
+                style={{ color: '#166534', fontWeight: '700', textDecoration: 'underline', textUnderlineOffset: '2px' }}
+              >
+                View My Returns →
+              </Link>
             </p>
           </div>
         )}
@@ -369,17 +375,20 @@ function Orders() {
         )}
 
         {/* ======================================================
-            STATUS FILTER CHIPS
+            STATUS FILTER CHIPS + MY RETURNS LINK
             ====================================================== */}
 
         <div
           style={{
             display: 'flex',
-            gap: '8px',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
             marginBottom: '24px',
             flexWrap: 'wrap',
           }}
         >
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {STATUS_FILTERS.map((status) => (
             <button
               key={status}
@@ -410,6 +419,25 @@ function Orders() {
               {status}
             </button>
           ))}
+          </div>
+
+          <Link
+            to="/my-returns"
+            style={{
+              padding: '7px 16px',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              border: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-white)',
+              color: 'var(--color-navy)',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            📦 My Returns
+          </Link>
         </div>
 
         {/* ======================================================

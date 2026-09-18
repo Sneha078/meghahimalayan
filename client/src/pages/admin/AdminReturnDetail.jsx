@@ -287,6 +287,26 @@ function AdminReturnDetail() {
                 </p>
               </div>
 
+              {(item.images ?? []).length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {item.images.map((img, i) => (
+                    <a key={i} href={img.url} target="_blank" rel="noreferrer">
+                      <img
+                        src={img.url}
+                        alt="Return"
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          objectFit: 'cover',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               {!showInspection && item.itemCondition && item.itemCondition !== 'Not Evaluated' && (
                 <p style={{ fontSize: '0.78rem', color: '#64748b' }}>
                   Condition: {item.itemCondition} · {item.restockable ? 'Restockable' : 'Not restockable'}
