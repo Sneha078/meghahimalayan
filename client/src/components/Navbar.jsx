@@ -21,12 +21,14 @@ function Navbar() {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const { totalItems } = useCart();
   const { user, logout } = useAuth();
   const { totalWishlisted } = useWishlist();
 
   const searchContainerRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
   const debounceRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,13 +37,22 @@ function Navbar() {
   useEffect(() => {
     setMobileMenuOpen(false);
     setDropdownOpen(false);
+    setMobileSearchOpen(false);
   }, [location.pathname]);
 
-  // Lock body scroll when mobile menu open
+  // Lock body scroll when mobile menu or search open
   useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    const open = mobileMenuOpen || mobileSearchOpen;
+    document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, mobileSearchOpen]);
+
+  // Auto-focus mobile search input when overlay opens
+  useEffect(() => {
+    if (mobileSearchOpen && mobileSearchInputRef.current) {
+      setTimeout(() => mobileSearchInputRef.current?.focus(), 100);
+    }
+  }, [mobileSearchOpen]);
 
   const handleLogout = async () => {
     setAccountOpen(false);
@@ -111,6 +122,7 @@ function Navbar() {
     const query = searchValue.trim();
     if (!query) return;
     setDropdownOpen(false);
+    setMobileSearchOpen(false);
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
@@ -133,12 +145,19 @@ function Navbar() {
         const product = visibleResults[highlightedIndex - suggestions.length];
         if (product) handleResultSelect(product);
       }
-    } else if (e.key === "Escape") { setDropdownOpen(false); }
+    } else if (e.key === "Escape") {
+      if (mobileSearchOpen) {
+        setMobileSearchOpen(false);
+      } else {
+        setDropdownOpen(false);
+      }
+    }
   };
 
   const handleSuggestionClick = (suggestion) => { setSearchValue(suggestion); setDropdownOpen(true); };
   const handleResultSelect = (product) => {
     setDropdownOpen(false);
+    setMobileSearchOpen(false);
     const productId = product.id ?? product._id;
     if (productId) navigate(`/product/${productId}`);
   };
@@ -153,18 +172,19 @@ function Navbar() {
         className={`w-full sticky top-0 z-40 transition-all duration-300 ${
           scrolled ? "bg-white shadow-sm" : "bg-[#0d1a2a]"
         }`}
-        style={{ padding: "20px 40px" }}
+        style={{ padding: "clamp(12px, 2.5vw, 20px) clamp(16px, 4vw, 40px)" }}
       >
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center justify-between gap-3 md:gap-6">
 
           {/* Left: Logo + Nav links */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8 shrink-0">
             {/* Hamburger — mobile only */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden"
               aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
               style={{ background: "none", border: "none", cursor: "pointer", color: textColor, padding: 0 }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -175,7 +195,7 @@ function Navbar() {
             </button>
 
             <Link to="/" style={{ textDecoration: "none" }}>
-              <img src={logo} alt="Mega Himalaya" style={{ height: "48px", width: "auto", objectFit: "contain" }} />
+              <img src={logo} alt="Mega Himalaya" style={{ height: "clamp(32px, 4vw, 48px)", width: "auto", objectFit: "contain" }} />
             </Link>
 
             <div className="hidden md:flex items-center gap-6">
@@ -192,7 +212,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* Center: Search */}
+          {/* Center: Search (desktop only) */}
           <div className="hidden md:block flex-1 max-w-md relative" ref={searchContainerRef}>
             <div className={`flex items-center gap-3 rounded-full border transition-all duration-300 ${
               scrolled ? "bg-gray-100 border-gray-200" : "bg-white/10 border-white/20"
@@ -230,11 +250,25 @@ function Navbar() {
           </div>
 
           {/* Right: Icons */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 md:gap-5">
+
+            {/* Mobile Search Icon */}
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(true)}
+              className="md:hidden"
+              aria-label="Search products"
+              style={{ color: textColor, background: "none", border: "none", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </button>
 
             {/* Wishlist */}
             <Link to="/wishlist" style={{ position: "relative", color: textColor, lineHeight: 0 }} aria-label="Wishlist">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -296,7 +330,7 @@ function Navbar() {
                 </div>
               ) : (
                 <Link to="/login" className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`} aria-label="Account">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -305,20 +339,19 @@ function Navbar() {
             </div>
 
             {/* Cart */}
-            <Link to="/cart" style={{
-              display: "flex", alignItems: "center", gap: "6px",
-              padding: "9px 20px", borderRadius: "8px",
+            <Link to="/cart" className="flex items-center gap-1.5 relative" style={{
+              padding: "9px 12px", borderRadius: "8px",
               backgroundColor: scrolled ? "var(--color-navy)" : "transparent",
               border: scrolled ? "none" : "1px solid rgba(255,255,255,0.3)",
               color: "var(--color-white)", fontSize: "0.875rem", fontWeight: "500",
-              textDecoration: "none", transition: "all 0.3s ease", position: "relative",
+              textDecoration: "none", transition: "all 0.3s ease",
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              Cart
+              <span className="hidden md:inline">Cart</span>
               {totalItems > 0 && (
                 <span style={{
                   backgroundColor: "var(--color-error)", color: "#ffffff", fontSize: "0.65rem", fontWeight: "700",
@@ -332,6 +365,117 @@ function Navbar() {
           </div>
         </div>
       </nav>
+
+      {/* ── Mobile Search Overlay ── */}
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex flex-col" style={{ backgroundColor: "var(--color-sbg)" }}>
+          {/* Search Header */}
+          <div className="flex items-center gap-3 shrink-0" style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-border)" }}>
+            <button
+              type="button"
+              onClick={() => { setMobileSearchOpen(false); setSearchValue(""); setSuggestions([]); setResults([]); setDropdownOpen(false); }}
+              aria-label="Close search"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-navy)", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="flex-1 flex items-center gap-3 rounded-full bg-white border border-[var(--color-border)]" style={{ padding: "10px 16px" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                placeholder="Search products, brands..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="flex-1 bg-transparent text-sm outline-none text-[var(--color-navy)] placeholder-gray-400"
+                style={{ minWidth: 0 }}
+              />
+              {searchValue && (
+                <button type="button"
+                  onClick={() => { setSearchValue(""); setSuggestions([]); setResults([]); setDropdownOpen(false); }}
+                  aria-label="Clear search"
+                  className="text-gray-400 shrink-0"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div className="flex-1 overflow-y-auto" style={{ padding: "8px 16px" }}>
+            {searchValue.trim().length >= SEARCH_MIN_CHARS ? (
+              <div className="relative">
+                {showDropdown && (
+                  <SearchDropdown query={searchValue} suggestions={suggestions} results={results}
+                    loading={searchLoading} highlightedIndex={highlightedIndex}
+                    onSuggestionClick={handleSuggestionClick} onResultSelect={handleResultSelect} onViewAll={goToFullResults} />
+                )}
+              </div>
+            ) : (
+              /* Quick Links when no search */
+              <div>
+                <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-muted)", textTransform: "uppercase", margin: "12px 0 8px" }}>
+                  Quick Links
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {["Eyeglasses", "Watches", "Perfumes", "New Arrivals", "Best Sellers"].map((tag) => (
+                    <Link
+                      key={tag}
+                      to={`/shop?search=${encodeURIComponent(tag)}`}
+                      onClick={() => setMobileSearchOpen(false)}
+                      className="text-xs font-medium rounded-full border"
+                      style={{
+                        padding: "8px 14px",
+                        color: "var(--color-navy)",
+                        borderColor: "var(--color-border)",
+                        backgroundColor: "var(--color-white)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+
+                <p style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-muted)", textTransform: "uppercase", margin: "20px 0 8px" }}>
+                  Categories
+                </p>
+                <div className="space-y-1">
+                  {[
+                    { to: "/shop?category=eyeglasses", label: "Eyeglasses" },
+                    { to: "/shop?category=watches", label: "Watches" },
+                    { to: "/shop?category=perfumes", label: "Perfumes" },
+                  ].map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMobileSearchOpen(false)}
+                      className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-white transition-colors"
+                      style={{ textDecoration: "none", color: "var(--color-navy)" }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-taupe)]">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <path d="M16 10a4 4 0 0 1-8 0" />
+                      </svg>
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Mobile Drawer ── */}
       {mobileMenuOpen && (
@@ -349,6 +493,22 @@ function Navbar() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
+              </button>
+            </div>
+
+            {/* Search in drawer */}
+            <div className="px-5 pt-4 pb-2">
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); setMobileSearchOpen(true); }}
+                className="w-full flex items-center gap-3 rounded-lg bg-white/10 border border-white/10 text-left"
+                style={{ padding: "10px 14px", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", cursor: "pointer" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="opacity-50">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                Search products...
               </button>
             </div>
 
