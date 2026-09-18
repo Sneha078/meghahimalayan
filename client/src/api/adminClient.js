@@ -35,8 +35,13 @@ export const deleteOrder = (id) =>
     credentials: 'include',
   }).then(handleResponse)
 
-export const getAdminProducts = () =>
-  fetch(`${API_URL}/admin/products`, { credentials: 'include' }).then(handleResponse)
+export const getAdminProducts = (page = undefined, limit = undefined) => {
+    const params = new URLSearchParams()
+    if (page !== undefined) params.set('page', page)
+    if (limit !== undefined) params.set('limit', limit)
+    const qs = params.toString()
+    return fetch(`${API_URL}/admin/products${qs ? `?${qs}` : ''}`, { credentials: 'include' }).then(handleResponse)
+}
 
 export const createProduct = (productData) =>
   fetch(`${API_URL}/admin/product/create`, {
@@ -60,8 +65,13 @@ export const deleteProduct = (id) =>
         credentials: 'include',
     }).then(handleResponse)
 
-export const getUsers = () =>
-    fetch(`${API_URL}/admin/users`,{credentials: 'include' }).then(handleResponse)
+export const getUsers = (page = undefined, limit = undefined) => {
+    const params = new URLSearchParams()
+    if (page !== undefined) params.set('page', page)
+    if (limit !== undefined) params.set('limit', limit)
+    const qs = params.toString()
+    return fetch(`${API_URL}/admin/users${qs ? `?${qs}` : ''}`,{credentials: 'include' }).then(handleResponse)
+}
 
 export const getSingleUser =(id) =>
     fetch(`${API_URL}/admin/user/${id}`, {credentials:'include'}).then(handleResponse)

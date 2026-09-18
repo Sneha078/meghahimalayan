@@ -9,13 +9,21 @@ function AdminUsers() {
   const [updating, setUpdating] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [search, setSearch]   = useState('')
+  const [page, setPage]       = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [userCount, setUserCount]   = useState(0)
 
   useEffect(() => {
-    getUsers()
-      .then((data) => setUsers(data.users ?? []))
+    setLoading(true)
+    getUsers(page, 15)
+      .then((data) => {
+        setUsers(data.users ?? [])
+        setTotalPages(data.totalPages ?? 1)
+        setUserCount(data.userCount ?? (data.users ?? []).length)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   const handleRoleChange = async (id, newRole) => {
     setUpdating(id)
@@ -34,7 +42,12 @@ function AdminUsers() {
     setDeleting(id)
     try {
       await deleteUser(id)
-      setUsers((prev) => prev.filter((u) => u._id !== id))
+      setUsers((prev) => {
+        const next = prev.filter((u) => u._id !== id)
+        if (next.length === 0 && page > 1) setPage((p) => p - 1)
+        return next
+      })
+      setUserCount((c) => Math.max(0, c - 1))
     } catch (err) {
       alert(err.message)
     } finally {
@@ -55,7 +68,7 @@ function AdminUsers() {
           Users
         </h1>
         <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-          {users.length} registered users
+          {userCount} registered users
         </p>
       </div>
 
@@ -180,6 +193,36 @@ function AdminUsers() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page <= 1 ? '#f1f5f9' : '#ffffff', color: page <= 1 ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600', cursor: page <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            ← Prev
+          </button>
+          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page >= totalPages ? '#f1f5f9' : '#ffffff', color: page >= totalPages ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600', cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>
