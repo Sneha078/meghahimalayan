@@ -4,10 +4,6 @@ import ProductCard from './ProductCard'
 
 const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'
 
-/**
- * Normalises a product from the AI recommendation service into the
- * shape ProductCard expects (mirrors the raw Mongo document).
- */
 function adaptProduct(product) {
   return {
     ...product,
@@ -18,17 +14,6 @@ function adaptProduct(product) {
   }
 }
 
-/**
- * "Recommended for you" — personalised product row powered by the
- * hybrid recommendation engine's /recommendation/for-user endpoint.
- *
- * Pass `userId` when the user is logged in for collaborative filtering.
- * Pass `viewedIds` (array of product _id strings) for content-based filtering.
- * When neither is available the engine falls back to top-rated products.
- *
- * Usage:
- *   <RecommendedForYou userId={user?._id} viewedIds={recentlyViewed} />
- */
 function RecommendedForYou({ userId = null, viewedIds = [] }) {
   const [products, setProducts] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -66,20 +51,18 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  // Re-fetch when the user logs in/out or viewed products change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, JSON.stringify(viewedIds)])
 
   const scrollBy = (amount) =>
     scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
 
-  // Don't render a section header if there's genuinely nothing to show.
   if (!loading && !error && products.length === 0) return null
 
   return (
     <section style={{
       backgroundColor: 'var(--color-white)',
-      padding: '64px 5rem',
+      padding: 'clamp(2rem, 5vw, 4rem) var(--section-px)',
       borderTop: '1px solid var(--color-border)',
     }}>
       {/* Header */}
@@ -87,7 +70,9 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
-        marginBottom: '40px',
+        marginBottom: 'clamp(20px, 3vw, 40px)',
+        flexWrap: 'wrap',
+        gap: '12px',
       }}>
         <div>
           <p style={{
@@ -102,7 +87,7 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
           </p>
           <h2 style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2rem',
+            fontSize: 'var(--text-2xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -111,7 +96,7 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
           </h2>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="hidden sm:flex" style={{ gap: '10px', alignItems: 'center' }}>
           {!loading && !error && products.length > 4 && (
             <>
               <button onClick={() => scrollBy(-280)} aria-label="Scroll left" style={navBtn}>‹</button>
@@ -174,11 +159,12 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
             paddingBottom: '4px',
             scrollbarWidth: 'none',
           }}
+          className="hide-scrollbar"
         >
           {products.map((product) => (
             <div
               key={product._id ?? product.id}
-              style={{ minWidth: '220px', maxWidth: '220px', scrollSnapAlign: 'start', flexShrink: 0 }}
+              style={{ minWidth: '200px', maxWidth: '220px', scrollSnapAlign: 'start', flexShrink: 0 }}
             >
               <ProductCard product={product} />
             </div>

@@ -15,15 +15,21 @@ function StatsBar() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        padding: '2rem 5rem',
+        flexWrap: 'wrap',
+        padding: 'clamp(1.5rem, 4vw, 2rem) var(--section-px)',
+        gap: '1rem',
       }}>
         {stats.map((stat, index) => (
-          <div key={stat.id} style={{ display: 'flex', alignItems: 'center', gap: '3rem' }}>
+          <div key={stat.id} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'clamp(1rem, 3vw, 3rem)',
+          }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{
                 fontFamily: 'var(--font-serif)',
                 color: 'var(--color-taupe)',
-                fontSize: '2rem',
+                fontSize: 'clamp(1.2rem, 3vw, 2rem)',
                 fontWeight: '700',
                 lineHeight: '1',
                 marginBottom: '0.4rem',
@@ -32,7 +38,7 @@ function StatsBar() {
               </p>
               <p style={{
                 color: 'rgba(255,255,255,0.45)',
-                fontSize: '0.78rem',
+                fontSize: 'var(--text-xs)',
                 letterSpacing: '0.05em',
               }}>
                 {stat.label}

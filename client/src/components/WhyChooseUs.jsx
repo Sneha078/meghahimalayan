@@ -28,17 +28,14 @@ const features = [
     icon: '✅',
     title: 'Genuine Products',
     description: 'Only authentic international brand eyewear, watches and perfumes',
-    fontSize: 600,
-    
   },
 ]
 
 function WhyChooseUs() {
   return (
-    <section style={{ backgroundColor: 'var(--color-white)', padding: '80px 5rem' }}>
+    <section style={{ backgroundColor: 'var(--color-white)', padding: 'var(--section-py) var(--section-px)' }}>
 
-     
-      <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 'clamp(28px, 4vw, 56px)' }}>
         <p style={{
           color: 'var(--color-black)',
           fontSize: '0.85rem',
@@ -51,7 +48,7 @@ function WhyChooseUs() {
         </p>
         <h2 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize:   '2.5rem',
+          fontSize:   'var(--text-3xl)',
           fontWeight: '700',
           color:      'var(--color-navy)',
           lineHeight: '1.2',
@@ -60,19 +57,17 @@ function WhyChooseUs() {
         </h2>
       </div>
 
-   
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        gap:'24px',
-      }}>
+      <div
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+      style={{ gap: 'var(--section-gap)' }}
+      >
         {features.map(feature => (
           <div
             key={feature.id}
             style={{
               backgroundColor: 'var(--color-sbg)',
               borderRadius: '16px',
-              padding: '32px 24px',
+              padding: 'clamp(20px, 3vw, 32px) clamp(16px, 2vw, 24px)',
               textAlign: 'center',
               border: '3px solid var(--color-border)',
               borderTop: '3px solid var(--color-taupe)',
@@ -94,7 +89,7 @@ function WhyChooseUs() {
             </div>
             <h3 style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: '1rem',
+              fontSize: 'var(--text-sm)',
               fontWeight: '600',
               color: 'var(--color-navy)',
               marginBottom: '10px',
@@ -102,7 +97,7 @@ function WhyChooseUs() {
               {feature.title}
             </h3>
             <p style={{
-              fontSize: '0.82rem',
+              fontSize: 'var(--text-xs)',
               color: 'var(--color-muted)',
               lineHeight: '1.6',
             }}>

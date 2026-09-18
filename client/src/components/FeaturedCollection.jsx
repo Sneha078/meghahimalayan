@@ -3,23 +3,20 @@ import { useProducts } from "../hooks/useProducts";
 import ProductCard from "./ProductCard";
 
 function FeaturedCollection() {
-    // Ask the backend to filter server-side (featured=true) instead of
-    // fetching a partial page and filtering in JS — getAllProducts
-    // defaults to only 12 results/page, so client-side filtering would
-    // silently miss most of the catalog otherwise.
     const { products: featured, loading, error } = useProducts({ featured: true, limit: 8 })
 
     return (
         <section style={{
             backgroundColor: 'var(--color-sbg)',
-            padding: '80px 5rem',
-
+            padding: 'var(--section-py) var(--section-px)',
         }}>
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
-                marginBottom: '48px',
+                marginBottom: 'clamp(24px, 4vw, 48px)',
+                flexWrap: 'wrap',
+                gap: '16px',
             }}>
                 <div>
                  <p style={{
@@ -29,15 +26,14 @@ function FeaturedCollection() {
                             letterSpacing: '0.2em',
                             textTransform: 'uppercase',
                             marginBottom: '10px',
- 
                  }}>
                     HAND-PICKED FOR YOU</p>
                     <h2 style={{
                       fontFamily: 'var(--font-serif)',
-                      fontSize: '2.5rem',
+                      fontSize: 'var(--text-3xl)',
                       fontWeight: '700',
                       color: 'var(--color-navy)',
-                      lineHeight: '1.2',  
+                      lineHeight: '1.2',
                     }}>
                         Featured Collection</h2>
                         </div>
@@ -51,11 +47,11 @@ function FeaturedCollection() {
                         fontWeight: '600',
                         letterSpacing: '0.1em',
                          textDecoration: 'none',
-                         transition: 'all 0.3s ease', 
+                         transition: 'all 0.3s ease',
                         }}
                         onMouseEnter={(e) =>{
                          e.currentTarget.style.backgroundColor='var(--color-navy)'
-                         e.currentTarget.style.color = 'var(--color-taupe)'   
+                         e.currentTarget.style.color = 'var(--color-taupe)'
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent'
@@ -66,7 +62,6 @@ function FeaturedCollection() {
                         </Link>
             </div>
 
-            {/* Loading / error states — the grid below only renders once data is ready */}
             {loading && (
                 <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>Loading products…</p>
             )}
@@ -75,13 +70,11 @@ function FeaturedCollection() {
             )}
 
             {!loading && !error && (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                     gap: '20px',  
-                }}>
+                <div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                style={{ gap: 'var(--section-gap)' }}
+                >
                     {featured.map((product) => (
-                        // MongoDB documents use _id, not id
                         <ProductCard key={product._id} product={product} />
                     ))}
                 </div>

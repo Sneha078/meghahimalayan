@@ -1,16 +1,18 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
 import { useStoreLocator } from '../hooks/useStoreLocator'
 
 function OurStory() {
-  const [hoveredShop, setHoveredShop] = useState(false)
-  const [hoveredStore, setHoveredStore] = useState(false)
   const {openStoreLocator, StoreLocatorModal} = useStoreLocator()
   return (
-    <section style={{ backgroundColor: 'var(--color-navy)', padding: '80px 5rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5rem', alignItems: 'center' }}>
+    <section style={{ backgroundColor: 'var(--color-navy)', padding: 'var(--section-py) var(--section-px)' }}>
+      <div
+      className="grid grid-cols-1 md:grid-cols-2"
+      style={{
+        gap: 'clamp(2rem, 5vw, 5rem)',
+        alignItems: 'center',
+      }}
+      >
 
-        
         <div>
           <p style={{
             color: 'var(--color-taupe)',
@@ -26,7 +28,7 @@ function OurStory() {
           <h2 style={{
             fontFamily: 'var(--font-serif)',
             color: '#ffffff',
-            fontSize:'2.8rem',
+            fontSize:'var(--text-4xl)',
             fontWeight: '700',
             lineHeight: '1.2',
             marginBottom: '24px',
@@ -36,7 +38,7 @@ function OurStory() {
 
           <p style={{
             color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.95rem',
+            fontSize: 'var(--text-base)',
             lineHeight: '1.8',
             marginBottom: '16px',
             textAlign: 'justify',
@@ -48,7 +50,7 @@ function OurStory() {
 
           <p style={{
             color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.95rem',
+            fontSize: 'var(--text-base)',
             lineHeight: '1.8',
             marginBottom: '16px',
             textAlign: 'justify',
@@ -61,7 +63,7 @@ function OurStory() {
           <p style={{
             color: 'var(--color-taupe)',
             fontWeight: 'bold',
-            fontSize: '0.95rem',
+            fontSize: 'var(--text-base)',
             lineHeight: '1.8',
             fontStyle: 'italic',
             marginBottom: '32px',
@@ -71,8 +73,7 @@ function OurStory() {
             commitment to every customer.
           </p>
 
-          
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <Link
               to="/shop"
               style={{
@@ -128,9 +129,8 @@ function OurStory() {
           gridTemplateColumns: '1fr 1fr',
           gridTemplateRows: '1fr 1fr',
           gap:'16px',
-          height:'460px',
+          height:'clamp(280px, 40vw, 460px)',
         }}>
-          
           <div style={{ gridRow: '1 / 3', borderRadius: '12px', overflow: 'hidden' }}>
             <img
               src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&q=80&fit=crop"
@@ -138,7 +138,7 @@ function OurStory() {
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </div>
-       
+
           <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
             <img
               src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80&fit=crop"
@@ -146,7 +146,7 @@ function OurStory() {
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </div>
-        
+
           <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
             <img
               src="https://images.unsplash.com/photo-1615634260167-c8cdede054de?w=600&q=80&fit=crop"

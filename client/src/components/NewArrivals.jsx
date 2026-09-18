@@ -12,7 +12,7 @@ function NewArrivals() {
   return (
     <section style={{
       backgroundColor: 'var(--color-sbg)',
-      padding: '80px 5rem',
+      padding: 'var(--section-py) var(--section-px)',
     }}>
 
       {/* Section Header */}
@@ -20,7 +20,7 @@ function NewArrivals() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '40px',
+        marginBottom: 'clamp(20px, 3vw, 40px)',
       }}>
         <div>
           <p style={{
@@ -35,7 +35,7 @@ function NewArrivals() {
           </p>
           <h2 style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2.5rem',
+            fontSize: 'var(--text-3xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -44,8 +44,8 @@ function NewArrivals() {
           </h2>
         </div>
 
-        {/* Arrow Buttons */}
-        <div style={{ display: 'flex', gap: '10px' }}>
+        {/* Arrow Buttons — hidden on mobile */}
+        <div className="hidden sm:flex" style={{ gap: '10px' }}>
           <button
             onClick={() => scrollBy(-260)}
             aria-label="Scroll left"
@@ -129,13 +129,14 @@ function NewArrivals() {
           ref={scrollRef}
           style={{
             display: 'flex',
-            gap: '20px',
+            gap: '16px',
             overflowX: 'auto',
             scrollSnapType: 'x mandatory',
             paddingBottom: '4px',
             scrollbarWidth: 'none',
             cursor: 'grab',
           }}
+          className="hide-scrollbar"
           onMouseDown={(e) => {
             const el = scrollRef.current
             if (!el) return
@@ -159,7 +160,7 @@ function NewArrivals() {
           {newProducts.map((product) => (
             <div
               key={product._id}
-              style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start', flexShrink: 0 }}
+              style={{ minWidth: '200px', maxWidth: '240px', scrollSnapAlign: 'start', flexShrink: 0 }}
             >
               <ProductCard product={product} />
             </div>

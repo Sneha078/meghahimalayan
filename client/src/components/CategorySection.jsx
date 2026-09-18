@@ -44,7 +44,7 @@ function CategoryCard({ cat, count }) {
         position:   'relative',
         borderRadius: '16px',
         overflow:   'hidden',
-        minHeight:  '420px',
+        minHeight:  'clamp(280px, 40vw, 420px)',
         cursor:     'pointer',
         transform:  hovered ? 'scale(1.03)' : 'scale(1)',
         boxShadow:  hovered
@@ -53,7 +53,6 @@ function CategoryCard({ cat, count }) {
         transition: 'transform 0.35s ease, box-shadow 0.35s ease',
       }}
     >
- 
       <div style={{
         position: 'absolute',
         inset:  0,
@@ -64,56 +63,53 @@ function CategoryCard({ cat, count }) {
         transition: 'transform 0.5s ease',
       }} />
 
-    
       <div style={{
         position:   'absolute',
         inset:       0,
         background: 'linear-gradient(to top, rgba(13,32,49,0.90) 40%, rgba(13,32,49,0.35) 100%)',
       }} />
 
-    <div style={{
-  position: 'absolute',
-  top: '28px',
-  left: '28px',
-  zIndex: 2,
-}}>
-  <p style={{
-    color: '#ffffff',
-    fontSize: '0.68rem',
-    fontWeight: '700',
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    marginBottom: '4px',
-    textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-  }}>
-    {count === null ? '\u00A0' : `${count} PRODUCT${count === 1 ? '' : 'S'}`}
-  </p>
+      <div style={{
+        position: 'absolute',
+        top: 'clamp(16px, 3vw, 28px)',
+        left: 'clamp(16px, 3vw, 28px)',
+        zIndex: 2,
+      }}>
+        <p style={{
+          color: '#ffffff',
+          fontSize: '0.68rem',
+          fontWeight: '700',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          marginBottom: '4px',
+          textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+        }}>
+          {count === null ? '\u00A0' : `${count} PRODUCT${count === 1 ? '' : 'S'}`}
+        </p>
 
-  <p style={{
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: '0.62rem',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-  }}>
-    {cat.tagline}
-  </p>
-</div>
+        <p style={{
+          color: 'rgba(255,255,255,0.65)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+        }}>
+          {cat.tagline}
+        </p>
+      </div>
 
-<div style={{
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  padding: '28px',
-  zIndex: 2,
-}}>
-     
-        
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 'clamp(16px, 3vw, 28px)',
+        zIndex: 2,
+      }}>
         <h3 style={{
           fontFamily:   'var(--font-serif)',
           color:  '#ffffff',
-          fontSize: '2.4rem',
+          fontSize: 'clamp(1.5rem, 4vw, 2.4rem)',
           fontWeight:'700',
           lineHeight: '1.1',
           marginBottom: '8px',
@@ -121,17 +117,15 @@ function CategoryCard({ cat, count }) {
           {cat.title}
         </h3>
 
-       
         <p style={{
           color:  'rgba(255,255,255,0.6)',
-          fontSize: '0.82rem',
+          fontSize: 'var(--text-sm)',
           lineHeight: '1.6',
-          marginBottom: '20px',
+          marginBottom: '16px',
         }}>
           {cat.description}
         </p>
 
-      
         <Link
           to={cat.link}
           style={{
@@ -167,9 +161,9 @@ function CategorySection() {
   return (
     <section style={{
       backgroundColor: 'var(--color-white)',
-      padding:  '80px 5rem',
+      padding:  'var(--section-py) var(--section-px)',
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 'clamp(24px, 4vw, 48px)' }}>
         <p style={{
           color:  'var(--color-taupe)',
           fontSize: '0.72rem',
@@ -182,7 +176,7 @@ function CategorySection() {
         </p>
         <h2 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize:   '2.8rem',
+          fontSize:   'var(--text-4xl)',
           fontWeight: '700',
           color:      'var(--color-navy)',
           lineHeight: '1.2',
@@ -191,12 +185,10 @@ function CategorySection() {
         </h2>
       </div>
 
-  
-      <div style={{
-        display:  'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap:'24px',
-      }}>
+      <div
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+      style={{ gap: 'var(--section-gap)' }}
+      >
         {categories.map(cat => (
           <CategoryCard key={cat.id} cat={cat}
           count = {counts[cat.categoryKey] ?? null} />
