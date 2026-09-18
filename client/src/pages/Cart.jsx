@@ -9,6 +9,9 @@ function Cart() {
   const {
     cartItems, updateQuantity, removeItem, subtotal,
     couponCode, discount, applyCoupon, removeCoupon,
+    //shared points state
+    pointsUsed, 
+    pointsDiscount, setPointsRedemption,
   } = useCart()
   const { user } = useAuth()
 
@@ -16,11 +19,11 @@ function Cart() {
   const [couponMessage, setCouponMessage] = useState(null)
   const [applyingCoupon, setApplyingCoupon] = useState(false)
 
-  const [pointsUsed, setPointsUsed] = useState(0)
-  const [pointsDiscount, setPointsDiscount] = useState(0)
+  
 
   const [publicOffers, setPublicOffers] = useState([])
   const [offersLoading, setOffersLoading] = useState(true)
+  const [productToDelete, setProductToDelete] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -34,7 +37,8 @@ function Cart() {
   const shipping = subtotal >= 5000 ? 0 : 200
 
   const discounted = Math.max(0, subtotal - discount)
-  const total = Math.max(0, discounted + shipping - pointsDiscount)
+  const calculatedTotal = Math.max(0, discounted + shipping - pointsDiscount)
+  const total = Math.floor(calculatedTotal)
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim()
@@ -202,7 +206,7 @@ function Cart() {
   >
     {/* Delete icon — top-right of the row */}
     <button
-      onClick={() => removeItem(item.id)}
+      onClick={() => setProductToDelete(item)}
       aria-label="Remove item"
       title="Remove item"
       style={{
@@ -654,9 +658,10 @@ function Cart() {
           {user && (
             <PointsRedeemBox
               subtotal={discounted}
+              pointsUsed={pointsUsed}
+              pointsDiscount={pointsDiscount}
               onChange={(points, pointsDisc) => {
-                setPointsUsed(points)
-                setPointsDiscount(pointsDisc)
+                setPointsRedemption(points, pointsDisc)
               }}
             />
           )}
@@ -731,6 +736,145 @@ function Cart() {
               </span>
             ))}
           </div>
+          {/* Delete Confirmation Modal */}
+{productToDelete && (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 1000,
+      backgroundColor: 'rgba(13, 26, 42, 0.45)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
+      backdropFilter: 'blur(3px)',
+    }}
+    onClick={() => setProductToDelete(null)}
+  >
+    <div
+      style={{
+        width: '100%',
+        maxWidth: '420px',
+        backgroundColor: 'var(--color-white)',
+        borderRadius: '16px',
+        padding: '30px',
+        border: '1px solid var(--color-border)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Icon */}
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          backgroundColor: '#fef2f2',
+          color: '#dc2626',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '18px',
+          fontSize: '1.3rem',
+        }}
+      >
+        🗑️
+      </div>
+
+      {/* Title */}
+      <h2
+        style={{
+          fontFamily: 'var(--font-serif)',
+          fontSize: '1.4rem',
+          fontWeight: '700',
+          color: 'var(--color-navy)',
+          marginBottom: '10px',
+        }}
+      >
+        Remove product?
+      </h2>
+
+      {/* Message */}
+      <p
+        style={{
+          fontSize: '0.9rem',
+          color: 'var(--color-muted)',
+          lineHeight: '1.6',
+          marginBottom: '8px',
+        }}
+      >
+        Do you want to delete this product from the
+        cart?
+      </p>
+
+      {/* Product name */}
+      <p
+        style={{
+          fontSize: '0.85rem',
+          fontWeight: '600',
+          color: 'var(--color-navy)',
+          marginBottom: '24px',
+        }}
+      >
+        {productToDelete.name}
+      </p>
+
+      {/* Buttons */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        {/* Cancel */}
+        <button
+          type="button"
+          onClick={() => setProductToDelete(null)}
+          style={{
+            padding: '11px 22px',
+            borderRadius: '8px',
+            border:
+              '1px solid var(--color-border)',
+            backgroundColor:
+              'var(--color-white)',
+            color: 'var(--color-navy)',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+          }}
+        >
+          CANCEL
+        </button>
+
+        {/* Delete */}
+        <button
+          type="button"
+          onClick={async () => {
+            const id = productToDelete.id
+
+            setProductToDelete(null)
+
+            await removeItem(id)
+          }}
+          style={{
+            padding: '11px 22px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: '#dc2626',
+            color: '#ffffff',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+          }}
+        >
+          DELETE
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         </div>
       </div>

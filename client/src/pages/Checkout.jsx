@@ -14,7 +14,7 @@ import PointsRedeemBox from "./PointsRedeemBox";
 const STEPS = ["Delivery", "Payment", "Review"];
 
 function Checkout() {
-  const { cartItems, subtotal, discount, clearCart } = useCart();
+  const { cartItems, subtotal, discount, clearCart, pointsUsed, pointsDiscount, setPointsRedemption, } = useCart();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -37,8 +37,6 @@ function Checkout() {
   // instant UI feedback (mirrors the server's formula) — the server
   // recomputes the real discount from pointsUsed when the order is
   // actually created, and is the final authority on the charged amount.
-  const [pointsUsed, setPointsUsed] = useState(0);
-  const [pointsDiscount, setPointsDiscount] = useState(0);
 
   const shipping = subtotal >= 5000 ? 0 : 200;
 
@@ -46,7 +44,8 @@ function Checkout() {
   // (see PointsRedeemBox) is based on what's actually still owed after
   // the coupon, not the raw pre-coupon subtotal.
   const discounted = Math.max(0, subtotal - discount);
-  const total = Math.max(0, discounted + shipping - pointsDiscount);
+  const calculatedTotal = Math.max(0, discounted + shipping - pointsDiscount)
+  const total = Math.floor(calculatedTotal)
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1080,12 +1079,13 @@ function Checkout() {
               final total below. Cap is based on the post-coupon subtotal,
               not the raw cart subtotal. */}
           <PointsRedeemBox
-            subtotal={discounted}
-            onChange={(points, pointsDisc) => {
-              setPointsUsed(points);
-              setPointsDiscount(pointsDisc);
-            }}
-          />
+  subtotal={discounted}
+  pointsUsed={pointsUsed}
+  pointsDiscount={pointsDiscount}
+  onChange={(points, discount) => {
+    setPointsRedemption(points, discount);
+  }}
+/>
 
           {/* Subtotal & Shipping */}
           <div
