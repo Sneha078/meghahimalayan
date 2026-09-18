@@ -170,7 +170,17 @@ const validateCoupon = async (
 
 
 // Keep shipping rules centralized.
-const calculateShippingPrice = () => 0;
+// Must match the storefront promise: free over Rs. 5,000, otherwise Rs. 200.
+const FREE_SHIPPING_THRESHOLD = 5000;
+const SHIPPING_FEE = 200;
+
+const calculateShippingPrice = ({ itemsPrice } = {}) => {
+  const subtotal = Number(itemsPrice) || 0;
+
+  return subtotal >= FREE_SHIPPING_THRESHOLD
+    ? 0
+    : SHIPPING_FEE;
+};
 
 
 // Keep tax rules centralized.

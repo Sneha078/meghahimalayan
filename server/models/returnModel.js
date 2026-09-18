@@ -76,6 +76,25 @@ const returnItemSchema = new mongoose.Schema(
       maxlength: 1000,
     },
 
+    // Customer-uploaded photos for this returned item (Cloudinary)
+    images: [
+      {
+        public_id: {
+          type: String,
+          trim: true,
+          maxlength: 300,
+          default: "",
+        },
+
+        url: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 1000,
+        },
+      },
+    ],
+
     quantity: {
       type: Number,
       required: [true, "Return quantity is required"],
