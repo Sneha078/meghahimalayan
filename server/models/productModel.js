@@ -271,14 +271,42 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//pre-save middleware
-//runs before a product is saved to mongodb
-productSchema.pre("findOneAndUpdate", function (next) {
-  const update = this.getUpdate()
+// Keeps isOutOfStock in sync whenever stock changes through ANY update —
+// direct assignment ({ stock: n }, $set) or quantity changes ($inc, used by
+// order creation and stock restore). Without this, the product-card
+// out-of-stock indicator goes stale the moment stock is touched.
+productSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate();
+
+  let assignedStock;
   if (update.stock !== undefined) {
-    update.isOutofStock = 
-      update.stock === 0;
+    assignedStock = update.stock;
+  } else if (update.$set && update.$set.stock !== undefined) {
+    assignedStock = update.$set.stock;
   }
+
+  const delta = update.$inc && update.$inc.stock !== undefined
+    ? update.$inc.stock
+    : undefined;
+
+  if (assignedStock === undefined && delta === undefined) {
+    return next();
+  }
+
+  let newStock;
+  if (assignedStock !== undefined) {
+    newStock = Number(assignedStock);
+  } else {
+    // $inc needs the current value to compute the resulting stock.
+    const current = await this.model
+      .findOne(this.getFilter(), { stock: 1 })
+      .lean();
+    newStock = Number(current ? current.stock : 0) + Number(delta);
+  }
+
+  const target = update.$set || update;
+  target.isOutOfStock = newStock === 0;
+
   next();
 });
 
