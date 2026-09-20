@@ -82,6 +82,25 @@ const couponSchema = new mongoose.Schema(
       min: [0, "Used count cannot be negative"],
     },
 
+    // Per-user usage limit — how many times a single user can apply this coupon.
+    // null = no per-user cap (only the global usageLimit applies).
+    perUserLimit: {
+      type: Number,
+      default: 1,
+      min: [1, "Per-user limit must be at least 1"],
+    },
+
+    // Array of user IDs who have successfully used this coupon.
+    // Each entry is one order — so a user who placed two orders with
+    // the same coupon appears twice. This lets us enforce perUserLimit
+    // with a simple $elemMatch count without a separate collection.
+    usedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     // Optional expiry date
     expiresAt: {
       type: Date,

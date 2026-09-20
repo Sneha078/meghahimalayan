@@ -103,7 +103,8 @@ const calculateCouponDiscount = (
 const validateCoupon = async (
   couponCode,
   itemsPrice,
-  session
+  session,
+  userId = null
 ) => {
   if (!couponCode) {
     return {
@@ -147,6 +148,20 @@ const validateCoupon = async (
       "This coupon has reached its usage limit",
       400
     );
+  }
+
+  // Per-user limit check
+  if (userId && coupon.perUserLimit !== null && coupon.perUserLimit !== undefined) {
+    const timesUsedByUser = coupon.usedBy.filter(
+      (id) => id.toString() === userId.toString()
+    ).length;
+    if (timesUsedByUser >= coupon.perUserLimit) {
+      const limitWord = coupon.perUserLimit === 1 ? "once" : `${coupon.perUserLimit} times`;
+      throw new HandleError(
+        `You have already used this coupon ${limitWord}`,
+        400
+      );
+    }
   }
 
   if (
@@ -693,7 +708,8 @@ export const createNewOrder =
                 await validateCoupon(
                   couponCode,
                   itemsPrice,
-                  session
+                  session,
+                  req.user._id
                 );
 
               discount =
@@ -710,7 +726,9 @@ export const createNewOrder =
               };
 
               /*
-               * Atomic usage-limit protection.
+               * Atomic usage-limit protection: guard both global limit
+               * and per-user limit in the same findOneAndUpdate so no
+               * race condition can let a user sneak in an extra use.
                */
               if (
                 couponResult.coupon
@@ -729,9 +747,8 @@ export const createNewOrder =
                 await Coupon.findOneAndUpdate(
                   couponFilter,
                   {
-                    $inc: {
-                      usedCount: 1,
-                    },
+                    $inc: { usedCount: 1 },
+                    $push: { usedBy: req.user._id },
                   },
                   {
                     new: true,
@@ -1261,6 +1278,9 @@ export const cancelMyOrder =
                   $inc: {
                     usedCount: -1,
                   },
+                  $pull: {
+                    usedBy: order.user,
+                  },
                 },
                 {
                   session,
@@ -1681,6 +1701,9 @@ export const updateOrderStatus =
                   {
                     $inc: {
                       usedCount: -1,
+                    },
+                    $pull: {
+                      usedBy: order.user,
                     },
                   },
 

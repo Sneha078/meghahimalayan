@@ -103,6 +103,15 @@ export const googleLogin = handleAsyncError(async (req, res, next) => {
     }
   }
 
+  // Soft-deleted / inactive accounts cannot sign in, even via Google
+  if (user.isDeleted) {
+    return next(new HandleError("This account has been deleted", 401));
+  }
+
+  if (!user.isActive) {
+    return next(new HandleError("This account is inactive", 401));
+  }
+
   // Issue JWT cookie — same flow as regular login
   sendToken(user, 200, res);
 });

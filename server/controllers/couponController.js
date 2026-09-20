@@ -169,6 +169,19 @@ export const validateCoupon = handleAsyncError(
         new HandleError("This coupon has reached its usage limit",400));
     }
 
+    // Check per-user usage limit (only for authenticated requests)
+    if (req.user && coupon.perUserLimit !== null && coupon.perUserLimit !== undefined) {
+      const timesUsedByUser = coupon.usedBy.filter(
+        (id) => id.toString() === req.user._id.toString()
+      ).length;
+      if (timesUsedByUser >= coupon.perUserLimit) {
+        const limitWord = coupon.perUserLimit === 1 ? "once" : `${coupon.perUserLimit} times`;
+        return next(
+          new HandleError(`You have already used this coupon ${limitWord}`, 400)
+        );
+      }
+    }
+
     // Check minimum order
     if (orderTotal < coupon.minOrder) {
       return next(
@@ -232,6 +245,7 @@ export const createCoupon = handleAsyncError(
       minOrder = 0,
       maxDiscount = null,
       usageLimit = null,
+      perUserLimit,
       expiresAt = null,
       isActive = true,
     } = req.body;
@@ -301,6 +315,28 @@ export const createCoupon = handleAsyncError(
       }
     }
 
+    // Validate per-user usage limit.
+    // Absent (undefined) => schema default (1 use per user) applies.
+    // Explicit null or "" => per-user cap disabled (unlimited).
+    let numericPerUserLimit = null;
+    const perUserLimitProvided = perUserLimit !== undefined;
+    if (perUserLimitProvided) {
+      if (perUserLimit !== null && perUserLimit !== "") {
+        numericPerUserLimit = Number(perUserLimit);
+        if (
+          !Number.isInteger(numericPerUserLimit) ||
+          numericPerUserLimit < 1
+        ) {
+          return next(
+            new HandleError(
+              "Per-user limit must be a positive whole number",
+              400
+            )
+          );
+        }
+      }
+    }
+
     // Validate expiry
     if (expiresAt) {
       const expiryDate = new Date(expiresAt);
@@ -348,6 +384,9 @@ export const createCoupon = handleAsyncError(
       minOrder: numericMinOrder,
       maxDiscount: finalMaxDiscount,
       usageLimit: numericUsageLimit,
+      ...(perUserLimitProvided
+        ? { perUserLimit: numericPerUserLimit }
+        : {}),
       usedCount: 0,
       expiresAt: expiresAt
         ? new Date(expiresAt)
@@ -380,7 +419,7 @@ export const updateCoupon = handleAsyncError(
       );
     }
     // Only these fields can be updated.
-    // usedCount is intentionally NOT included.
+    // usedCount and usedBy are intentionally NOT included.
     const allowedFields = [
       "code",
       "description",
@@ -389,6 +428,7 @@ export const updateCoupon = handleAsyncError(
       "minOrder",
       "maxDiscount",
       "usageLimit",
+      "perUserLimit",
       "expiresAt",
       "isActive",
     ];

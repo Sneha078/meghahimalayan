@@ -72,7 +72,7 @@ const calculateCouponDiscount = (coupon, itemsPrice) => {
 
 // Validate coupon for cart preview.
 // The Order controller MUST validate the coupon again during checkout.
-const validateCoupon = async (couponCode, itemsPrice) => {
+const validateCoupon = async (couponCode, itemsPrice, userId = null) => {
   if (!couponCode) {
     return { coupon: null, discount: 0, error: null };
   }
@@ -111,6 +111,21 @@ const validateCoupon = async (couponCode, itemsPrice) => {
       discount: 0,
       error: "This coupon has reached its usage limit",
     };
+  }
+
+  // Per-user limit check
+  if (userId && coupon.perUserLimit !== null && coupon.perUserLimit !== undefined) {
+    const timesUsedByUser = coupon.usedBy.filter(
+      (id) => id.toString() === userId.toString()
+    ).length;
+    if (timesUsedByUser >= coupon.perUserLimit) {
+      const limitWord = coupon.perUserLimit === 1 ? "once" : `${coupon.perUserLimit} times`;
+      return {
+        coupon: null,
+        discount: 0,
+        error: `You have already used this coupon ${limitWord}`,
+      };
+    }
   }
 
   if (itemsPrice < coupon.minOrder) {
@@ -186,7 +201,7 @@ const refreshCart = async (cart) => {
 };
 
 //Prepare final cart summary for frontend 
-const buildCartResponse = async (cart) => {
+const buildCartResponse = async (cart, userId = null) => {
   if (!cart) {
     return {
       _id: null,
@@ -206,7 +221,8 @@ const buildCartResponse = async (cart) => {
   if (cart.couponCode) {
     const result = await validateCoupon(
       cart.couponCode,
-      itemsPrice
+      itemsPrice,
+      userId
     );
 
     if (result.error) {
@@ -268,7 +284,7 @@ export const getCart = handleAsyncError(async (req, res) => {
   });
 
   cart.items = cart.items.filter((item) => item.product);
-  const response = await buildCartResponse(cart);
+  const response = await buildCartResponse(cart, req.user._id);
 
   return res.status(200).json({
     success: true,
@@ -637,7 +653,8 @@ export const applyCoupon = handleAsyncError(
 
     const result = await validateCoupon(
       normalizedCode,
-      itemsPrice
+      itemsPrice,
+      req.user?._id ?? null
     );
 
     if (result.error) {

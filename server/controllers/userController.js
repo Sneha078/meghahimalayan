@@ -67,6 +67,7 @@ export const loginUser = handleAsyncError(async (req, res, next) => {
   // Support login with email OR phone number
   const user = await User.findOne({
     $or: [{ email }, { phone: email }],
+    isDeleted: { $ne: true },
   }).select("+password");
 
   if (!user) {
@@ -76,6 +77,10 @@ export const loginUser = handleAsyncError(async (req, res, next) => {
   const isMatch = await user.verifyPassword(password);
   if (!isMatch) {
     return next(new HandleError("Invalid credentials", 401));
+  }
+
+  if (!user.isActive) {
+    return next(new HandleError("This account has been deactivated. Please contact support.", 403));
   }
 
   sendToken(user, 200, res);
@@ -517,14 +522,51 @@ export const removeFromWishlist = handleAsyncError(async (req, res, next) => {
 
 // GET /api/v1/admin/users
 export const getUsersList = handleAsyncError(async (req, res, next) => {
-  const users = await User.find().sort("-createdAt");
+  // Soft-deleted users are never shown in the admin user list
+  const baseFilter = { isDeleted: { $ne: true } };
+
+  // Pagination: pass ?page=&limit= to get a page. Without them the call
+  // keeps the original "return all users" behavior.
+  const resultsPerPage = Math.min(Number(req.query.limit) || 0, 100);
+
+  if (resultsPerPage > 0) {
+    const userCount = await User.countDocuments(baseFilter);
+    const totalPages = Math.ceil(userCount / resultsPerPage) || 1;
+    const currentPage = Math.max(1, Number(req.query.page) || 1);
+
+    if (currentPage > totalPages && userCount > 0) {
+      return next(
+        new HandleError(`Page ${currentPage} does not exist`, 404)
+      );
+    }
+
+    const users = await User.find(baseFilter)
+      .sort("-createdAt")
+      .skip((currentPage - 1) * resultsPerPage)
+      .limit(resultsPerPage);
+
+    res.status(200).json({
+      success: true,
+      userCount,
+      resultsPerPage,
+      totalPages,
+      currentPage,
+      users,
+    });
+    return;
+  }
+
+  const users = await User.find(baseFilter).sort("-createdAt");
 
   res.status(200).json({ success: true, count: users.length, users });
 });
 
 // GET /api/v1/admin/user/:id
 export const getSingleUser = handleAsyncError(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findOne({
+    _id: req.params.id,
+    isDeleted: { $ne: true },
+  });
 
   if (!user) {
     return next(new HandleError(`No user found with ID: ${req.params.id}`, 404));
@@ -541,8 +583,8 @@ export const updateUserRole = handleAsyncError(async (req, res, next) => {
     return next(new HandleError("Role must be either 'user' or 'admin'", 400));
   }
 
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
+  const user = await User.findOneAndUpdate(
+    { _id: req.params.id, isDeleted: { $ne: true } },
     { role },
     { new: true, runValidators: true }
   );
@@ -559,19 +601,37 @@ export const updateUserRole = handleAsyncError(async (req, res, next) => {
 });
 
 // DELETE /api/v1/admin/user/:id
+// Soft-delete: sets isDeleted + deletedAt so all historical data
+// (orders, reviews, returns) remains intact and referentially sound.
+// The user is excluded from all admin queries and cannot log in.
+// Cloudinary avatar is still removed since it's no longer needed.
 export const deleteUser = handleAsyncError(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findOne({
+    _id: req.params.id,
+    isDeleted: { $ne: true },
+  });
 
   if (!user) {
     return next(new HandleError("User not found", 404));
   }
 
-  // Clean up Cloudinary avatar
+  // Prevent an admin from soft-deleting their own account
+  if (user._id.toString() === req.user._id.toString()) {
+    return next(new HandleError("You cannot delete your own account", 400));
+  }
+
+  // Remove Cloudinary avatar — it won't be needed after deletion
   if (user.avatar?.public_id) {
     await cloudinary.uploader.destroy(user.avatar.public_id);
   }
 
-  await User.findByIdAndDelete(req.params.id);
+  await User.findByIdAndUpdate(req.params.id, {
+    isDeleted: true,
+    deletedAt: new Date(),
+    isActive: false,
+    // Nullify the avatar reference since the asset is gone
+    avatar: { public_id: "", url: "" },
+  });
 
   res.status(200).json({ success: true, message: "User deleted successfully" });
 });

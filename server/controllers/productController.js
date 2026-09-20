@@ -304,6 +304,39 @@ export const createOrUpdateReview = handleAsyncError(
 
 export const getAdminProducts = handleAsyncError(
   async (req, res, next) => {
+    // Pagination: pass ?page=&limit= to get a page. Without them the
+    // endpoint keeps the original "return all products" behavior so
+    // callers like the product edit form (which finds by _id in the
+    // full list) keep working.
+    const resultsPerPage = Math.min(Number(req.query.limit) || 0, 100);
+
+    if (resultsPerPage > 0) {
+      const productCount = await Product.countDocuments({});
+      const totalPages = Math.ceil(productCount / resultsPerPage) || 1;
+      const currentPage = Math.max(1, Number(req.query.page) || 1);
+
+      if (currentPage > totalPages && productCount > 0) {
+        return next(
+          new HandleError(`Page ${currentPage} does not exist`, 404)
+        );
+      }
+
+      const products = await Product.find({})
+        .sort("-createdAt")
+        .skip((currentPage - 1) * resultsPerPage)
+        .limit(resultsPerPage);
+
+      res.status(200).json({
+        success: true,
+        productCount,
+        resultsPerPage,
+        totalPages,
+        currentPage,
+        products,
+      });
+      return;
+    }
+
     const products = await Product.find().sort("-createdAt");
 
     res.status(200).json({
@@ -392,18 +425,58 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
       : [req.body.image];
   }
 
-  if (rawImages.length > 0) {
-    await destroyImages(product.image);
-    req.body.image = await uploadImages(rawImages);
-  } else {
-    // Keep existing images when none are supplied
-    delete req.body.image;
+  // Explicit allowlist — only these fields can be updated by admin.
+  // Prevents a crafted request from overwriting internal fields like
+  // `user`, `reviews`, `numOfReviews`, `ratings`, or `slug`.
+  const ALLOWED_UPDATE_FIELDS = [
+    "name",
+    "description",
+    "price",
+    "discountPrice",
+    "category",
+    "subcategory",
+    "brand",
+    "gender",
+    "stock",
+    "isFeatured",
+    "isBestSeller",
+    "isNewArrival",
+    "isOutOfStock",
+    "pointsCost",
+    // Eyeglasses
+    "frameShape",
+    "frameMaterial",
+    "frameColor",
+    "lensType",
+    // Watches
+    "watchType",
+    "dialColor",
+    "strapMaterial",
+    "caseSize",
+    "movementType",
+    "waterResistance",
+    // Perfumes
+    "fragranceFamily",
+    "fragranceType",
+    "volume",
+  ];
+
+  const updateData = {};
+  for (const field of ALLOWED_UPDATE_FIELDS) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
   }
 
-  //update product in momgodb
+  if (rawImages.length > 0) {
+    await destroyImages(product.image);
+    updateData.image = await uploadImages(rawImages);
+  }
+
+  //update product in mongodb
   product = await Product.findByIdAndUpdate(
     product._id,
-    req.body,
+    updateData,
     {
       new: true,
       runValidators: true,

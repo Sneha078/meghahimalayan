@@ -27,13 +27,20 @@ export const restoreStock = async (orderItems, session = null) => {
 /**
  * Releases one usage of a coupon, mirroring the same $inc pattern
  * cancelMyOrder/updateOrderStatus already use. No-ops if couponCode is empty.
+ * Pass userId to also remove the user from usedBy so their per-user
+ * limit is correctly restored.
  */
-export const releaseCouponUsage = async (couponCode, session = null) => {
+export const releaseCouponUsage = async (couponCode, session = null, userId = null) => {
   if (!couponCode) return;
+
+  const update = { $inc: { usedCount: -1 } };
+  if (userId) {
+    update.$pull = { usedBy: userId };
+  }
 
   await Coupon.findOneAndUpdate(
     { code: couponCode, usedCount: { $gt: 0 } },
-    { $inc: { usedCount: -1 } },
+    update,
     { session }
   );
 };

@@ -24,7 +24,7 @@ async function cancelOrderForFailedPayment(orderId, failureNote) {
       if (!order || order.orderStatus === "Cancelled") return;
 
       await restoreStock(order.orderItems, session);
-      await releaseCouponUsage(order.couponCode, session);
+      await releaseCouponUsage(order.couponCode, session, order.user);
 
       // Return any points spent as a checkout discount — the customer's
       // payment never actually went through, so they shouldn't lose the
