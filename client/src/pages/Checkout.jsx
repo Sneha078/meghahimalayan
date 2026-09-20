@@ -14,7 +14,7 @@ import PointsRedeemBox from "./PointsRedeemBox";
 const STEPS = ["Delivery", "Payment", "Review"];
 
 function Checkout() {
-  const { cartItems, subtotal, discount, clearCart } = useCart();
+  const { cartItems, subtotal, discount, couponCode, clearCart } = useCart();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -146,6 +146,9 @@ function Checkout() {
     // Server recomputes the actual discount from this point count — the
     // value shown on-screen (pointsDiscount) is never sent or trusted.
     pointsToRedeem: pointsUsed,
+    // Server recomputes the coupon discount from the code — the
+    // client-side `discount` value is never sent or trusted.
+    couponCode: couponCode || "",
   });
 
   const handlePlaceOrder = async () => {

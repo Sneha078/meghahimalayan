@@ -143,7 +143,7 @@ function AdminProductForm() {
         discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
         stock:  Number(form.stock),
         pointsCost:Number(form.pointsCost),
-        ...(imageBase64.length > 0 && { images: imageBase64 }),
+        ...(imageBase64.length > 0 && { image: imageBase64 }),
       }
 
       if (isEdit) {

@@ -5,7 +5,7 @@ import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../../api/
 const EMPTY_FORM = {
   code: '', description: '', type: 'percentage',
   value: '', minOrder: '', maxDiscount: '',
-  usageLimit: '', expiresAt: '', isActive: true,
+  usageLimit: '', perUserLimit: '', expiresAt: '', isActive: true,
 }
 
 function AdminCoupons() {
@@ -52,6 +52,7 @@ function AdminCoupons() {
       minOrder: coupon.minOrder ?? '',
       maxDiscount:coupon.maxDiscount ?? '',
       usageLimit:coupon.usageLimit ?? '',
+      perUserLimit:coupon.perUserLimit ?? '',
       expiresAt:coupon.expiresAt ? coupon.expiresAt.slice(0, 10) : '',
       isActive: coupon.isActive ?? true,
     })
@@ -71,6 +72,7 @@ function AdminCoupons() {
         minOrder: form.minOrder    ? Number(form.minOrder)    : 0,
         maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : null,
         usageLimit: form.usageLimit  ? Number(form.usageLimit)  : null,
+        ...(form.perUserLimit ? { perUserLimit: Number(form.perUserLimit) } : {}),
         expiresAt:   form.expiresAt   ? new Date(form.expiresAt) : null,
       }
       if (editId) {
@@ -190,6 +192,11 @@ function AdminCoupons() {
               </div>
 
               <div>
+                <label style={labelStyle}>Uses Per User</label>
+                <input name="perUserLimit" type="number" value={form.perUserLimit} onChange={handleChange} placeholder="Default 1" style={inputStyle} />
+              </div>
+
+              <div>
                 <label style={labelStyle}>Expires At</label>
                 <input name="expiresAt" type="date" value={form.expiresAt} onChange={handleChange} style={inputStyle} />
               </div>
@@ -247,7 +254,7 @@ function AdminCoupons() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc' }}>
-                  {['Code', 'Type', 'Value', 'Min Order', 'Used', 'Expires', 'Status', ''].map((h) => (
+                  {['Code', 'Type', 'Value', 'Min Order', 'Per User', 'Used', 'Expires', 'Status', ''].map((h) => (
                     <th key={h} style={{
                       padding: '12px 16px', textAlign: 'left',
                       fontSize: '0.75rem', fontWeight: '700',
@@ -273,6 +280,9 @@ function AdminCoupons() {
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                       Rs. {coupon.minOrder ?? 0}
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
+                      {coupon.perUserLimit ?? 'Unlimited'}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                       {coupon.usedCount ?? 0}{coupon.usageLimit ? ` / ${coupon.usageLimit}` : ''}
