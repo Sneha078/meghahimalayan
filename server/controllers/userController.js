@@ -583,8 +583,13 @@ export const getSingleUser = handleAsyncError(async (req, res, next) => {
 export const updateUserRole = handleAsyncError(async (req, res, next) => {
   const { role } = req.body;
 
-  if (!role || !["user", "admin"].includes(role)) {
-    return next(new HandleError("Role must be either 'user' or 'admin'", 400));
+  if (!role || !["user", "admin", "intern"].includes(role)) {
+    return next(
+      new HandleError(
+        "Role must be either 'user', 'admin' or 'intern'",
+        400
+      )
+    );
   }
 
   const user = await User.findOneAndUpdate(

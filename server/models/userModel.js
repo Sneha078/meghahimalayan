@@ -157,10 +157,13 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    // ROLE
+// ROLE
+    // admin  → everything
+    // intern → product add/update/delete + stock only
+    // user   → shopping / customer activities
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["user", "admin", "intern"],
       default: "user",
       index: true,
     },

@@ -32,18 +32,18 @@ router.put("/review", verifyUserAuth, createOrUpdateReview);
 // DELETE /api/v1/reviews?productId=<id>&id=<reviewId>
 router.delete("/reviews", verifyUserAuth, deleteReview);
 
-//Admin produts routes
+//Admin and Intern produts management routes
 router.get(
   "/admin/products",
   verifyUserAuth,
-  roleBasedAccess("admin"),
+  roleBasedAccess("admin", "intern"),
   getAdminProducts
 );
 
 router.post(
   "/admin/product/create",
   verifyUserAuth,
-  roleBasedAccess("admin"),
+  roleBasedAccess("admin", "intern"),
   createProduct
 );
 
@@ -51,12 +51,12 @@ router
   .route("/admin/product/:id")
   .put(
     verifyUserAuth,
-    roleBasedAccess("admin"),
+    roleBasedAccess("admin", "intern"),
     updateProduct
   )
   .delete(
     verifyUserAuth,
-    roleBasedAccess("admin"),
+    roleBasedAccess("admin", "intern"),
     deleteProduct
   );
 

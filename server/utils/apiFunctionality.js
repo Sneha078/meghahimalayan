@@ -84,15 +84,17 @@ class APIFunctionality {
       filters.gender = { $in: genders };
     }
 
-    // Price range filtering
+    // Price range filtering — uses the EFFECTIVE selling price
+    // (storefront shows discountPrice ?? price), so discounted items
+    // sort/filter by the price the customer actually sees.
     if (this.queryString.minPrice || this.queryString.maxPrice) {
-      filters.price = {};
+      filters.sellingPrice = {};
 
       if (this.queryString.minPrice)
-        filters.price.$gte = Number(this.queryString.minPrice);
+        filters.sellingPrice.$gte = Number(this.queryString.minPrice);
 
       if (this.queryString.maxPrice)
-        filters.price.$lte = Number(this.queryString.maxPrice);
+        filters.sellingPrice.$lte = Number(this.queryString.maxPrice);
     }
 
     // Stock availability
@@ -130,8 +132,8 @@ class APIFunctionality {
   // Sorting
   sort() {
     const sortMap = {
-      "price-low": "price",
-      "price-high": "-price",
+      "price-low": "sellingPrice",
+      "price-high": "-sellingPrice",
       "rating": "-ratings",
       "newest": "-createdAt",
       "best-selling": "-isBestSeller -ratings",

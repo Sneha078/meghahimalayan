@@ -149,6 +149,16 @@ const productSchema = new mongoose.Schema(
       min: [0, "Discount price cannot be negative"],
     },
 
+    // Storefront price the customer actually pays (discountPrice ?? price).
+    // STORED as a real field (kept in sync by the hooks below) so MongoDB
+    // Atlas can sort/filter on it — Atlas rejects sorting on fields computed
+    // on the fly inside an aggregation.
+    sellingPrice: {
+      type: Number,
+      default: 0,
+      min: [0, "Selling price cannot be negative"],
+    },
+
     //featured/Best seller/ New arrival
     isFeatured: {
       type: Boolean,
@@ -279,12 +289,38 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Keeps sellingPrice (the displayed discountPrice ?? price) in sync on
+// create/save. See the likely sibling pre("findOneAndUpdate") hook below.
+productSchema.pre("save", function (next) {
+  this.sellingPrice = this.discountPrice != null
+    ? Number(this.discountPrice)
+    : Number(this.price);
+  next();
+});
+
 // Keeps isOutOfStock in sync whenever stock changes through ANY update —
 // direct assignment ({ stock: n }, $set) or quantity changes ($inc, used by
 // order creation and stock restore). Without this, the product-card
 // out-of-stock indicator goes stale the moment stock is touched.
 productSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
+  const body = update.$set || update;
+
+  // Keep sellingPrice (discountPrice ?? price) in sync when either field
+  // is written. If only one side is provided, pull the other from the doc.
+  if (body.price !== undefined || body.discountPrice !== undefined) {
+    let basePrice = body.price;
+    let discount = body.discountPrice;
+    if (basePrice === undefined || discount === undefined) {
+      const current = await this.model
+        .findOne(this.getFilter(), { price: 1, discountPrice: 1 })
+        .lean();
+      if (basePrice === undefined) basePrice = current?.price;
+      if (discount === undefined) discount = current?.discountPrice ?? null;
+    }
+    body.sellingPrice =
+      discount != null ? Number(discount) : Number(basePrice ?? 0);
+  }
 
   let assignedStock;
   if (update.stock !== undefined) {
@@ -328,6 +364,7 @@ productSchema.index({
 productSchema.index({ category: 1 });
 productSchema.index({ brand: 1 });
 productSchema.index({ price: 1 });
+productSchema.index({ sellingPrice: 1 });
 productSchema.index({ ratings: -1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ isBestSeller: 1 });

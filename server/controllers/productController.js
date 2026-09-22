@@ -310,8 +310,18 @@ export const getAdminProducts = handleAsyncError(
     // full list) keep working.
     const resultsPerPage = Math.min(Number(req.query.limit) || 0, 100);
 
+    // Server-side filters: ?category=eyeglasses and/or ?keyword=...
+    const filter = {};
+    if (req.query.category && req.query.category !== "All") {
+      filter.category = req.query.category;
+    }
+    if (req.query.keyword) {
+      const regex = { $regex: req.query.keyword, $options: "i" };
+      filter.$or = [{ name: regex }, { brand: regex }];
+    }
+
     if (resultsPerPage > 0) {
-      const productCount = await Product.countDocuments({});
+      const productCount = await Product.countDocuments(filter);
       const totalPages = Math.ceil(productCount / resultsPerPage) || 1;
       const currentPage = Math.max(1, Number(req.query.page) || 1);
 
@@ -321,7 +331,7 @@ export const getAdminProducts = handleAsyncError(
         );
       }
 
-      const products = await Product.find({})
+      const products = await Product.find(filter)
         .sort("-createdAt")
         .skip((currentPage - 1) * resultsPerPage)
         .limit(resultsPerPage);
@@ -337,7 +347,7 @@ export const getAdminProducts = handleAsyncError(
       return;
     }
 
-    const products = await Product.find().sort("-createdAt");
+    const products = await Product.find(filter).sort("-createdAt");
 
     res.status(200).json({
       success: true,
