@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getAdminProducts, deleteProduct } from '../../api/adminClient'
+import { getFilterOptions } from '../../api/productClient'
 
 function AdminProducts() {
   const [products, setProducts]   = useState([])
@@ -16,7 +17,7 @@ function AdminProducts() {
 
   useEffect(() => {
     setLoading(true)
-    getAdminProducts(page, 15)
+    getAdminProducts(page, 15, { category: filter })
       .then((data) => {
         setProducts(data.products ?? [])
         setTotalPages(data.totalPages ?? 1)
@@ -24,7 +25,12 @@ function AdminProducts() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, filter])
+
+  const handleFilter = (c) => {
+    setFilter(c)
+    setPage(1)
+  }
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return
@@ -44,14 +50,22 @@ function AdminProducts() {
     }
   }
 
-  const categories = ['All', 'eyeglasses', 'watches', 'perfumes']
+  useEffect(() => {
+    getFilterOptions()
+      .then((data) => {
+        if (data.categories?.length) setCategories(['All', ...data.categories])
+      })
+      .catch(() => {})
+  }, [])
 
-  const filtered = products.filter((p) => {
-    const matchCat = filter === 'All' || p.category === filter
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchSearch
-  })
+  const [categories, setCategories] = useState(['All', 'eyeglasses', 'watches', 'perfumes'])
+
+  // Category filtering happens server-side (so pagination + count stay
+  // correct); this leaves only the name/brand search to filter locally.
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.brand.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div style={{ padding: '32px' }}>
@@ -97,7 +111,7 @@ function AdminProducts() {
           {categories.map((c) => (
             <button
               key={c}
-              onClick={() => setFilter(c)}
+              onClick={() => handleFilter(c)}
               style={{
                 padding: '6px 16px', borderRadius: '20px',
                 fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer',

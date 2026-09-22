@@ -111,17 +111,17 @@ function App() {
   </AdminRoute>
 } />
 <Route path="/admin/products" element={
-  <AdminRoute>
+  <AdminRoute roles={['admin', 'intern']}>
     <AdminLayout><AdminProducts /></AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/products/new" element={
-  <AdminRoute>
+  <AdminRoute roles={['admin', 'intern']}>
     <AdminLayout><AdminProductForm /></AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/products/:id/edit" element={
-  <AdminRoute>
+  <AdminRoute roles={['admin', 'intern']}>
     <AdminLayout><AdminProductForm /></AdminLayout>
   </AdminRoute>
 } />

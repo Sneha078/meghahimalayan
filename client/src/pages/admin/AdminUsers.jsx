@@ -164,8 +164,9 @@ function AdminUsers() {
                           cursor: 'pointer', outline: 'none',
                         }}
                       >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
+<option value="user">User</option>
+<option value="intern">Intern</option>
+<option value="admin">Admin</option>
                       </select>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.82rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>

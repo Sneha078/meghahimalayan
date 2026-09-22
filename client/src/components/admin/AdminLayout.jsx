@@ -27,6 +27,11 @@ function AdminLayoutInner({ children }) {
     navigate('/admin/login')
   }
 
+  // Interns only manage products — show just the Products menu
+  const visibleNav = user?.role === 'intern'
+    ? NAV_ITEMS.filter((item) => item.path.startsWith('/admin/products'))
+    : NAV_ITEMS
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
@@ -84,7 +89,7 @@ function AdminLayoutInner({ children }) {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
-          {NAV_ITEMS.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = location.pathname === item.path
             return (
               <Link
@@ -169,7 +174,7 @@ function AdminLayoutInner({ children }) {
           zIndex: 100,
           flexShrink: 0,
         }}>
-          <NotificationBell />
+          {user?.role === 'admin' && <NotificationBell />}
 
           <div style={{
             display: 'flex',

@@ -9,6 +9,8 @@ function AdminLoginPage() {
   useEffect(() => {
     if (user?.role === 'admin') {
       navigate('/admin/dashboard', { replace: true })
+    } else if (user?.role === 'intern') {
+      navigate('/admin/products', { replace: true })
     }
   }, [user, navigate])
 
@@ -43,13 +45,14 @@ function AdminLoginPage() {
     try {
       const data = await login({ email: form.email, password: form.password })
 
-    
-      if (data.user?.role !== 'admin') {
-        setServerError('Access denied. Admin accounts only.')
+      const role = data.user?.role
+
+      if (role !== 'admin' && role !== 'intern') {
+        setServerError('Access denied. Staff accounts only.')
         return
       }
 
-      navigate('/admin/dashboard')
+      navigate(role === 'intern' ? '/admin/products' : '/admin/dashboard')
     } catch (err) {
       setServerError(err.message)
     } finally {

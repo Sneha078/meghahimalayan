@@ -6,12 +6,12 @@ import ProductCard from '../components/ProductCard'
 
 
 const SORT_OPTIONS = [
-  { value: 'featured',   label: 'Featured' },
-  { value: '-createdAt', label: 'Newest' },
-  { value: 'price',      label: 'Price: Low to High' },
-  { value: '-price',     label: 'Price: High to Low' },
-  { value: '-ratings',   label: 'Best Rated' },
-  { value: '-isBestSeller', label: 'Best Selling' },
+  { value: 'featured',     label: 'Featured' },
+  { value: 'newest',       label: 'Newest' },
+  { value: 'price-low',    label: 'Price: Low to High' },
+  { value: 'price-high',   label: 'Price: High to Low' },
+  { value: 'rating',       label: 'Best Rated' },
+  { value: 'best-selling', label: 'Best Selling' },
 ]
 
 const PRICE_RANGES = [

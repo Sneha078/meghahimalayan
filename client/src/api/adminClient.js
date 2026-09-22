@@ -35,10 +35,12 @@ export const deleteOrder = (id) =>
     credentials: 'include',
   }).then(handleResponse)
 
-export const getAdminProducts = (page = undefined, limit = undefined) => {
+export const getAdminProducts = (page = undefined, limit = undefined, filters = {}) => {
     const params = new URLSearchParams()
     if (page !== undefined) params.set('page', page)
     if (limit !== undefined) params.set('limit', limit)
+    if (filters.category && filters.category !== 'All') params.set('category', filters.category)
+    if (filters.keyword) params.set('keyword', filters.keyword)
     const qs = params.toString()
     return fetch(`${API_URL}/admin/products${qs ? `?${qs}` : ''}`, { credentials: 'include' }).then(handleResponse)
 }
