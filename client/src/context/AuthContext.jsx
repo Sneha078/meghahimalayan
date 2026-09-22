@@ -6,6 +6,7 @@ import {
   registerUser,
   logoutUser,
   googleLoginUser,
+  updateProfile as updateProfileApi,
 } from '../api/authClient'
 
 const AuthContext = createContext()
@@ -32,14 +33,22 @@ export function AuthProvider({ children }) {
     email,
     password,
     phone,
+    marketingOptIn,
   }) => {
     const data = await registerUser({
       name,
       email,
       password,
       phone,
+      marketingOptIn,
     })
 
+    setUser(data.user)
+    return data
+  }
+
+  const updateProfile = async (fields) => {
+    const data = await updateProfileApi(fields)
     setUser(data.user)
     return data
   }
@@ -72,6 +81,7 @@ export function AuthProvider({ children }) {
         signup,
         logout,
         loginWithGoogle,
+        updateProfile,
       }}
     >
       {children}

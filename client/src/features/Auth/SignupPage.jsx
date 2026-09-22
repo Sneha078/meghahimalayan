@@ -13,6 +13,7 @@ function SignupPage() {
     phone: '',
     password: '',
     confirmPassword: '',
+    marketingOptIn: true,
   })
 
   const [errors, setErrors] = useState({})
@@ -150,6 +151,7 @@ function SignupPage() {
         email: form.email,
         password: form.password,
         phone: form.phone,
+        marketingOptIn: form.marketingOptIn,
       })
 
       navigate('/')
@@ -397,7 +399,7 @@ function SignupPage() {
               alignItems: 'flex-start',
               gap: '10px',
               cursor: 'pointer',
-              marginBottom: '24px',
+              marginBottom: '12px',
             }}
           >
             <input
@@ -441,6 +443,45 @@ function SignupPage() {
               >
                 Privacy Policy
               </Link>
+            </span>
+          </label>
+
+          {/* Marketing opt-in */}
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              cursor: 'pointer',
+              marginBottom: '24px',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={form.marketingOptIn}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  marketingOptIn:
+                    e.target.checked,
+                }))
+              }
+              style={{
+                accentColor: 'var(--color-navy)',
+                marginTop: '2px',
+              }}
+            />
+
+            <span
+              style={{
+                fontSize: '0.8rem',
+                color: 'var(--color-muted)',
+                lineHeight: '1.5',
+              }}
+            >
+              Send me emails about{' '}
+              <strong>new arrivals</strong> and offers
+              from Mega Himalaya.
             </span>
           </label>
 

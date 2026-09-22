@@ -18,10 +18,12 @@ const CUSTOMER_CARE_LINKS = [
 ];
 
 function AccountPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(user?.marketingOptIn ?? false);
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
 
   const handleLogout = async () => {
     await logout()
@@ -48,6 +50,26 @@ function AccountPage() {
       })
       .finally(() => setLoadingRecent(false));
   }, []);
+
+  // Keep the toggle in sync when the fetched user changes
+  useEffect(() => {
+    setMarketingOptIn(user?.marketingOptIn ?? false);
+  }, [user?.marketingOptIn]);
+
+  const handleMarketingToggle = async (enabled) => {
+    setMarketingOptIn(enabled);
+    setSaveState('saving');
+
+    try {
+      await updateProfile({ marketingOptIn: enabled });
+      setSaveState('saved');
+    } catch (err) {
+      setSaveState('error');
+      console.error('Failed to update marketing preference:', err);
+    }
+
+    setTimeout(() => setSaveState('idle'), 3000);
+  };
 
   return (
     <section style={{ maxWidth: "1080px", margin: "0 auto", padding: "40px 24px 64px" }}>
@@ -152,6 +174,54 @@ function AccountPage() {
           View Rewards →
         </span>
       </Link>
+
+      {/* Marketing preferences */}
+      <div style={{
+        border: '1px solid var(--color-border)',
+        borderRadius: '12px',
+        padding: '22px 24px',
+        marginBottom: '48px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: '16px',
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: '240px' }}>
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0d1a2a', margin: '0 0 6px' }}>
+            📧 New Arrival Emails
+          </p>
+          <p style={{ fontSize: '0.82rem', color: '#6b6862', lineHeight: '1.5', margin: 0 }}>
+            {marketingOptIn
+              ? 'You are subscribed. We will email you when new products arrive.'
+              : 'You are unsubscribed. We will not send you new-arrival or promotional emails.'}
+          </p>
+
+          {saveState === 'saved' && (
+            <p style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600, margin: '8px 0 0' }}>
+              ✓ Preference saved
+            </p>
+          )}
+          {saveState === 'error' && (
+            <p style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600, margin: '8px 0 0' }}>
+              Could not save. Please try again.
+            </p>
+          )}
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={marketingOptIn}
+            disabled={saveState === 'saving'}
+            onChange={(e) => handleMarketingToggle(e.target.checked)}
+            style={{ accentColor: 'var(--color-navy)', width: '18px', height: '18px' }}
+          />
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0d1a2a' }}>
+            {saveState === 'saving' ? 'Saving…' : marketingOptIn ? 'Subscribed' : 'Unsubscribed'}
+          </span>
+        </label>
+      </div>
 
       {/* Recently viewed */}
       {(loadingRecent || recentProducts.length > 0) && (

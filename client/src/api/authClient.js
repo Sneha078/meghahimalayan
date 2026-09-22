@@ -27,6 +27,7 @@ export async function registerUser({
   email,
   password,
   phone,
+  marketingOptIn,
 }) {
   const res = await fetch(`${API_URL}/register`, {
     method: 'POST',
@@ -39,6 +40,34 @@ export async function registerUser({
       email,
       password,
       phone,
+      marketingOptIn,
+    }),
+  })
+
+  return handleResponse(res)
+}
+
+// =========================
+// Update Profile
+// =========================
+
+export async function updateProfile({
+  name,
+  email,
+  phone,
+  marketingOptIn,
+}) {
+  const res = await fetch(`${API_URL}/me/update`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      marketingOptIn,
     }),
   })
 
