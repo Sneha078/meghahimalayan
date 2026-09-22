@@ -149,6 +149,14 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // MARKETING / PROMOTIONAL EMAILS (e.g. "New Arrivals")
+    // Explicily false by default — the user must opt in to receive
+    // promotional emails. True → marketing emails are allowed.
+    marketingOptIn: {
+      type: Boolean,
+      default: false,
+    },
+
     // ROLE
     role: {
       type: String,

@@ -468,6 +468,12 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     }
   }
 
+  // Re-marking a product as a new arrival → it becomes eligible for the
+  // "New Arrivals" marketing email again (the previous notification is reset).
+  if (req.body.isNewArrival === true) {
+    updateData.newArrivalNotified = false;
+  }
+
   if (rawImages.length > 0) {
     await destroyImages(product.image);
     updateData.image = await uploadImages(rawImages);

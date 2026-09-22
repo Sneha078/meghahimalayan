@@ -165,6 +165,14 @@ const productSchema = new mongoose.Schema(
       default: false,
     },
 
+    // True after the "New Arrivals" email campaign has been sent for this
+    // product. Reset to false whenever an admin re-marks the product as a
+    // new arrival, so it becomes eligible for a future campaign again.
+    newArrivalNotified: {
+      type: Boolean,
+      default: false,
+    },
+
     //product quantity availability
     stock: {
       type: Number,
@@ -323,6 +331,7 @@ productSchema.index({ price: 1 });
 productSchema.index({ ratings: -1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ isBestSeller: 1 });
+productSchema.index({ isNewArrival: 1, newArrivalNotified: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

@@ -18,6 +18,7 @@ import {
   getSingleUser,
   updateUserRole,
   deleteUser,
+  unsubscribeUser,
 } from "../controllers/userController.js";
 import { verifyUserAuth, roleBasedAccess } from "../middleware/userAuth.js";
 
@@ -27,6 +28,9 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login",    loginUser);
 router.post("/logout",   logout);
+
+// Public unsubscribe link used in marketing emails (no auth required)
+router.get("/unsubscribe/:email", unsubscribeUser);
 
 router.post("/password/forgot",          forgotPassword);
 router.put("/password/reset/:token",     resetPassword);

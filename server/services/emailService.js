@@ -37,8 +37,18 @@ import {
   adminNewReturnTemplate,
 } from "../templates/adminNewReturn.js";
 
+import {
+  newArrivalsTemplate,
+} from "../templates/newArrivals.js";
+
 const FRONTEND_URL =
   process.env.FRONTEND_URL || "http://localhost:5173";
+
+const BACKEND_URL =
+  process.env.BACKEND_URL || "http://localhost:5000";
+
+const buildUnsubscribeUrl = (email) =>
+  `${BACKEND_URL}/api/v1/unsubscribe/${encodeURIComponent(email)}`;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -560,4 +570,60 @@ export const sendAdminNewReturnEmail = async (
   });
 
   return results;
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEW ARRIVALS (marketing email, sent by cron in batches)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const sendNewArrivalsEmail = async (
+  user,
+  products
+) => {
+  if (!user?.email) {
+    throw new Error(
+      "Cannot send new arrivals email: customer email missing"
+    );
+  }
+
+  const unsubscribeUrl =
+    buildUnsubscribeUrl(user.email);
+
+  const html = newArrivalsTemplate({
+    user,
+    products,
+    frontendUrl: FRONTEND_URL,
+    unsubscribeUrl,
+  });
+
+  const productLines = (products || [])
+    .map(
+      (p) =>
+        `• ${p?.name || "Product"} — ${p?.price
+          ? `NPR ${p.price}`
+          : ""} ${
+          p?._id
+            ? `(${FRONTEND_URL}/product/${p._id})`
+            : ""
+        }`
+    )
+    .join("\n");
+
+  return sendEmail({
+    email: user.email,
+
+    subject:
+      "New Arrivals Have Landed — Shop the Latest | Mega Himalaya",
+
+    text:
+      `Hi ${user.name || "there"},\n\n` +
+      `Fresh products have just landed at Mega Himalaya.\n\n` +
+      productLines + "\n\n" +
+      `View all new arrivals: ${FRONTEND_URL}/shop\n\n` +
+      `You are receiving this because you opted in to marketing ` +
+      `emails. To stop receiving these: ${unsubscribeUrl}`,
+
+    html,
+  });
 };

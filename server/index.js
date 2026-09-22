@@ -11,6 +11,7 @@ import connectDB from "./config/db.js";
 import HandleError from "./utils/handleError.js";
 import errorMiddleware from "./middleware/error.js";
 import { initSocket } from "./socket/socket.js";
+import { startNewArrivalsJob } from "./cron/newArrivalsJob.js";
 
 // ── Route imports ─────────────────────────────────────────────────────────────
 import userRoutes         from "./routes/userRoutes.js";
@@ -179,6 +180,9 @@ const startServer = async () => {
 
     const httpServer = createServer(app);
     initSocket(httpServer);
+
+    // ── New Arrivals marketing email cron ──────────────────────────────────
+    startNewArrivalsJob();
 
     const server = httpServer.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

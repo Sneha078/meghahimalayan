@@ -18,7 +18,7 @@ import { notifyAdmins } from "../services/notificationService.js";
 //Register user
 // POST /api/v1/register
 export const registerUser = handleAsyncError(async (req, res, next) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, marketingOptIn } = req.body;
 
   if (!name || !email || !password) {
     return next(new HandleError("Name, email and password are required", 400));
@@ -34,6 +34,7 @@ export const registerUser = handleAsyncError(async (req, res, next) => {
     email,
     password,
     phone: phone || "",
+    marketingOptIn: marketingOptIn === true,
   });
 
   // Welcome email (fire-and-forget — never blocks registration)
@@ -288,7 +289,7 @@ export const updatePassword = handleAsyncError(async (req, res, next) => {
 //Update Profile
 // PUT /api/v1/me/update
 export const updateProfile = handleAsyncError(async (req, res, next) => {
-  const { name, email, phone, avatar } = req.body;
+  const { name, email, phone, avatar, marketingOptIn } = req.body;
 
   const user = await User.findById(req.user.id);
   if (!user) {
@@ -297,6 +298,9 @@ export const updateProfile = handleAsyncError(async (req, res, next) => {
 
   if (name !== undefined)  user.name  = name;
   if (phone !== undefined) user.phone = phone;
+  if (marketingOptIn !== undefined) {
+    user.marketingOptIn = marketingOptIn === true;
+  }
 
   if (email !== undefined && email !== user.email) {
     const taken = await User.findOne({ email, _id: { $ne: user._id } });
@@ -634,4 +638,58 @@ export const deleteUser = handleAsyncError(async (req, res, next) => {
   });
 
   res.status(200).json({ success: true, message: "User deleted successfully" });
+});
+
+
+// UNSUBSCRIBE — one-click link from marketing emails
+// GET /api/v1/unsubscribe/:email
+// Public — no auth required, so a user can unsubscribe from the email itself.
+export const unsubscribeUser = handleAsyncError(async (req, res, next) => {
+  const email = String(req.params.email || "").trim().toLowerCase();
+
+  if (!email) {
+    return next(new HandleError("Email address is required", 400));
+  }
+
+  await User.updateOne(
+    { email },
+    { marketingOptIn: false }
+  );
+
+  res.type("html").send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Unsubscribed — Mega Himalaya</title>
+    </head>
+    <body style="
+      margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;
+      background:#f4f4f4;color:#172554;
+    ">
+      <div style="
+        max-width:520px;margin:60px auto;background:#ffffff;
+        padding:40px;border-radius:8px;text-align:center;
+      ">
+        <h1 style="font-size:22px;margin:0 0 12px 0;">
+          You're unsubscribed
+        </h1>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px 0;">
+          You will no longer receive new-arrival or promotional emails
+          from Mega Himalaya. Transactional emails (orders, returns,
+          account) are unaffected.
+        </p>
+        <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}"
+           style="
+             display:inline-block;background:#f97316;color:#ffffff;
+             padding:12px 26px;text-decoration:none;border-radius:6px;
+             font-weight:bold;font-size:14px;
+           ">
+          Back to Mega Himalaya
+        </a>
+      </div>
+    </body>
+    </html>
+  `);
 });
