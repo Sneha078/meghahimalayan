@@ -69,7 +69,7 @@ function ScrollToTop() {
 
 function App() {
   return (
-    <div>
+    <div style={{ overflowX: 'clip', width: '100%' }}>
       <ScrollToTop />
       <Navbar />
       <Routes>

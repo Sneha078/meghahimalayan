@@ -260,7 +260,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>Loading order…</p>
         </div>
       </div>
@@ -271,7 +271,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <div style={styles.errorBox}>{error}</div>
         </div>
       </div>
@@ -285,7 +285,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem', maxWidth: '700px' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)', maxWidth: '700px' }}>
           <div style={{ ...styles.card, textAlign: 'center', padding: '48px' }}>
             <p style={{ fontSize: '2rem', marginBottom: '16px' }}>⚠️</p>
             <p style={{ fontWeight: '700', color: 'var(--color-navy)', marginBottom: '8px' }}>
@@ -305,7 +305,7 @@ function ReturnRequest() {
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
       <PageBanner eyebrow="My Orders" title="Return Request" />
 
-      <form onSubmit={handleSubmit} style={{ padding: '40px 5rem', maxWidth: '780px' }}>
+      <form onSubmit={handleSubmit} style={{ padding: 'clamp(20px, 4vw, 40px) var(--section-px)', maxWidth: '780px' }}>
 
         {/* Order reference */}
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '28px' }}>

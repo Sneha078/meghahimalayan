@@ -51,12 +51,12 @@ function AccountPage() {
 
   return (
     <section style={{ maxWidth: "1080px", margin: "0 auto", padding: "40px 24px 64px" }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center" style={{ marginBottom: '28px', gap: '16px' }}>
         <div>
           <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-taupe)", marginBottom: "6px" }}>
             My Account
           </p>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "1.6rem", fontWeight: 700, color: "#0d1a2a" }}>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "clamp(1.3rem, 4vw, 1.6rem)", fontWeight: 700, color: "#0d1a2a" }}>
             Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
           </h1>
         </div>
@@ -163,7 +163,7 @@ function AccountPage() {
           {loadingRecent ? (
             <p style={{ fontSize: "0.85rem", color: "#6b6862" }}>Loading…</p>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "14px" }}>
               {recentProducts.map((product) => (
                 <Link
                   key={product.id}

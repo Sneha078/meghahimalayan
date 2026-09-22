@@ -33,7 +33,7 @@ const features = [
 
 function WhyChooseUs() {
   return (
-    <section style={{ backgroundColor: 'var(--color-white)', padding: 'var(--section-py) var(--section-px)' }}>
+    <section style={{ backgroundColor: 'var(--color-white)', padding: 'var(--section-py) var(--section-px)', overflow: 'hidden' }}>
 
       <div style={{ textAlign: 'center', marginBottom: 'clamp(28px, 4vw, 56px)' }}>
         <p style={{

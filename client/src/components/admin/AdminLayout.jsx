@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { SocketProvider } from "../../context/SocketContext";
@@ -20,31 +20,71 @@ function AdminLayoutInner({ children }) {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const check = (e) => setIsMobile(e.matches)
+    check(mq)
+    mq.addEventListener('change', check)
+    return () => mq.removeEventListener('change', check)
+  }, [])
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [mobileOpen])
 
   const handleLogout = async () => {
     await logout()
     navigate('/admin/login')
   }
 
+  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? '64px' : '240px')
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
-      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
+      {isMobile && mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 199,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+          }}
+        />
+      )}
+
       <aside style={{
-        width: sidebarOpen ? '240px' : '64px',
+        ...(isMobile ? {
+          position: 'fixed',
+          left: 0, top: 0, bottom: 0,
+          zIndex: 200,
+          width: '260px',
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.25s ease',
+        } : {
+          width: sidebarCollapsed ? '64px' : '240px',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          transition: 'width 0.2s ease',
+        }),
         backgroundColor: 'var(--color-navy)',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.2s ease',
         flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
         overflow: 'hidden',
       }}>
 
-        {/* Logo row */}
         <div style={{
           padding: '24px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -62,7 +102,7 @@ function AdminLayoutInner({ children }) {
           }}>
             MH
           </div>
-          {sidebarOpen && (
+          {!sidebarCollapsed && (
             <span style={{
               color: '#ffffff', fontWeight: '700',
               fontSize: '0.9rem', whiteSpace: 'nowrap',
@@ -70,19 +110,20 @@ function AdminLayoutInner({ children }) {
               Admin Panel
             </span>
           )}
-          <button
-            onClick={() => setSidebarOpen((p) => !p)}
-            style={{
-              marginLeft: 'auto', background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
-              fontSize: '1rem', flexShrink: 0,
-            }}
-          >
-            {sidebarOpen ? '◀' : '▶'}
-          </button>
+          {!isMobile && (
+            <button
+              onClick={() => setSidebarCollapsed((p) => !p)}
+              style={{
+                marginLeft: 'auto', background: 'none', border: 'none',
+                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                fontSize: '1rem', flexShrink: 0,
+              }}
+            >
+              {sidebarCollapsed ? '▶' : '◀'}
+            </button>
+          )}
         </div>
 
-        {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname === item.path
@@ -112,18 +153,17 @@ function AdminLayoutInner({ children }) {
                   if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'
                 }}
               >
-                {sidebarOpen && <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>}
+                {!sidebarCollapsed && <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>}
               </Link>
             )
           })}
         </nav>
 
-        {/* User / logout */}
         <div style={{
           padding: '16px',
           borderTop: '1px solid rgba(255,255,255,0.08)',
         }}>
-          {sidebarOpen && (
+          {!sidebarCollapsed && (
             <div style={{ marginBottom: '12px' }}>
               <p style={{ fontSize: '0.82rem', fontWeight: '600', color: '#ffffff' }}>
                 {user?.name}
@@ -146,20 +186,18 @@ function AdminLayoutInner({ children }) {
             }}
           >
             <span>🚪</span>
-            {sidebarOpen && 'Logout'}
+            {!sidebarCollapsed && 'Logout'}
           </button>
         </div>
       </aside>
 
-      {/* ── Main area ─────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
 
-        {/* Top header bar */}
         <header style={{
           height: '60px',
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #e2e8f0',
-          padding: '0 28px',
+          padding: isMobile ? '0 16px' : '0 28px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
@@ -169,6 +207,22 @@ function AdminLayoutInner({ children }) {
           zIndex: 100,
           flexShrink: 0,
         }}>
+          {isMobile && (
+            <button
+              onClick={() => setMobileOpen((p) => !p)}
+              aria-label="Toggle menu"
+              style={{
+                marginRight: 'auto',
+                background: 'none', border: 'none',
+                fontSize: '1.3rem', cursor: 'pointer',
+                color: '#334155', padding: '4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              ☰
+            </button>
+          )}
+
           <NotificationBell />
 
           <div style={{
@@ -194,7 +248,6 @@ function AdminLayoutInner({ children }) {
           </div>
         </header>
 
-        {/* Page content */}
         <main style={{ flex: 1 }}>
           {children}
         </main>
@@ -203,7 +256,6 @@ function AdminLayoutInner({ children }) {
   )
 }
 
-// Wrap with SocketProvider so NotificationBell and Dashboard can access the socket
 function AdminLayout({ children }) {
   return (
     <SocketProvider>

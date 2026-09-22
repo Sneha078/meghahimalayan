@@ -4,7 +4,7 @@ import { useStoreLocator } from '../hooks/useStoreLocator'
 function OurStory() {
   const {openStoreLocator, StoreLocatorModal} = useStoreLocator()
   return (
-    <section style={{ backgroundColor: 'var(--color-navy)', padding: 'var(--section-py) var(--section-px)' }}>
+    <section style={{ backgroundColor: 'var(--color-navy)', padding: 'var(--section-py) var(--section-px)', overflow: 'hidden' }}>
       <div
       className="grid grid-cols-1 md:grid-cols-2"
       style={{

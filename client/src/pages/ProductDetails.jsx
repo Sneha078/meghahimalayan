@@ -324,15 +324,19 @@ function ProductDetail() {
 
       {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '16px 5rem',
+        padding: '12px var(--section-px)',
         backgroundColor: 'var(--color-white)',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex',
-        gap: '8px',
+        gap: '6px',
         alignItems: 'center',
         fontSize: '0.8rem',
         color: 'var(--color-muted)',
-      }}>
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+      }}
+      className="hide-scrollbar"
+      >
         <Link to="/" style={{ color: 'var(--color-muted)', textDecoration: 'none' }}>Home</Link>
         <span>›</span>
         <Link to="/shop" style={{ color: 'var(--color-muted)', textDecoration: 'none' }}>Shop</Link>
@@ -348,15 +352,16 @@ function ProductDetail() {
       </div>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '48px 5rem',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '64px',
-        alignItems: 'start',
-      }}>
+      <div
+        className="grid grid-cols-1 md:grid-cols-2"
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: 'clamp(24px, 4vw, 48px) var(--section-px)',
+          gap: 'clamp(24px, 4vw, 64px)',
+          alignItems: 'start',
+        }}
+      >
 
         {/* ── Left: Image gallery ──────────────────────────────────────────── */}
         <div>
@@ -365,7 +370,7 @@ function ProductDetail() {
             backgroundColor: '#f3f4f6',
             borderRadius: '16px',
             overflow: 'hidden',
-            height: '480px',
+            aspectRatio: '1 / 1',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -410,7 +415,7 @@ function ProductDetail() {
 
           {/* Thumbnail strip — only shown if multiple images */}
           {images.length > 1 && (
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }} className="hide-scrollbar">
               {images.map((img, i) => (
                 <button
                   key={i}
@@ -458,7 +463,7 @@ function ProductDetail() {
           {/* Name */}
           <h1 style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2rem',
+            fontSize: 'var(--text-3xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -476,8 +481,8 @@ function ProductDetail() {
           </div>
 
           {/* Price */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '24px' }}>
-            <span style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--color-navy)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: '700', color: 'var(--color-navy)' }}>
               Rs. {sellingPrice.toLocaleString()}
             </span>
             {originalPrice && (
@@ -530,7 +535,7 @@ function ProductDetail() {
           </div>
 
           {/* CTA buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
             <button
               disabled={product.isOutOfStock}
               onClick={handleAddToCart}
@@ -595,6 +600,7 @@ function ProductDetail() {
               style={{
                 width: '50px',
                 height: '50px',
+                minWidth: '50px',
                 borderRadius: '8px',
                 border: '1px solid var(--color-border)',
                 backgroundColor: isWishlisted(product?._id ?? product?.id) ? '#fff1f2' : 'var(--color-white)',
@@ -650,7 +656,7 @@ function ProductDetail() {
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '0 5rem 48px',
+        padding: '0 var(--section-px) clamp(24px, 4vw, 48px)',
       }}>
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '48px' }}>
 
@@ -669,7 +675,10 @@ function ProductDetail() {
             )}
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'start' }}>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2"
+            style={{ gap: 'clamp(24px, 3vw, 48px)', alignItems: 'start' }}
+          >
 
             {/* ── Left: existing reviews ───── */}
             <div>
@@ -840,10 +849,10 @@ function ProductDetail() {
               backgroundColor: 'var(--color-white)',
               borderRadius: '12px',
               border: '1px solid var(--color-border)',
-              padding: '28px 28px',
-              position: 'sticky',
-              top: '88px',
-            }}>
+              padding: 'clamp(20px, 3vw, 28px)',
+            }}
+            className="md:sticky md:top-[88px]"
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{
                   fontFamily: 'var(--font-serif)',
@@ -1098,7 +1107,7 @@ function ProductDetail() {
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '0 5rem 64px',
+        padding: '0 var(--section-px) clamp(32px, 5vw, 64px)',
       }}>
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '48px' }}>
           <RecommendedProducts productId={product._id} />

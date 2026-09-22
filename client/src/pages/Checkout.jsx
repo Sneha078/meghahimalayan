@@ -199,7 +199,7 @@ function Checkout() {
           alignItems: "center",
           justifyContent: "center",
           textAlign: "center",
-          padding: "80px 5rem",
+          padding: "80px var(--section-px)",
         }}
       >
         <div style={{ fontSize: "4rem", marginBottom: "24px" }}>🛒</div>
@@ -254,7 +254,7 @@ function Checkout() {
       <div
         style={{
           backgroundColor: "var(--color-navy)",
-          padding: "48px 5rem 36px",
+          padding: "clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)",
         }}
       >
         <p
@@ -274,7 +274,7 @@ function Checkout() {
           style={{
             fontFamily: "var(--font-serif)",
             color: "#ffffff",
-            fontSize: "2.8rem",
+            fontSize: "clamp(1.8rem, 5vw, 2.8rem)",
             fontWeight: "800",
             marginBottom: "32px",
           }}
@@ -284,6 +284,7 @@ function Checkout() {
 
         {/* Steps */}
         <div
+          className="overflow-x-auto"
           style={{
             display: "flex",
             alignItems: "center",
@@ -364,11 +365,10 @@ function Checkout() {
 
       {/* Main Content */}
       <div
+        className="grid grid-cols-1 lg:grid-cols-[1fr_360px]"
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 360px",
           gap: "32px",
-          padding: "40px 5rem",
+          padding: "clamp(20px, 4vw, 40px) var(--section-px)",
           alignItems: "flex-start",
         }}
       >
@@ -377,7 +377,7 @@ function Checkout() {
           style={{
             backgroundColor: "var(--color-white)",
             borderRadius: "16px",
-            padding: "36px",
+            padding: "clamp(20px, 4vw, 36px)",
             border: "1px solid var(--color-border)",
           }}
         >
@@ -397,9 +397,8 @@ function Checkout() {
               </h2>
 
               <div
+                className="grid grid-cols-1 sm:grid-cols-2"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
                   gap: "20px",
                 }}
               >

@@ -110,7 +110,7 @@ function MyReturns() {
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
       <PageBanner eyebrow="Your Account" title="My Returns" />
 
-      <div style={{ padding: '40px 5rem', maxWidth: '860px' }}>
+      <div style={{ padding: 'clamp(20px, 4vw, 40px) var(--section-px)', maxWidth: '860px' }}>
 
         {/* Back link */}
         <Link

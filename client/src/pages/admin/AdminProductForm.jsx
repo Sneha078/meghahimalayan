@@ -207,7 +207,7 @@ function AdminProductForm() {
               }}
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
                 Category <span style={{ color: '#dc2626' }}>*</span>
@@ -233,7 +233,7 @@ function AdminProductForm() {
               </select>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 16px' }}>
             <Field label="Brand" name="brand" value={form.brand} onChange={handleChange} required placeholder="e.g. Ray-Ban" />
             <Field label="Subcategory" name="subcategory" value={form.subcategory} onChange={handleChange} placeholder="e.g. Sunglasses" />
           </div>
@@ -241,7 +241,7 @@ function AdminProductForm() {
 
       
         <Section title="Pricing & Stock">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 16px' }}>
             <Field label="Price (Rs.)" name="price" value={form.price} onChange={handleChange} type="number" required placeholder="5000" />
             <Field label="Discount Price (Rs.)" name="discountPrice" value={form.discountPrice} onChange={handleChange} type="number" placeholder="Leave blank if none" />
             <Field label="Stock" name="stock" value={form.stock} onChange={handleChange} type="number" required placeholder="10" />
@@ -259,7 +259,7 @@ function AdminProductForm() {
         
         {form.category === 'eyeglasses' && (
           <Section title="Eyeglasses Specifications">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 16px' }}>
               <Field label="Frame Shape" name="frameShape" value={form.frameShape} onChange={handleChange} placeholder="e.g. Aviator" />
               <Field label="Frame Material" name="frameMaterial" value={form.frameMaterial} onChange={handleChange} placeholder="e.g. Metal" />
               <Field label="Frame Color" name="frameColor" value={form.frameColor} onChange={handleChange} placeholder="e.g. Gold" />
@@ -270,7 +270,7 @@ function AdminProductForm() {
 
         {form.category === 'watches' && (
           <Section title="Watch Specifications">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 16px' }}>
               <Field label="Watch Type" name="watchType" value={form.watchType} onChange={handleChange} placeholder="e.g. Analog" />
               <Field label="Dial Color" name="dialColor" value={form.dialColor} onChange={handleChange} placeholder="e.g. Black" />
               <Field label="Strap Material" name="strapMaterial" value={form.strapMaterial} onChange={handleChange} placeholder="e.g. Leather" />
@@ -283,7 +283,7 @@ function AdminProductForm() {
 
         {form.category === 'perfumes' && (
           <Section title="Perfume Specifications">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 16px' }}>
               <Field label="Fragrance Family" name="fragranceFamily" value={form.fragranceFamily} onChange={handleChange} placeholder="e.g. Floral" />
               <Field label="Fragrance Type" name="fragranceType" value={form.fragranceType} onChange={handleChange} placeholder="e.g. EDP" />
               <Field label="Volume" name="volume" value={form.volume} onChange={handleChange} placeholder="e.g. 100ml" />

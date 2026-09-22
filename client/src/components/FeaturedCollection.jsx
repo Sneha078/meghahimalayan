@@ -9,6 +9,7 @@ function FeaturedCollection() {
         <section style={{
             backgroundColor: 'var(--color-sbg)',
             padding: 'var(--section-py) var(--section-px)',
+            overflow: 'hidden',
         }}>
             <div style={{
                 display: 'flex',
@@ -71,8 +72,8 @@ function FeaturedCollection() {
 
             {!loading && !error && (
                 <div
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-                style={{ gap: 'var(--section-gap)' }}
+                className="grid grid-cols-2 lg:grid-cols-4"
+                style={{ gap: 'var(--section-gap)', minWidth: 0 }}
                 >
                     {featured.map((product) => (
                         <ProductCard key={product._id} product={product} />

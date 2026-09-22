@@ -35,13 +35,14 @@ function CoinBadge({ scrolled }) {
         className={`flex items-center gap-1.5 rounded-full border transition-all duration-300 ${
           scrolled
             ? "bg-gray-100 border-gray-200 text-[#0d1a2a]"
-            : "bg-white/10 border-white/20 text-white"
+            : "bg-white/20 border-white/30 text-white"
         }`}
         style={{
-          padding: "8px 16px",
-          fontSize: "0.82rem",
+          padding: "6px 12px",
+          fontSize: "0.78rem",
           fontWeight: 600,
           cursor: "pointer",
+          whiteSpace: "nowrap",
         }}
       >
         🪙 {balance.toLocaleString()}

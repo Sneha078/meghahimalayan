@@ -48,6 +48,7 @@ function BestSellers() {
       style={{
         backgroundColor: 'var(--color-white)',
         padding: 'var(--section-py) var(--section-px)',
+        overflow: 'hidden',
       }}
     >
       {/* Section Header */}
@@ -127,7 +128,7 @@ function BestSellers() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: 'var(--section-gap)',
             marginBottom: '48px',
           }}

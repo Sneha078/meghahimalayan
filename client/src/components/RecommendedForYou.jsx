@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from './ProductCard'
 
@@ -18,7 +18,6 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
   const [products, setProducts] = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(false)
-  const scrollRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -54,9 +53,6 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, JSON.stringify(viewedIds)])
 
-  const scrollBy = (amount) =>
-    scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' })
-
   if (!loading && !error && products.length === 0) return null
 
   return (
@@ -64,6 +60,7 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
       backgroundColor: 'var(--color-white)',
       padding: 'clamp(2rem, 5vw, 4rem) var(--section-px)',
       borderTop: '1px solid var(--color-border)',
+      overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
@@ -97,12 +94,6 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
         </div>
 
         <div className="hidden sm:flex" style={{ gap: '10px', alignItems: 'center' }}>
-          {!loading && !error && products.length > 4 && (
-            <>
-              <button onClick={() => scrollBy(-280)} aria-label="Scroll left" style={navBtn}>‹</button>
-              <button onClick={() => scrollBy(280)}  aria-label="Scroll right" style={{ ...navBtn, backgroundColor: 'var(--color-navy)', color: '#fff', border: 'none' }}>›</button>
-            </>
-          )}
           <Link
             to="/shop"
             style={{
@@ -131,11 +122,11 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
 
       {/* Skeleton loaders */}
       {loading && (
-        <div style={{ display: 'flex', gap: '16px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} style={{
-              minWidth: '220px', height: '340px',
-              borderRadius: '12px', background: '#f3f4f6', flexShrink: 0,
+              height: '340px',
+              borderRadius: '12px', background: '#f3f4f6',
             }} />
           ))}
         </div>
@@ -147,25 +138,11 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
         </p>
       )}
 
-      {/* Product row */}
+      {/* 2-column product grid */}
       {!loading && !error && products.length > 0 && (
-        <div
-          ref={scrollRef}
-          style={{
-            display: 'flex',
-            gap: '16px',
-            overflowX: 'auto',
-            scrollSnapType: 'x mandatory',
-            paddingBottom: '4px',
-            scrollbarWidth: 'none',
-          }}
-          className="hide-scrollbar"
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
           {products.map((product) => (
-            <div
-              key={product._id ?? product.id}
-              style={{ minWidth: '200px', maxWidth: '220px', scrollSnapAlign: 'start', flexShrink: 0 }}
-            >
+            <div key={product._id ?? product.id}>
               <ProductCard product={product} />
             </div>
           ))}
@@ -173,17 +150,6 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
       )}
     </section>
   )
-}
-
-const navBtn = {
-  width: '36px', height: '36px',
-  borderRadius: '50%',
-  border: '1px solid var(--color-border)',
-  background: 'var(--color-white)',
-  color: 'var(--color-navy)',
-  fontSize: '1.2rem',
-  cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
 export default RecommendedForYou

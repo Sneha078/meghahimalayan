@@ -69,7 +69,7 @@ function AdminLoginPage() {
       <div style={{
         backgroundColor: '#162840',
         borderRadius: '20px',
-        padding: '48px',
+        padding: 'clamp(24px, 5vw, 48px)',
         width: '100%',
         maxWidth: '420px',
         border: '1px solid rgba(255,255,255,0.08)',

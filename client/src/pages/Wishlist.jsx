@@ -22,7 +22,7 @@ function Wishlist() {
       {/* Page Header */}
       <div style={{
         backgroundColor: 'var(--color-navy)',
-        padding: '48px 5rem 36px',
+        padding: 'clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)',
       }}>
         <p style={{
           color: 'var(--color-taupe)',
@@ -37,7 +37,7 @@ function Wishlist() {
         <h1 style={{
           fontFamily: 'var(--font-serif)',
           color: '#ffffff',
-          fontSize: '2.4rem',
+          fontSize: 'clamp(1.6rem, 5vw, 2.4rem)',
           fontWeight: '800',
         }}>
           My Wishlist
@@ -49,7 +49,7 @@ function Wishlist() {
         )}
       </div>
 
-      <div style={{ padding: '40px 5rem' }}>
+      <div style={{ padding: 'clamp(20px, 4vw, 40px) var(--section-px)' }}>
 
         {/* Empty state */}
         {wishlist.length === 0 && (

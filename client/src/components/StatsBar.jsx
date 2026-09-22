@@ -10,22 +10,18 @@ function StatsBar() {
     <div style={{
       backgroundColor: 'var(--color-navy)',
       borderTop: '1px solid rgba(255,255,255,0.06)',
+      overflow: 'hidden',
     }}>
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        flexWrap: 'wrap',
         padding: 'clamp(1.5rem, 4vw, 2rem) var(--section-px)',
-        gap: '1rem',
       }}>
-        {stats.map((stat, index) => (
-          <div key={stat.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'clamp(1rem, 3vw, 3rem)',
-          }}>
-            <div style={{ textAlign: 'center' }}>
+        {/* Mobile: 2x2 grid, Desktop: 4 in a row */}
+        <div
+          className="grid grid-cols-2 md:grid-cols-4"
+          style={{ gap: '1.5rem 2rem', justifyItems: 'center' }}
+        >
+          {stats.map((stat, index) => (
+            <div key={stat.id} style={{ textAlign: 'center' }}>
               <p style={{
                 fontFamily: 'var(--font-serif)',
                 color: 'var(--color-taupe)',
@@ -44,15 +40,8 @@ function StatsBar() {
                 {stat.label}
               </p>
             </div>
-            {index < stats.length - 1 && (
-              <div style={{
-                width: '1px',
-                height: '40px',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-              }} />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

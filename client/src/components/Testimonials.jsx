@@ -43,6 +43,7 @@ function Testimonials() {
       style={{
         backgroundColor: 'var(--color-white)',
         padding: 'var(--section-py) var(--section-px)',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
@@ -81,7 +82,7 @@ function Testimonials() {
 
       {/* Testimonials Grid */}
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-2 lg:grid-cols-4"
         style={{
           gap: 'var(--section-gap)',
           alignItems: 'stretch',

@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 function OffersBanner(){
     return (
         <section style={{
@@ -59,93 +57,13 @@ function OffersBanner(){
                 fontSize: 'var(--text-base)',
                 lineHeight: '1.7',
                 maxWidth: '540px',
-                margin: '0 auto 36px',
+                margin: '0 auto',
                 }}>
                   At Mega Himalaya Optical House, we believe premium eyewear, watches and perfumes should be
                   accessible. Discover daily surprises and factory-direct pricing on all
                   top international brands.
                 </p>
-
-                <div style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'center',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                }}>
-                    <Link
-                    to="/shop?category=eyeglasses"
-                    style={{
-                    backgroundColor: 'transparent',
-                    color: '#ffffff',
-                    padding: '12px 24px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    letterSpacing: '0.12em',
-                    textDecoration: 'none',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    transition: 'all 0.3s ease',
-                            }}
-               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'
-  }}
-        onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-  }}>
-            SHOP EYEGLASSES
-          </Link>
-         <Link
-  to="/shop?category=watches"
-  style={{
-    backgroundColor: 'transparent',
-    color: '#ffffff',
-    padding: '12px 24px',
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    letterSpacing: '0.12em',
-    textDecoration: 'none',
-    border: '1px solid rgba(255,255,255,0.3)',
-    transition: 'all 0.3s ease',
-  }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'
-    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.backgroundColor = 'transparent'
-    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-  }}
->
-  SHOP WATCHES
-</Link>
-
-          <Link
-          to="/shop?category=perfumes"
-          style={{
-            backgroundColor: 'transparent',
-            color: '#ffffff',
-            padding: '12px 24px',
-            fontSize: '0.75rem',
-            fontWeight: '600',
-            letterSpacing: '0.12em',
-            textDecoration: 'none',
-            border: '1px solid rgba(255,255,255,0.3)',
-            transition: 'all 0.3s ease',
-          }}
-          onMouseEnter={(e) => {
-             e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'
-             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)'
-          }}
-          onMouseLeave={(e) =>{
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-          }} >
-            SHOP PERFUMES
-          </Link>
             </div>
-         </div>
         </section>
     )
 }
