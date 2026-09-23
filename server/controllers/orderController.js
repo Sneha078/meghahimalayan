@@ -1384,6 +1384,14 @@ export const getAllOrders =
         isDeleted: false,
       };
 
+      if (
+        req.query.status &&
+        req.query.status !== "All"
+      ) {
+        filter.orderStatus =
+          req.query.status;
+      }
+
       const [
         orders,
         totalOrders,
