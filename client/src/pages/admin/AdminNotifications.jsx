@@ -54,7 +54,9 @@ export default function AdminNotifications() {
           item._id === n._id ? { ...item, readBy: ['me'] } : item
         )
       )
-    } catch (_) {}
+    } catch {
+      // best-effort — ignore mark-read failures
+    }
   }
 
   const handleMarkAll = async () => {
@@ -64,7 +66,9 @@ export default function AdminNotifications() {
       setNotifications((prev) =>
         prev.map((item) => ({ ...item, readBy: ['me'] }))
       )
-    } catch (_) {}
+    } catch {
+      // best-effort — ignore mark-all-read failures
+    }
   }
 
   const isUnread = (n) =>
@@ -74,9 +78,7 @@ export default function AdminNotifications() {
     { key: 'ALL', label: 'All' },
     { key: 'ORDER', label: 'Orders 🛒' },
     { key: 'RETURN', label: 'Returns ↩️' },
-    { key: 'MESSAGE', label: 'Messages ✉️' },
     { key: 'USER', label: 'Users 👤' },
-    { key: 'SYSTEM', label: 'System ⚙️' },
   ]
 
   const filtered = notifications.filter((n) => {

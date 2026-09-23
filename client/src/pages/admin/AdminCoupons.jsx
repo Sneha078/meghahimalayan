@@ -6,6 +6,7 @@ const EMPTY_FORM = {
   code: '', description: '', type: 'percentage',
   value: '', minOrder: '', maxDiscount: '',
   usageLimit: '', perUserLimit: '', expiresAt: '', isActive: true,
+  isPublic: false,
 }
 
 function AdminCoupons() {
@@ -55,6 +56,7 @@ function AdminCoupons() {
       perUserLimit:coupon.perUserLimit ?? '',
       expiresAt:coupon.expiresAt ? coupon.expiresAt.slice(0, 10) : '',
       isActive: coupon.isActive ?? true,
+      isPublic: coupon.isPublic ?? false,
     })
     setEditId(coupon._id)
     setFormError('')
@@ -208,9 +210,16 @@ function AdminCoupons() {
               <input name="description" value={form.description} onChange={handleChange} placeholder="Optional description" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
               <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} style={{ accentColor: 'var(--color-navy)' }} />
               <span style={{ fontSize: '0.88rem', color: '#475569', fontWeight: '500' }}>Active</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '20px' }}>
+              <input type="checkbox" name="isPublic" checked={form.isPublic} onChange={handleChange} style={{ accentColor: 'var(--color-navy)' }} />
+              <span style={{ fontSize: '0.88rem', color: '#475569', fontWeight: '500' }}>
+                Show in "Available Offers" on the Cart page
+              </span>
             </label>
 
             <div style={{ display: 'flex', gap: '12px' }}>
