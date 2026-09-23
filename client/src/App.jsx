@@ -41,6 +41,7 @@ import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import OrderFailed from './pages/OrderFailed'
+import HowToChooseEyewear from './pages/HowToChooseEyewear'
 
 
 
@@ -165,6 +166,7 @@ function App() {
 < Route path='/privacy' element={<Privacy/>} /> 
 <Route path='/terms' element={<Terms />} />
 <Route path ='/order-failed' element={<OrderFailed />} />  
+<Route path='/how-to-choose-eyewear' element={<HowToChooseEyewear />} />
       </Routes>
       <Footer />
     </div>

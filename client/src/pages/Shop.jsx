@@ -355,6 +355,36 @@ function Shop() {
         ))}
       </div>
 
+      {/* Eyewear Guide Banner */}
+      {category === 'eyeglasses' && (
+        <div style={{
+          padding: '12px var(--section-px)',
+          backgroundColor: '#f0ebe3',
+          borderBottom: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-navy)' }}>
+            Not sure which frame suits you? Read our guide →
+          </p>
+          <a
+            href="/how-to-choose-eyewear"
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: '700',
+              color: 'var(--color-navy)',
+              textDecoration: 'underline',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            How to Choose Eyewear
+          </a>
+        </div>
+      )}
+
       {/* Mobile Filter Toggle */}
       <div
         className="flex md:hidden"

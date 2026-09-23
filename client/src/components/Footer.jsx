@@ -222,6 +222,7 @@ function Footer() {
                   Information
                 </h4>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <FooterLink to="/how-to-choose-eyewear">How to Choose Eyewear</FooterLink>
                   <FooterLink to="/shipping">Shipping Info</FooterLink>
                   <FooterLink to="/returns">Return & Refund</FooterLink>
                   <FooterLink to="/privacy">Privacy Policy</FooterLink>
