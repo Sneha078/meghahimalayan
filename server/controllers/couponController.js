@@ -248,6 +248,7 @@ export const createCoupon = handleAsyncError(
       perUserLimit,
       expiresAt = null,
       isActive = true,
+      isPublic = false,
     } = req.body;
 
     // Normalize code
@@ -392,6 +393,7 @@ export const createCoupon = handleAsyncError(
         ? new Date(expiresAt)
         : null,
       isActive: Boolean(isActive),
+      isPublic: Boolean(isPublic),
     });
 
     res.status(201).json({
@@ -431,6 +433,7 @@ export const updateCoupon = handleAsyncError(
       "perUserLimit",
       "expiresAt",
       "isActive",
+      "isPublic",
     ];
 
     const updateData = {};
