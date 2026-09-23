@@ -59,7 +59,7 @@ function Shop() {
     ...(priceRange.min > 0        && { minPrice: priceRange.min }),
     ...(priceRange.max            && { maxPrice: priceRange.max }),
     ...(discount                  && { discount: 'true' }),
-    ...(sortBy !== 'featured'     && { sort: sortBy }),
+    sort: sortBy,
     limit: 24,
     page,
   }
