@@ -132,6 +132,7 @@ class APIFunctionality {
   // Sorting
   sort() {
     const sortMap = {
+      "featured": "-isFeatured -createdAt",
       "price-low": "sellingPrice",
       "price-high": "-sellingPrice",
       "rating": "-ratings",
