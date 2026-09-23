@@ -16,19 +16,30 @@ function AdminOrders() {
   const [error, setError]         = useState(null)
   const [filter, setFilter]       = useState('All')
   const [reviewing, setReviewing] = useState(null)
+  const [page, setPage]           = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalOrders, setTotalOrders] = useState(0)
 
   useEffect(() => {
-    getAllOrders()
-      .then((data) => setOrders(data.orders ?? []))
+    setLoading(true)
+    getAllOrders(page, 15, filter)
+      .then((data) => {
+        setOrders(data.orders ?? [])
+        setTotalPages(data.totalPages ?? 1)
+        setTotalOrders(data.totalOrders ?? (data.orders ?? []).length)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [page, filter])
+
+  const handleFilter = (s) => {
+    setFilter(s)
+    setPage(1)
+  }
 
   const statuses = ['All', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
 
-  const filtered = filter === 'All'
-    ? orders
-    : orders.filter((o) => o.orderStatus === filter)
+  const paginatedOrders = orders
 
   // ============================================================
   // BANK TRANSFER REVIEW
@@ -71,7 +82,7 @@ function AdminOrders() {
           Orders
         </h1>
         <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-          {orders.length} total orders
+          {totalOrders} total orders
         </p>
       </div>
 
@@ -82,7 +93,7 @@ function AdminOrders() {
         {statuses.map((s) => (
           <button
             key={s}
-            onClick={() => setFilter(s)}
+            onClick={() => handleFilter(s)}
             style={{
               padding: '6px 16px', borderRadius: '20px',
               fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer',
@@ -110,7 +121,7 @@ function AdminOrders() {
 
       {loading && <p style={{ color: '#64748b' }}>Loading orders…</p>}
 
-      {!loading && filtered.length === 0 && (
+      {!loading && paginatedOrders.length === 0 && (
         <div style={{
           textAlign: 'center', padding: '60px',
           backgroundColor: '#ffffff', borderRadius: '12px',
@@ -120,7 +131,7 @@ function AdminOrders() {
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {!loading && paginatedOrders.length > 0 && (
         <div style={{
           backgroundColor: '#ffffff', borderRadius: '12px',
           border: '1px solid #e2e8f0', overflow: 'hidden',
@@ -142,7 +153,7 @@ function AdminOrders() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => {
+                {paginatedOrders.map((order) => {
                   const s = STATUS_COLORS[order.orderStatus] ?? STATUS_COLORS.Processing
 
                   const isPendingBankTransfer =
@@ -241,6 +252,40 @@ function AdminOrders() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          gap: '16px', marginTop: '24px',
+        }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page <= 1 ? '#f1f5f9' : '#ffffff', color: page <= 1 ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600', cursor: page <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            ← Prev
+          </button>
+          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page >= totalPages ? '#f1f5f9' : '#ffffff', color: page >= totalPages ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600', cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

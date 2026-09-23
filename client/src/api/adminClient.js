@@ -15,8 +15,11 @@ export const getAnalytics = () =>
 export const getTopCustomers    = () =>
   fetch(`${API_URL}/admin/customers/top`, { credentials: 'include' }).then(handleResponse)
 
-export const getAllOrders = (page = 1, limit = 100) =>
-  fetch(`${API_URL}/admin/orders?page=${page}&limit=${limit}`, { credentials: 'include' }).then(handleResponse)
+export const getAllOrders = (page = 1, limit = 100, status) => {
+  const params = new URLSearchParams({ page, limit })
+  if (status && status !== 'All') params.set('status', status)
+  return fetch(`${API_URL}/admin/orders?${params}`, { credentials: 'include' }).then(handleResponse)
+}
 
 export const getAdminOrder = (id) =>
   fetch(`${API_URL}/admin/order/${id}`, { credentials: 'include' }).then(handleResponse)
