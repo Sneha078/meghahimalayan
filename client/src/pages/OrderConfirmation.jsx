@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { getMySingleOrder } from '../api/productClient'
 import { useCart } from '../context/CartContext'
 
@@ -15,12 +15,16 @@ function OrderConfirmation() {
   const orderId = searchParams.get('orderId')
   const { clearCart } = useCart()
 
-  // Falls back to a made-up number only when there's no real order to show
-  // (e.g. this page reached without an orderId at all).
-  const fallbackOrderNumber = `MH${Date.now().toString().slice(-6)}`
+  // This page only means something with a real order behind it. A direct
+  // visit without an orderId used to render a fake "MH…" confirmation —
+  // redirect instead, so we never claim an order exists when it doesn't.
+  // replace keeps the back button from returning to this dead end.
+  if (!orderId) {
+    return <Navigate to="/orders" replace />
+  }
 
   const [order, setOrder] = useState(null)
-  const [loading, setLoading] = useState(!!orderId)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -60,24 +64,20 @@ function OrderConfirmation() {
     }
   }, [orderId])
 
-  const paymentMethod = order
-    ? PAYMENT_LABEL[order.paymentInfo?.method] ?? order.paymentInfo?.method
-    : 'Cash on Delivery'
+  const paymentMethod = order ? PAYMENT_LABEL[order.paymentInfo?.method] ?? order.paymentInfo?.method : '—'
 
-  const orderStatus = order?.orderStatus ?? 'Confirmed'
-  const displayOrderNumber = order?._id
-    ? order._id.slice(-6).toUpperCase()
-    : fallbackOrderNumber
+  const orderStatus = order?.orderStatus ?? ''
+  const displayOrderNumber = order?._id ? order._id.slice(-6).toUpperCase() : ''
 
-  // Timeline reflects the order's actual status once we have it; before
-  // that (or for the no-orderId fallback) it shows the original static
-  // "just placed, confirmed" state.
+  // Timeline reflects the order's actual status once we have it. Nothing on
+  // this page claims "confirmed" unless a real loaded order says so — the
+  // load-error path shows the error text instead of a fabricated success.
   const steps = [
     { label: 'Order Placed', done: true },
-    { label: 'Order Confirmed', done: !order || ['Confirmed', 'Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
-    { label: 'Processing', done: order && ['Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
-    { label: 'Shipped', done: order && ['Shipped', 'Delivered'].includes(orderStatus) },
-    { label: 'Delivered', done: order && orderStatus === 'Delivered' },
+    { label: 'Order Confirmed', done: !!order && ['Confirmed', 'Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Processing', done: !!order && ['Processing', 'Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Shipped', done: !!order && ['Shipped', 'Delivered'].includes(orderStatus) },
+    { label: 'Delivered', done: !!order && orderStatus === 'Delivered' },
   ]
 
   if (loading) {
