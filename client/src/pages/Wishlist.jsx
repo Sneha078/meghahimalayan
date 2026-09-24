@@ -1,6 +1,6 @@
 // src/pages/Wishlist.jsx
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import ProductCard from '../components/ProductCard'
@@ -9,10 +9,11 @@ function Wishlist() {
   const { user, loading: authLoading } = useAuth()
   const { wishlist } = useWishlist()
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/login')
-  }, [user, authLoading, navigate])
+    if (!authLoading && !user) navigate('/login', { state: { from: location.pathname } })
+  }, [user, authLoading, navigate, location])
 
   if (authLoading) return null
 

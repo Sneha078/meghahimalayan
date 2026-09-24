@@ -1,6 +1,6 @@
 // src/pages/ReturnRequest.jsx
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getMySingleOrder, submitReturnRequest } from '../api/productClient'
 import PageBanner from '../components/PageBanner'
@@ -22,6 +22,7 @@ function ReturnRequest() {
   const { id: orderId } = useParams()
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -46,7 +47,7 @@ function ReturnRequest() {
   // ── Load the order ────────────────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return
-    if (!user) { navigate('/login'); return }
+    if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
 
     let cancelled = false
     setLoading(true)

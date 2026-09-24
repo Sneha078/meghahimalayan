@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getMySingleOrder } from '../api/productClient'
+import { useCart } from '../context/CartContext'
 
 const PAYMENT_LABEL = {
   COD: 'Cash on Delivery',
@@ -12,6 +13,7 @@ const PAYMENT_LABEL = {
 function OrderConfirmation() {
   const [searchParams] = useSearchParams()
   const orderId = searchParams.get('orderId')
+  const { clearCart } = useCart()
 
   // Falls back to a made-up number only when there's no real order to show
   // (e.g. this page reached without an orderId at all).
@@ -28,9 +30,23 @@ function OrderConfirmation() {
     setLoading(true)
     setError('')
 
+    // Clear the cart once, only when this order is genuinely paid. The
+    // gateway confirmations set paymentInfo.status to "Paid" server-side
+    // before redirecting here, so anything else (COD, failed payments that
+    // still landed here) leaves the cart alone. The flag keeps a refreshed
+    // or revisited confirmation URL from wiping a brand new cart.
+    const alreadyCleared = localStorage.getItem('last_cleared_order') === orderId
+
     getMySingleOrder(orderId)
       .then((data) => {
-        if (!cancelled) setOrder(data.order ?? data)
+        if (cancelled) return
+        const orderData = data.order ?? data
+        setOrder(orderData)
+
+        if (orderData?.paymentInfo?.status === 'Paid' && !alreadyCleared) {
+          localStorage.setItem('last_cleared_order', orderId)
+          clearCart()
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message)

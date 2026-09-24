@@ -130,7 +130,7 @@ function Orders() {
     if (authLoading) return
 
     if (!user) {
-      navigate('/login')
+      navigate('/login', { state: { from: location.pathname } })
       return
     }
 

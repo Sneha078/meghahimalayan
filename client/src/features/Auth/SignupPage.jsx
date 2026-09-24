@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
 
 function SignupPage() {
   const { signup, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/'
 
   const [form, setForm] = useState({
     fullName: '',
@@ -34,7 +36,7 @@ function SignupPage() {
           accessToken: tokenResponse.access_token,
         })
 
-        navigate('/')
+        navigate(from)
       } catch (err) {
         setServerError(
           err.message || 'Google sign-up failed. Please try again.'
@@ -154,7 +156,7 @@ function SignupPage() {
         marketingOptIn: form.marketingOptIn,
       })
 
-      navigate('/')
+      navigate(from)
     } catch (err) {
       setServerError(err.message)
     } finally {

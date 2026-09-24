@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getProductById, getProductReviews, submitReview, deleteReview } from '../api/productClient'
 import { useCart } from '../context/CartContext'
 import RecommendedProducts from '../components/RecommendedProducts'
@@ -58,6 +58,7 @@ function ProductDetail() {
   const { user } = useAuth()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const navigate = useNavigate()
+  const location = useLocation()
 
 
 
@@ -588,7 +589,7 @@ function ProductDetail() {
 
             <button
               onClick={async () => {
-                if (!user) { navigate('/login'); return }
+                if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
                 await toggleWishlist(product)
               }}
               aria-label="Add to wishlist"

@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { createOrder } from "../api/productClient";
 import {
   initiateEsewaPayment,
@@ -15,7 +16,16 @@ const STEPS = ["Delivery", "Payment", "Review"];
 
 function Checkout() {
   const { cartItems, subtotal, discount, couponCode, clearCart } = useCart();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } })
+    }
+  }, [user, authLoading, navigate, location])
 
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -173,14 +183,17 @@ function Checkout() {
 
       if (paymentMethod === "esewa") {
         const { url, payload } = await initiateEsewaPayment(orderId);
-        clearCart(); // order already exists server-side; gateway takes over from here
+        // Cart stays intact here: the gateway hasn't confirmed anything yet.
+        // If payment fails/cancels the customer returns to /order-failed with
+        // their items still in the (server-side) cart so "TRY AGAIN" works.
+        // The cart is cleared on /order-confirmation only once the verify
+        // callback has marked this order as Paid.
         redirectToEsewa(url, payload);
         return; // page is navigating away, nothing left to render
       }
 
       if (paymentMethod === "khalti") {
         const { paymentUrl } = await initiateKhaltiPayment(orderId);
-        clearCart();
         redirectToKhalti(paymentUrl);
         return;
       }
@@ -191,6 +204,8 @@ function Checkout() {
   };
 
   // Empty cart
+  if (authLoading) return null;
+
   if (cartItems.length === 0 && currentStep !== 2) {
     return (
       <div

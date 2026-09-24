@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
@@ -11,6 +11,7 @@ function ProductCard({ product }) {
   const { user } = useAuth()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleAddToCart = () => {
     addItem(product)
@@ -143,7 +144,7 @@ function ProductCard({ product }) {
             onClick={async (e) => {
               e.stopPropagation()
               e.preventDefault()
-              if (!user) { navigate('/login'); return }
+              if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
               await toggleWishlist(product)
             }}
             style={{

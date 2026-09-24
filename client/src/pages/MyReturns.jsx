@@ -1,6 +1,6 @@
 // src/pages/MyReturns.jsx
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { getMyReturns, cancelReturn } from '../api/productClient'
 import { useAuth } from '../context/AuthContext'
 import PageBanner from '../components/PageBanner'
@@ -49,6 +49,7 @@ function StatusBadge({ label, styleMap }) {
 function MyReturns() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [returns, setReturns] = useState([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +60,7 @@ function MyReturns() {
   // ── Load returns ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return
-    if (!user) { navigate('/login'); return }
+    if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
 
     let cancelled = false
     setLoading(true)
