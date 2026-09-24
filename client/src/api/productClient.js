@@ -114,7 +114,9 @@ export async function createOrder(orderData) {
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to place order')
+    const err = new Error(data.message || 'Failed to place order')
+    err.status = res.status
+    throw err
   }
   return res.json()
 }

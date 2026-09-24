@@ -198,6 +198,12 @@ function Checkout() {
         return;
       }
     } catch (err) {
+      // Session lapsed mid-checkout — send them to log in rather than
+      // exposing the raw 401 from POST /api/v1/order/new.
+      if (err?.status === 401) {
+        navigate('/login', { state: { from: location.pathname } })
+        return
+      }
       setOrderError(err.message);
       setOrderLoading(false);
     }
