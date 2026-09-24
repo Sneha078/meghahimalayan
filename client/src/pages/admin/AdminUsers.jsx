@@ -68,7 +68,7 @@ function AdminUsers() {
         style={{
           padding: '9px 14px', borderRadius: '8px',
           border: '1px solid #e2e8f0', fontSize: '0.88rem',
-          outline: 'none', marginBottom: '20px', minWidth: '260px',
+          outline: 'none', marginBottom: '20px', width: '100%',
         }}
       />
 

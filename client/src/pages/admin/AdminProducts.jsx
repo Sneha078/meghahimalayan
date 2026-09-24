@@ -77,7 +77,7 @@ function AdminProducts() {
           style={{
             padding: '9px 14px', borderRadius: '8px',
             border: '1px solid #e2e8f0', fontSize: '0.88rem',
-            outline: 'none', minWidth: '240px',
+            outline: 'none', width: '100%',
           }}
         />
         <div style={{ display: 'flex', gap: '8px' }}>

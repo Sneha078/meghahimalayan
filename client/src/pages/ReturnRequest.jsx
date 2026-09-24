@@ -85,11 +85,39 @@ function ReturnRequest() {
       [key]: { ...prev[key], [field]: value },
     }))
   }
+ 
+  const MAX_IMAGE_SIZE_MB = 10
+  const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024
 
   const handleImages = (key, files) => {
-    const arr = Array.from(files).slice(0, 5) // max 5 images per item
-    const previews = arr.map((f) => URL.createObjectURL(f))
-    setItems((prev) => ({ ...prev, [key]: { ...prev[key], images: arr, previews } }))
+    const all = Array.from(files).filter((f) => f.type.startsWith('image/'))
+    const oversized = all.filter((f) => f.size > MAX_IMAGE_SIZE_BYTES)
+    if (oversized.length > 0) {
+      setSubmitError(
+        `Image "${oversized[0].name}" is too large. Each image must be under ${MAX_IMAGE_SIZE_MB} MB.`
+      )
+      return
+    }
+    const incoming = all
+    setItems((prev) => {
+      const current = prev[key]
+      const merged = [...(current.images ?? []), ...incoming].slice(0, 5) // max 5 images per item
+      ;(current.previews ?? []).forEach((url) => URL.revokeObjectURL(url))
+      return {
+        ...prev,
+        [key]: { ...current, images: merged, previews: merged.map((f) => URL.createObjectURL(f)) },
+      }
+    })
+  }
+
+  const removeImage = (key, index) => {
+    setItems((prev) => {
+      const current = prev[key]
+      const images = (current.images ?? []).filter((_, i) => i !== index)
+      const previews = (current.previews ?? []).filter((_, i) => i !== index)
+      if (current.previews?.[index]) URL.revokeObjectURL(current.previews[index])
+      return { ...prev, [key]: { ...current, images, previews } }
+    })
   }
 
   const selectedCount = Object.values(items).filter((v) => v.selected).length
@@ -128,6 +156,18 @@ function ReturnRequest() {
         }
       } else if (!bankDetails.accountNumber.trim()) {
         setSubmitError('Please enter your registered mobile number.')
+        return
+      }
+    }
+
+    // Guard: ensure no image exceeds the size limit before sending
+    for (const item of selectedItems) {
+      const key = item.product?._id ?? item.product ?? item._id
+      const oversized = (items[key].images ?? []).filter((f) => f.size > MAX_IMAGE_SIZE_BYTES)
+      if (oversized.length > 0) {
+        setSubmitError(
+          `Image "${oversized[0].name}" is too large. Each image must be under ${MAX_IMAGE_SIZE_MB} MB.`
+        )
         return
       }
     }
@@ -222,7 +262,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>Loading order…</p>
         </div>
       </div>
@@ -233,7 +273,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <div style={styles.errorBox}>{error}</div>
         </div>
       </div>
@@ -247,7 +287,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem', maxWidth: '700px' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)', maxWidth: '700px' }}>
           <div style={{ ...styles.card, textAlign: 'center', padding: '48px' }}>
             <p style={{ fontSize: '2rem', marginBottom: '16px' }}>⚠️</p>
             <p style={{ fontWeight: '700', color: 'var(--color-navy)', marginBottom: '8px' }}>
@@ -267,7 +307,7 @@ function ReturnRequest() {
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
       <PageBanner eyebrow="My Orders" title="Return Request" />
 
-      <form onSubmit={handleSubmit} style={{ padding: '40px 5rem', maxWidth: '780px' }}>
+      <form onSubmit={handleSubmit} style={{ padding: 'clamp(20px, 4vw, 40px) var(--section-px)', maxWidth: '780px' }}>
 
         {/* Order reference */}
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '28px' }}>
@@ -364,18 +404,45 @@ function ReturnRequest() {
                           type="file"
                           accept="image/*"
                           multiple
-                          onChange={(e) => handleImages(key, e.target.files)}
+                          onChange={(e) => { handleImages(key, e.target.files); e.target.value = '' }}
                           style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
                         />
                         {meta.previews?.length > 0 && (
                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                             {meta.previews.map((src, i) => (
-                              <img
-                                key={i}
-                                src={src}
-                                alt={`preview-${i}`}
-                                style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--color-border)' }}
-                              />
+                              <div key={i} style={{ position: 'relative' }}>
+                                <img
+                                  src={src}
+                                  alt={`preview-${i}`}
+                                  style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--color-border)', display: 'block' }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(key, i)}
+                                  aria-label={`Remove photo ${i + 1}`}
+                                  title="Remove photo"
+                                  style={{
+                                    position: 'absolute',
+                                    top: '-6px',
+                                    right: '-6px',
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    background: 'var(--color-navy, #1f2a44)',
+                                    color: '#fff',
+                                    fontSize: '12px',
+                                    lineHeight: 1,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: 0,
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}

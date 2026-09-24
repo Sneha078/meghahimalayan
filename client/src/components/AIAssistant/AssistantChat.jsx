@@ -165,6 +165,7 @@ function AssistantChat({ onClose }) {
           padding: '18px 20px',
           maxHeight: '360px',
           overflowY: 'auto',
+          overflowX: 'hidden',
           backgroundColor: '#f7f4f0',
         }}
       >

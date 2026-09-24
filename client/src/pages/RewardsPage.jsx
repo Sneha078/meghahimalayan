@@ -174,13 +174,13 @@ function RewardsPage() {
       style={{
         maxWidth: "1080px",
         margin: "0 auto",
-        padding: "48px 24px",
+        padding: "clamp(24px, 5vw, 48px) var(--section-px)",
       }}
     >
       <h1
         style={{
           fontFamily: "var(--font-serif)",
-          fontSize: "1.8rem",
+          fontSize: "clamp(1.3rem, 4vw, 1.8rem)",
           fontWeight: 700,
           color: "#0d1a2a",
           marginBottom: "24px",
@@ -197,7 +197,7 @@ function RewardsPage() {
         style={{
           backgroundColor: "#0d1a2a",
           borderRadius: "14px",
-          padding: "32px",
+          padding: "clamp(20px, 4vw, 32px)",
           textAlign: "center",
           marginBottom: "16px",
         }}
@@ -229,7 +229,7 @@ function RewardsPage() {
             <p
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: "2.4rem",
+                fontSize: "clamp(1.6rem, 5vw, 2.4rem)",
                 fontWeight: 700,
                 color: "#f4f0eb",
                 margin: 0,

@@ -1,5 +1,4 @@
-
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 const PANELS = [
@@ -33,164 +32,120 @@ const PANELS = [
 ]
 
 function SplitVideoSection() {
-  const [hovered, setHovered] = useState(null)
+  const [active, setActive] = useState(0)
   const videoRefs = useRef({})
 
-  const handleMouseEnter = (id) => {
-    setHovered(id)
+  // Auto-advance every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActive((prev) => (prev + 1) % PANELS.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Play active video, pause others
+  useEffect(() => {
     Object.entries(videoRefs.current).forEach(([key, video]) => {
       if (!video) return
-      if (key === id) {
+      if (key === PANELS[active].id) {
         video.play().catch(() => {})
       } else {
         video.pause()
       }
     })
-  }
-
-  const handleMouseLeave = () => {
-    setHovered(null)
-    Object.values(videoRefs.current).forEach((video) => {
-      if (!video) return
-      video.pause()
-    })
-  }
+  }, [active])
 
   return (
-    <section
-      onMouseLeave={handleMouseLeave}
-      style={{
-        width: '100%',
-        height: '90vh',
-        display: 'flex',
-        overflow: 'hidden',
-      }}>
-      {PANELS.map((panel) => {
-        const isHovered = hovered === panel.id
-        const isOtherHovered = hovered !== null && hovered !== panel.id
-
+    <section style={{ width: '100%', position: 'relative', overflow: 'hidden' }}>
+      {PANELS.map((panel, index) => {
+        const isActive = index === active
         return (
           <div
             key={panel.id}
-            onMouseEnter={() => handleMouseEnter(panel.id)}
             style={{
               position: 'relative',
-              flex: isHovered ? '0 0 60%' : isOtherHovered ? '0 0 20%' : '0 0 33.33%',
-              transition: 'flex 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+              width: '100%',
+              height: '80vh',
+              minHeight: '500px',
               overflow: 'hidden',
-              cursor: 'pointer',
+              display: isActive ? 'block' : 'none',
             }}
           >
-          
             <video
               ref={(el) => (videoRefs.current[panel.id] = el)}
               src={panel.video}
               muted
               loop
               playsInline
-              preload="auto"
+              preload={isActive ? 'auto' : 'metadata'}
               style={{
                 position: 'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                transform: isHovered ? 'scale(1.03)' : 'scale(1)',
-                transition: 'transform 0.7s ease',
               }}
             />
 
-            
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: isHovered
-                ? 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)'
-                : 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 100%)',
-              transition: 'background 0.5s ease',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
             }} />
 
-          
-            {panel.id === 'eyeglasses' && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: '1px',
-                height: '100%',
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                zIndex: 2,
-              }} />
-            )}
-
-          
             <div style={{
               position: 'absolute',
               inset: 0,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-end',
-              padding: '48px',
+              padding: 'clamp(24px, 5vw, 60px) clamp(20px, 5vw, 80px)',
+              paddingBottom: '60px',
               zIndex: 2,
             }}>
-              
               <p style={{
                 color: 'var(--color-taupe)',
-                fontSize: '0.72rem',
+                fontSize: 'clamp(0.6rem, 1.2vw, 0.75rem)',
                 fontWeight: '700',
                 letterSpacing: '0.25em',
                 textTransform: 'uppercase',
                 marginBottom: '12px',
-                opacity: isHovered ? 1 : 0.7,
-                transform: isHovered ? 'translateY(0)' : 'translateY(4px)',
-                transition: 'all 0.4s ease',
               }}>
                 {panel.label}
               </p>
 
-            
               <h2 style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: isHovered ? '3.2rem' : '2.4rem',
+                fontSize: 'clamp(2rem, 6vw, 3.5rem)',
                 fontWeight: '800',
                 color: '#ffffff',
                 lineHeight: 1.15,
                 marginBottom: '16px',
                 whiteSpace: 'pre-line',
-                transition: 'font-size 0.4s ease',
               }}>
                 {panel.heading}
               </h2>
 
-           
               <p style={{
                 color: 'rgba(255,255,255,0.75)',
-                fontSize: '0.95rem',
+                fontSize: 'clamp(0.8rem, 1.5vw, 1rem)',
                 lineHeight: '1.6',
                 marginBottom: '28px',
-                maxWidth: '320px',
-                opacity: isHovered ? 1 : 0,
-                transform: isHovered ? 'translateY(0)' : 'translateY(12px)',
-                transition: 'all 0.4s ease 0.1s',
+                maxWidth: '400px',
               }}>
                 {panel.sub}
               </p>
 
-              
-              <div style={{
-                opacity: isHovered ? 1 : 0,
-                transform: isHovered ? 'translateY(0)' : 'translateY(12px)',
-                transition: 'all 0.4s ease 0.15s',
-              }}>
+              <div>
                 <Link
                   to={panel.link}
                   style={{
                     display: 'inline-block',
-                    padding: '12px 32px',
+                    padding: '14px 36px',
                     backgroundColor: 'var(--color-taupe)',
                     color: 'var(--color-navy)',
                     textDecoration: 'none',
-                    fontSize: '0.8rem',
+                    fontSize: 'clamp(0.7rem, 1.2vw, 0.85rem)',
                     fontWeight: '700',
                     letterSpacing: '0.12em',
                     textTransform: 'uppercase',
@@ -207,6 +162,8 @@ function SplitVideoSection() {
           </div>
         )
       })}
+
+
     </section>
   )
 }

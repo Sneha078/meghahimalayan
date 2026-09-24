@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import cloudinary from "../config/cloudinary.js";
+
 import Return from "../models/returnModel.js";
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
@@ -424,6 +426,77 @@ const validateImages = (images) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RETURN IMAGE UPLOAD (Cloudinary)
+// Accepts base64 data URLs from the customer and returns { public_id, url }.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const uploadReturnImages = async (
+  images,
+  folder = "returns"
+) => {
+  if (!Array.isArray(images) || images.length === 0) {
+    return [];
+  }
+
+  if (images.length > MAX_IMAGES) {
+    throw new HandleError(
+      `Maximum ${MAX_IMAGES} images allowed per item`,
+      400
+    );
+  }
+
+  const uploaded = [];
+
+  for (const image of images) {
+    if (
+      typeof image !== "string" ||
+      !image.startsWith("data:")
+    ) {
+      throw new HandleError(
+        "Each return image must be a base64 data URL",
+        400
+      );
+    }
+
+    try {
+      const result =
+        await cloudinary.uploader.upload(image, {
+          folder,
+        });
+
+      uploaded.push({
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+    } catch (err) {
+      console.error(
+        "Return image Cloudinary upload failed:",
+        err?.message || err,
+        err?.http_code ? `(http ${err.http_code})` : ""
+      );
+
+      // Cloudinary returns http_code 400 with a message like "File size too large" when
+      // the upload exceeds their limit. Give the user a clear, actionable message.
+      const isFileSizeError =
+        err?.message?.toLowerCase().includes("file size") ||
+        err?.message?.toLowerCase().includes("too large") ||
+        err?.http_code === 400;
+
+      throw new HandleError(
+        isFileSizeError
+          ? "Failed to upload a return image. Please try a smaller or different image (max 10 MB each)."
+          : `Failed to upload a return image: ${err?.message || "unknown error"}${
+              err?.http_code ? ` (HTTP ${err.http_code})` : ""
+            }`,
+        400
+      );
+    }
+  }
+
+  return uploaded;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // REFUND AMOUNT VALIDATION
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -577,6 +650,28 @@ export const createReturnRequest = handleAsyncError(
     }
 
     const returnImages = validateImages(images);
+
+    // Upload customer photos to Cloudinary BEFORE opening the DB
+    // transaction. Cloudinary calls are not transactional and would
+    // otherwise hold the Mongo session open.
+    const uploadedItemImages = await Promise.all(
+      items.map((item) =>
+        uploadReturnImages(item?.images)
+      )
+    );
+
+    const itemImagesByProduct = new Map();
+
+    items.forEach((item, index) => {
+      const id = normalizeId(item?.product);
+
+      if (id) {
+        itemImagesByProduct.set(
+          id,
+          uploadedItemImages[index] || []
+        );
+      }
+    });
 
     const session = await mongoose.startSession();
 
@@ -809,6 +904,10 @@ export const createReturnRequest = handleAsyncError(
             product: originalItem.product,
             name: originalItem.name,
             image: originalItem.image || "",
+            images:
+              itemImagesByProduct.get(
+                normalizeId(item.product)
+              ) || [],
             quantity,
             itemPrice: roundMoney(price),
             refundUnitPrice: roundMoney(netPrice),

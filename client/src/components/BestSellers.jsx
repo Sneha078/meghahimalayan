@@ -47,14 +47,15 @@ function BestSellers() {
     <section
       style={{
         backgroundColor: 'var(--color-white)',
-        padding: '80px 5rem',
+        padding: 'var(--section-py) var(--section-px)',
+        overflow: 'hidden',
       }}
     >
       {/* Section Header */}
       <div
         style={{
           textAlign: 'center',
-          marginBottom: '48px',
+          marginBottom: 'clamp(24px, 4vw, 48px)',
         }}
       >
         <p
@@ -73,7 +74,7 @@ function BestSellers() {
         <h2
           style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2.8rem',
+            fontSize: 'var(--text-4xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -86,7 +87,7 @@ function BestSellers() {
         <p
           style={{
             color: 'var(--color-muted)',
-            fontSize: '1rem',
+            fontSize: 'var(--text-base)',
             maxWidth: '480px',
             margin: '0 auto',
             lineHeight: '1.7',
@@ -127,9 +128,8 @@ function BestSellers() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fill, minmax(230px, 1fr))',
-            gap: '24px',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 'var(--section-gap)',
             marginBottom: '48px',
           }}
         >
@@ -190,4 +190,3 @@ function BestSellers() {
 }
 
 export default BestSellers
-

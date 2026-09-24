@@ -86,7 +86,7 @@ function Cart() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '80px 5rem',
+        padding: '80px var(--section-px)',
         textAlign: 'center',
       }}>
         <div style={{ fontSize: '4rem', marginBottom: '24px' }}>🛒</div>
@@ -135,7 +135,7 @@ function Cart() {
       {/* Page Header */}
       <div style={{
         backgroundColor: 'var(--color-navy)',
-        padding: '48px 5rem 36px',
+        padding: 'clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)',
       }}>
         <p style={{
           color: 'var(--color-taupe)',
@@ -150,7 +150,7 @@ function Cart() {
         <h1 style={{
           fontFamily: 'var(--font-serif)',
           color: '#ffffff',
-          fontSize: '2.8rem',
+          fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
           fontWeight: '800',
         }}>
           Shopping Cart
@@ -158,20 +158,19 @@ function Cart() {
       </div>
 
       {/* Main Content */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 380px',
-        gap: '32px',
-        padding: '40px 5rem',
-        alignItems: 'flex-start',
-      }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px]"
+        style={{
+          gap: '32px',
+          padding: 'clamp(20px, 4vw, 40px) var(--section-px)',
+          alignItems: 'flex-start',
+        }}
+      >
 
         {/* Left — Cart Items */}
         <div>
 
-          {/* Header Row */}
-          <div style={{
-            display: 'grid',
+          {/* Header Row — hidden on mobile */}
+          <div className="hidden md:grid" style={{
             gridTemplateColumns: '2fr 1fr 1fr 1fr',
             padding: '12px 0',
             borderBottom: '1px solid var(--color-border)',
@@ -194,25 +193,19 @@ function Cart() {
 {cartItems.map((item) => (
   <div
     key={item.id}
+    className="relative grid md:grid-cols-[2fr_1fr_1fr_1fr] grid-cols-1 md:items-center md:gap-4"
     style={{
-      position: 'relative',
-      display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr',
-      alignItems: 'center',
       padding: '20px 0',
       borderBottom: '1px solid var(--color-border)',
-      gap: '16px',
     }}
   >
-    {/* Delete icon — top-right of the row */}
+    {/* Delete icon — top-right on mobile, absolute on desktop */}
     <button
       onClick={() => setProductToDelete(item)}
       aria-label="Remove item"
       title="Remove item"
+      className="absolute top-4 right-0 md:top-1/2 md:-translate-y-1/2 md:right-0"
       style={{
-        position: 'absolute',
-        top: '50px',
-        right: '0',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
@@ -324,8 +317,8 @@ function Cart() {
       </div>
     </div>
 
-    {/* Price */}
-    <div>
+    {/* Price — shown inline on desktop, below name on mobile */}
+    <div className="md:block hidden">
       <p style={{
         fontSize: '0.95rem',
         fontWeight: '600',
@@ -345,9 +338,100 @@ function Cart() {
       )}
     </div>
 
-    {/* Quantity Controls */}
-    <div style={{
-      display: 'flex',
+    {/* Mobile: price + quantity + total row */}
+    <div className="flex md:hidden items-center justify-between mt-3" style={{ gap: '12px' }}>
+      <div>
+        <p style={{
+          fontSize: '0.95rem',
+          fontWeight: '600',
+          color: 'var(--color-navy)',
+        }}>
+          Rs. {item.price.toLocaleString()}
+        </p>
+        {item.originalPrice && (
+          <p style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+            textDecoration: 'line-through',
+            marginTop: '2px',
+          }}>
+            Rs. {item.originalPrice.toLocaleString()}
+          </p>
+        )}
+      </div>
+
+      {/* Quantity Controls */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0',
+        border: '1px solid var(--color-border)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        width: 'fit-content',
+      }}>
+        <button
+          onClick={() => updateQuantity(item.id, -1)}
+          style={{
+            width: '36px',
+            height: '36px',
+            border: 'none',
+            backgroundColor: 'var(--color-white)',
+            cursor: 'pointer',
+            fontSize: '1.1rem',
+            color: 'var(--color-navy)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          −
+        </button>
+        <span style={{
+          width: '40px',
+          height: '36px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.9rem',
+          fontWeight: '600',
+          color: 'var(--color-navy)',
+          backgroundColor: 'var(--color-white)',
+          borderLeft: '1px solid var(--color-border)',
+          borderRight: '1px solid var(--color-border)',
+        }}>
+          {item.quantity}
+        </span>
+        <button
+          onClick={() => updateQuantity(item.id, 1)}
+          style={{
+            width: '36px',
+            height: '36px',
+            border: 'none',
+            backgroundColor: 'var(--color-white)',
+            cursor: 'pointer',
+            fontSize: '1.1rem',
+            color: 'var(--color-navy)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      <p style={{
+        fontSize: '1rem',
+        fontWeight: '700',
+        color: 'var(--color-navy)',
+      }}>
+        Rs. {(item.price * item.quantity).toLocaleString()}
+      </p>
+    </div>
+
+    {/* Quantity Controls — desktop */}
+    <div className="hidden md:flex" style={{
       alignItems: 'center',
       gap: '0',
       border: '1px solid var(--color-border)',
@@ -412,8 +496,8 @@ function Cart() {
       </button>
     </div>
 
-    {/* Item Total */}
-    <p style={{
+    {/* Item Total — desktop */}
+    <p className="hidden md:block" style={{
       fontSize: '1rem',
       fontWeight: '700',
       color: 'var(--color-navy)',
@@ -601,6 +685,7 @@ function Cart() {
                         padding: '10px 16px', backgroundColor: 'var(--color-navy)', color: 'var(--color-taupe)',
                         border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700',
                         letterSpacing: '0.08em', cursor: applyingCoupon ? 'wait' : 'pointer', opacity: applyingCoupon ? 0.6 : 1,
+                        flexShrink: 0,
                       }}
                     >
                       {applyingCoupon ? '…' : 'APPLY'}

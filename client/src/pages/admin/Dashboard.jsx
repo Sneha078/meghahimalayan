@@ -222,9 +222,7 @@ function Dashboard() {
           <LiveFeed events={liveNotifications ?? []} />
 
           {/* Stat cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          <div className="grid grid-cols-2 lg:grid-cols-4" style={{
             gap: '16px',
             marginBottom: '32px',
           }}>

@@ -85,17 +85,18 @@ function OrderConfirmation() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '80px 5rem',
+      padding: 'clamp(20px, 5vw, 80px) var(--section-px)',
     }}>
       <div style={{
         backgroundColor: 'var(--color-white)',
         borderRadius: '20px',
-        padding: '56px',
+        padding: 'clamp(24px, 5vw, 56px)',
         maxWidth: '560px',
         width: '100%',
         textAlign: 'center',
         border: '1px solid var(--color-border)',
         boxShadow: '0 20px 60px rgba(13,32,49,0.08)',
+        overflow: 'hidden',
       }}>
 
         {/* Success Icon */}
@@ -129,8 +130,11 @@ function OrderConfirmation() {
           fontSize: '0.95rem',
           lineHeight: '1.7',
           marginBottom: '32px',
+          maxWidth: '380px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}>
-          Thank you for your order. We'll contact you shortly to confirm your delivery details.
+          Thank you for your order! We'll contact you shortly to confirm your delivery details.
         </p>
 
         {error && (
@@ -153,28 +157,28 @@ function OrderConfirmation() {
           textAlign: 'left',
         }}>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'baseline', gap: '12px', marginBottom: '20px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Order Number</span>
             <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)' }}>
               #{displayOrderNumber}
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'baseline', gap: '12px', marginBottom: '20px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Payment Method</span>
             <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--color-navy)' }}>
               {paymentMethod}
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'baseline', gap: '12px', marginBottom: '20px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Estimated Delivery</span>
             <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--color-navy)' }}>
               3 - 5 Business Days
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'baseline', gap: '12px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>Order Status</span>
             <span style={{
               fontSize: '0.72rem',

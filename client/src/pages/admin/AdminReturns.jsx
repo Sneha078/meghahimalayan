@@ -88,7 +88,7 @@ function AdminReturns() {
           style={{
             padding: '8px 14px', borderRadius: '8px',
             border: '1px solid #e2e8f0', fontSize: '0.85rem',
-            minWidth: '220px', outline: 'none',
+            width: '100%', outline: 'none',
           }}
         />
       </div>

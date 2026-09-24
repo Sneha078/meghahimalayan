@@ -315,6 +315,26 @@ function AdminReturnDetail() {
                 </p>
               </div>
 
+              {(item.images ?? []).length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {item.images.map((img, i) => (
+                    <a key={i} href={img.url} target="_blank" rel="noreferrer">
+                      <img
+                        src={img.url}
+                        alt="Return"
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          objectFit: 'cover',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               {/* Item Images */}
               {item.images && item.images.length > 0 && (
                 <div>

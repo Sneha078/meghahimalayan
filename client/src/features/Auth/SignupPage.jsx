@@ -175,7 +175,7 @@ function SignupPage() {
         style={{
           backgroundColor: 'var(--color-white)',
           borderRadius: '20px',
-          padding: '48px',
+          padding: 'clamp(24px, 5vw, 48px)',
           width: '100%',
           maxWidth: '480px',
           border: '1px solid var(--color-border)',
@@ -191,7 +191,7 @@ function SignupPage() {
           <h2
             style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: '1.8rem',
+              fontSize: 'clamp(1.4rem, 4vw, 1.8rem)',
               fontWeight: '800',
               color: 'var(--color-navy)',
               marginBottom: '8px',

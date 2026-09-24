@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
+import { MapPin, Phone, Mail, Clock, CalendarDays, Ban, Shield, Truck, Gem, Tag } from 'lucide-react'
 import { useStoreLocator } from '../hooks/useStoreLocator'
 import { useBusinessSettings } from '../context/BusinessSettingsContext'
 
@@ -25,7 +26,6 @@ function FooterLink({ to, children }) {
   )
 }
 
-
 function SocialBtn({ href, label, children }) {
   const [hovered, setHovered] = useState(false)
   return (
@@ -38,12 +38,12 @@ function SocialBtn({ href, label, children }) {
         width: '38px',
         height: '38px',
         borderRadius: '50%',
-        border:`1px solid ${hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.30)'}`,
+        border: `1px solid ${hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.30)'}`,
         display: 'flex',
-        alignItems:'center',
+        alignItems: 'center',
         justifyContent: 'center',
-        color:   hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.80)',
-        transition:     'all 0.25s ease',
+        color: hovered ? 'var(--color-taupe)' : 'rgba(255,255,255,0.80)',
+        transition: 'all 0.25s ease',
         textDecoration: 'none',
       }}
       onMouseEnter={() => setHovered(true)}
@@ -53,7 +53,6 @@ function SocialBtn({ href, label, children }) {
     </a>
   )
 }
-
 
 function Footer() {
   const {openStoreLocator, StoreLocatorModal} = useStoreLocator()
@@ -84,28 +83,22 @@ function Footer() {
   }
   return (
     <footer style={{ backgroundColor: 'var(--color-navy)', color: 'rgba(255,255,255,0.5)' }}>
+      {/* Main Grid */}
+      <div style={{ maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto', paddingLeft: 'clamp(36px, 8vw, 64px)', paddingRight: 'clamp(16px, 8vw, 64px)', paddingTop: '2.5rem', paddingBottom: '2.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+        className="lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr_1fr_1fr] gap-6 md:gap-12">
 
-     
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
-        gap: '3rem',
-        padding:  '4rem 5rem',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        alignItems:'flex-start',
-      }}>
-
-    
-        <div>
-         
-          <div style={{ marginBottom: '1.2rem' }}>
-            <span style={{
-              fontFamily: 'var(--font-serif)',
-              color: 'var(--color-taupe)',
-              fontSize: '1.4rem',
-              fontWeight: '700',
-              letterSpacing: '0.06em',
-            }}>
+          {/* Brand title + details — mobile: full width top, desktop: col 1 */}
+          <div>
+            <span
+              style={{
+                fontFamily: 'var(--font-serif)',
+                color: 'var(--color-taupe)',
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                letterSpacing: '0.06em',
+              }}
+            >
               {businessSettings?.companyName || 'Mega Himalaya'}
             </span>
             <p style={{
@@ -136,7 +129,9 @@ function Footer() {
           onClick={openStoreLocator}
           style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', fontSize: '0.82rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center', marginTop: '1px' }}>📍</span>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center', marginTop: '1px' }}>
+                <MapPin size={15} strokeWidth={2} />
+              </span>
               <span>
                 {businessSettings?.address 
                   ? `${businessSettings.address.street}, ${businessSettings.address.city} ${businessSettings.address.postalCode}, ${businessSettings.address.country}`
@@ -145,26 +140,36 @@ function Footer() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>📞</span>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Phone size={15} strokeWidth={2} />
+              </span>
               <span>{formatPhoneForDisplay(businessSettings?.phone)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>✉️</span>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Mail size={15} strokeWidth={2} />
+              </span>
               <span>{businessSettings?.email || 'mail@megahimalaya.com'}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>🕐</span>
+              <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+                <Clock size={15} strokeWidth={2} />
+              </span>
               <span>{businessSettings?.openingHours?.weekdays || 'Sun–Fri: 10:00 AM – 6:00 PM'}</span>
             </div>
             {businessSettings?.openingHours?.saturday && businessSettings.openingHours.saturday !== 'Closed' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', textAlign: 'center' }}>📅</span>
+                <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+                  <CalendarDays size={15} strokeWidth={2} />
+                </span>
                 <span>{businessSettings.openingHours.saturday}</span>
               </div>
             )}
             {(!businessSettings?.openingHours?.saturday || businessSettings.openingHours.saturday === 'Closed') && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ flexShrink: 0, width: '16px', textAlign: 'center' }}>🚫</span>
+                <span style={{ flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+                  <Ban size={15} strokeWidth={2} />
+                </span>
                 <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>
                   Closed on Saturdays
                 </span>
@@ -199,151 +204,155 @@ function Footer() {
           </div>
         </div>
 
-       
-        <div>
-          <h4 style={{
-            color: 'var(--color-taupe)',
-            fontSize: '0.72rem',
-            fontWeight:'700',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            marginBottom:  '1.4rem',
-          }}>
-            Shop
-          </h4>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <FooterLink to="/shop">All Products</FooterLink>
-            <FooterLink to="/#new-arrivals">New Arrivals</FooterLink>
-            <FooterLink to="/shop?discount=true">Sale</FooterLink>
-            <FooterLink to="/shop">Brands</FooterLink>
-          </ul>
-        </div>
+          {/* 3 link columns — mobile: row 2 (3 cols), desktop: expands into col 2/3/4 */}
+          <div className="md:contents">
+            <div className="grid grid-cols-3 md:contents gap-6">
 
-       
-        <div>
-          <h4 style={{
-            color:'var(--color-taupe)',
-            fontSize: '0.72rem',
-            fontWeight: '700',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            marginBottom:  '1.4rem',
-          }}>
-            Account
-          </h4>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <FooterLink to="/account">My Account</FooterLink>
-            <FooterLink to="/orders">My Orders</FooterLink>
-            <FooterLink to="/wishlist">Wishlist</FooterLink>
-            <FooterLink to="/cart">My Cart</FooterLink>
-          </ul>
-        </div>
+              {/* Shop */}
+              <div>
+                <h4
+                  style={{
+                    color: 'var(--color-taupe)',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    marginBottom: '1.4rem',
+                  }}
+                >
+                  Shop
+                </h4>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <FooterLink to="/shop">All Products</FooterLink>
+                  <FooterLink to="/shop?category=eyeglasses">Eyeglasses</FooterLink>
+                  <FooterLink to="/shop?category=sunglasses">Sunglasses</FooterLink>
+                  <FooterLink to="/shop?category=watches">Watches</FooterLink>
+                  <FooterLink to="/shop?category=perfumes">Perfumes</FooterLink>
+                  <FooterLink to="/shop?discount=true">Sale & Offers</FooterLink>
+                </ul>
+              </div>
 
-       
-        <div>
-          <h4 style={{
-            color:'var(--color-taupe)',
-            fontSize: '0.72rem',
-            fontWeight: '700',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            marginBottom:  '1.4rem',
-          }}>
-            Information
-          </h4>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <FooterLink to="/shipping">Shipping Info</FooterLink>
-            <FooterLink to="/returns">Return & Refund</FooterLink>
-            <FooterLink to="/privacy">Privacy Policy</FooterLink>
-            <FooterLink to="/terms">Terms of Service</FooterLink>
-            <FooterLink to="/contact">Contact Us</FooterLink>
-            <FooterLink to="/faq">FAQ</FooterLink>
-          </ul>
+              {/* Account */}
+              <div>
+                <h4
+                  style={{
+                    color: 'var(--color-taupe)',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    marginBottom: '1.4rem',
+                  }}
+                >
+                  Account
+                </h4>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <FooterLink to="/account">My Account</FooterLink>
+                  <FooterLink to="/orders">My Orders</FooterLink>
+                  <FooterLink to="/wishlist">Wishlist</FooterLink>
+                  <FooterLink to="/rewards">Rewards & Coins</FooterLink>
+                  <FooterLink to="/cart">My Cart</FooterLink>
+                </ul>
+              </div>
 
-      
-          <div
-            style={{
-              marginTop:'2rem',
-              padding: '1rem',
-              border: '1px solid rgba(165,152,135,0.25)',
-              textAlign:  'center',
-              transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-              cursor: 'default',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)'
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            <p style={{
-              fontFamily:'var(--font-serif)',
-              color: 'var(--color-taupe)',
-              fontSize: '1.8rem',
-              fontWeight: '700',
-              lineHeight:'1',
-              marginBottom: '4px',
-            }}>
-              50+
-            </p>
-            <p style={{
-              color: 'rgba(255,255,255,0.4)',
-              fontSize: '0.7rem',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-            }}>
-              Years of Service
-            </p>
+              {/* Information */}
+              <div>
+                <h4
+                  style={{
+                    color: 'var(--color-taupe)',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    marginBottom: '1.4rem',
+                  }}
+                >
+                  Information
+                </h4>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <FooterLink to="/how-to-choose-eyewear">How to Choose Eyewear</FooterLink>
+                  <FooterLink to="/shipping">Shipping Info</FooterLink>
+                  <FooterLink to="/returns">Return & Refund</FooterLink>
+                  <FooterLink to="/privacy">Privacy Policy</FooterLink>
+                  <FooterLink to="/terms">Terms of Service</FooterLink>
+                  <FooterLink to="/contact">Contact Us</FooterLink>
+                  <FooterLink to="/faq">FAQ</FooterLink>
+                </ul>
+
+                <div
+                  style={{
+                    marginTop: '2rem',
+                    padding: '1rem',
+                    border: '1px solid rgba(165,152,135,0.25)',
+                    textAlign: 'center',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    cursor: 'default',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-serif)',
+                      color: 'var(--color-taupe)',
+                      fontSize: '1.8rem',
+                      fontWeight: '700',
+                      lineHeight: '1',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    50+
+                  </p>
+                  <p
+                    style={{
+                      color: 'rgba(255,255,255,0.4)',
+                      fontSize: '0.7rem',
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Years of Service
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
+      {/* Feature Badges Bar */}
+      <div className="border-b border-white/10">
+        <div style={{ maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto', paddingLeft: 'clamp(36px, 8vw, 64px)', paddingRight: 'clamp(16px, 8vw, 64px)', paddingTop: '1rem', paddingBottom: '1rem' }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          {[
+            { Icon: Shield, text: 'Secure Payments' },
+            { Icon: Truck, text: 'Free Shipping Over Rs.5k' },
+            { Icon: Gem, text: 'Genuine Products' },
+            { Icon: Tag, text: 'Daily Discounts' },
+          ].map((item) => (
+            <div key={item.text} className="flex items-center gap-2.5">
+              <item.Icon size={18} strokeWidth={2} className="text-white/70 shrink-0" />
+              <span className="text-white/70 text-xs sm:text-sm font-medium">
+                {item.text}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      
-      <div style={{
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        padding:'1.25rem 5rem',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap:'1rem',
-      }}>
-        {[
-          {  text: 'Secure Payments' },
-          {  text: 'Free Shipping Over Rs.5k' },
-          {  text: 'Genuine Products' },
-          {  text: 'Daily Discounts' },
-        ].map(item => (
-          <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
-            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.83rem', fontWeight: '500' }}>
-              {item.text}
-            </span>
-          </div>
-        ))}
+      {/* Bottom Copyright Bar */}
+      <div style={{ maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto', paddingLeft: 'clamp(36px, 8vw, 64px)', paddingRight: 'clamp(16px, 8vw, 64px)', paddingTop: '1rem', paddingBottom: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}
+        className="sm:flex-row sm:justify-between sm:items-center sm:text-left text-xs text-center text-white/40">
+        <p>© 2026 Mega Himalaya Optical House, Pokhara. All rights reserved.</p>
+        <p>Developed by POCOMAT</p>
       </div>
 
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '1.25rem 5rem',
-        fontSize:  '0.78rem',
-        flexWrap: 'wrap',
-        gap: '0.5rem',
-      }}>
-        <p style={{ color: 'rgba(255,255,255,0.35)' }}>
-          © 2026 Mega Himalaya Optical House, Pokhara. All rights reserved.
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.35)' }}>
-          Developed by POCOMAT
-        </p>
-      </div>
       <StoreLocatorModal />
-
     </footer>
   )
 }

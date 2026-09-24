@@ -521,7 +521,7 @@ const removeExistingImage = (publicId) => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '16px',
             }}
           >
@@ -613,7 +613,7 @@ const removeExistingImage = (publicId) => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '0 16px',
             }}
           >
@@ -640,7 +640,7 @@ const removeExistingImage = (publicId) => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '0 16px',
             }}
           >
@@ -712,7 +712,7 @@ const removeExistingImage = (publicId) => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '0 16px',
               }}
             >
@@ -756,7 +756,7 @@ const removeExistingImage = (publicId) => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '0 16px',
               }}
             >
@@ -816,7 +816,7 @@ const removeExistingImage = (publicId) => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                 gap: '0 16px',
               }}
             >
@@ -1460,6 +1460,15 @@ function Section({ title, children }) {
       {children}
     </div>
   )
+}
+
+const inputStyle = {
+  padding: '9px 12px',
+  borderRadius: '8px',
+  border: '1px solid #e2e8f0',
+  fontSize: '0.85rem',
+  outline: 'none',
+  boxSizing: 'border-box',
 }
 
 const inputStyle = {
