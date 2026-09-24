@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getRecentlyViewedIds } from "../utils/recentlyViewed";
 import { getProductById } from "../api/productClient";
+import ProfileEditModal from "../components/ProfileEditModal";
+import BusinessSettingsModal from "../components/BusinessSettingsModal";
 
 const QUICK_LINKS = [
   { to: "/orders", label: "My Orders" },
@@ -22,11 +24,19 @@ function AccountPage() {
   const navigate = useNavigate();
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showBusinessSettings, setShowBusinessSettings] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleLogout = async () => {
     await logout()
     navigate('/')
   }
+
+  const handleSuccessMessage = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 4000);
+  };
 
   useEffect(() => {
     const ids = getRecentlyViewedIds();
@@ -51,6 +61,21 @@ function AccountPage() {
 
   return (
     <section style={{ maxWidth: "1080px", margin: "0 auto", padding: "40px 24px 64px" }}>
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{
+          backgroundColor: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#166534',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '0.875rem',
+          marginBottom: '20px',
+        }}>
+          {successMessage}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
         <div>
           <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-taupe)", marginBottom: "6px" }}>
@@ -61,35 +86,104 @@ function AccountPage() {
           </h1>
         </div>
 
-        {/* Sign out button */}
-        <button
-          onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 18px',
-            backgroundColor: 'transparent',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            color: '#dc2626',
-            fontSize: '0.82rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          {/* Sign out icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          Sign Out
-        </button>
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {/* Update Profile Button */}
+          <button
+            onClick={() => setShowProfileEdit(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              backgroundColor: 'var(--color-navy)',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'var(--color-white)',
+              fontSize: '0.82rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          >
+            {/* Edit icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Update Information
+          </button>
+
+          {/* Business Settings Button (Admin only) */}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => setShowBusinessSettings(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 18px',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-taupe)',
+                borderRadius: '8px',
+                color: 'var(--color-taupe)',
+                fontSize: '0.82rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-taupe)';
+                e.currentTarget.style.color = 'var(--color-white)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-taupe)';
+              }}
+            >
+              {/* Settings icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              Business Settings
+            </button>
+          )}
+
+          {/* Sign out button */}
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              backgroundColor: 'transparent',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '0.82rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            {/* Sign out icon */}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Quick-link cards */}
@@ -228,6 +322,22 @@ function AccountPage() {
           ))}
         </div>
       </div>
+      
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        isOpen={showProfileEdit}
+        onClose={() => setShowProfileEdit(false)}
+        onSuccess={handleSuccessMessage}
+      />
+
+      {/* Business Settings Modal (Admin only) */}
+      {user?.role === 'admin' && (
+        <BusinessSettingsModal
+          isOpen={showBusinessSettings}
+          onClose={() => setShowBusinessSettings(false)}
+          onSuccess={handleSuccessMessage}
+        />
+      )}
     </section>
   );
 }

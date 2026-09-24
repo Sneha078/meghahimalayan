@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getMySingleOrder, submitReturnRequest } from '../api/productClient'
+import { getMySingleOrder, submitReturnRequest, uploadReturnImages } from '../api/productClient'
 import PageBanner from '../components/PageBanner'
 
 const RETURN_REASONS = [
@@ -135,22 +135,24 @@ function ReturnRequest() {
     setSubmitting(true)
 
     try {
-      // Convert images to base64
+      // Upload each item's photos to Cloudinary first, then build the payload
       const returnItems = await Promise.all(
         selectedItems.map(async (item) => {
           const key = item.product?._id ?? item.product ?? item._id
           const meta = items[key]
-          const imageBase64 = await Promise.all(
-            meta.images.map(
-              (file) =>
-                new Promise((res, rej) => {
-                  const reader = new FileReader()
-                  reader.onload = () => res(reader.result)
-                  reader.onerror = rej
-                  reader.readAsDataURL(file)
-                })
-            )
-          )
+
+          let uploadedImages = []
+          if (meta.images && meta.images.length > 0) {
+            try {
+              console.log(`Uploading ${meta.images.length} images for item ${item.name}`)
+              uploadedImages = await uploadReturnImages(meta.images)
+              console.log(`Successfully uploaded images:`, uploadedImages)
+            } catch (uploadError) {
+              console.error(`Failed to upload images for ${item.name}:`, uploadError)
+              throw new Error(`Failed to upload images for ${item.name}: ${uploadError.message}`)
+            }
+          }
+
           return {
             product: key,
             name: item.name,
@@ -158,7 +160,7 @@ function ReturnRequest() {
             price: item.price,
             reason: meta.reason,
             description: meta.description,
-            images: imageBase64,
+            images: uploadedImages, // [{ url, public_id }]
           }
         })
       )

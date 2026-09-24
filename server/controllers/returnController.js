@@ -14,12 +14,13 @@ import {
 } from "../services/emailService.js";
 
 import { notifyAdmins } from "../services/notificationService.js";
+import { clawbackOrderPoints } from "../services/pointsService.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RETURN_WINDOW_DAYS = 7;
+const RETURN_WINDOW_DAYS = 30; // Extended for testing - change back to 7 for production
 const RETURN_SHIPPING_DEADLINE_DAYS = 7;
 const MAX_IMAGES = 5;
 
@@ -801,6 +802,8 @@ export const createReturnRequest = handleAsyncError(
 
           refundAmount += itemRefund;
 
+          const itemImages = validateImages(item.images)
+
           // Return item snapshot
           returnItems.push({
             product: originalItem.product,
@@ -812,6 +815,8 @@ export const createReturnRequest = handleAsyncError(
             reason: item.reason,
             itemCondition: "Not Evaluated",
             restockable: false,
+            images: itemImages,
+            variant: originalItem.variant ?? null,
           });
         }
 
@@ -2033,6 +2038,15 @@ export const updateReturn =
 // FUTURE BEHAVIOR:
 // A payment service should perform the actual eSewa/Khalti/Card API call.
 // The controller should then record the verified provider result.
+//
+// REWARD POINTS: this is where earned points get clawed back,
+// proportional to THIS specific payout — see clawbackOrderPoints() in
+// services/pointsService.js. Triggered here (not at "Approved") because
+// this is the only point where an actual refund amount and payout are
+// confirmed; "Approved" happens before the item is even received or
+// inspected, so no refund amount exists yet at that stage. Runs inside
+// the same transaction as the order's refundedAmount update, so it's
+// atomic with it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const processRefund =
@@ -2437,6 +2451,33 @@ export const processRefund =
                 400
               );
             }
+
+            // ───────────────────────────────────
+            // CLAW BACK REWARD POINTS
+            // ───────────────────────────────────
+            //
+            // Proportional to THIS payout only — a partial return of one
+            // item on a multi-item order only claws back that item's
+            // share of the points the order originally earned. Uses
+            // order.totalPrice (the order's fixed original total, not the
+            // updated refundedAmount) as the denominator, and this
+            // specific refundAmountToProcess as the numerator, so
+            // multiple separate returns on the same order over time each
+            // claw back independently and correctly.
+            //
+            // No-op if this order never earned any points in the first
+            // place (e.g. it was never delivered with COD, or was a
+            // points-redeemed Rs. 0 order).
+            //
+            await clawbackOrderPoints(
+              returnDoc.order,
+              returnDoc._id,
+              refundAmountToProcess,
+              orderTotal,
+              session,
+              order.orderNumber,
+              returnDoc.returnNumber
+            );
 
             // ───────────────────────────────────
             // COMPLETE RETURN

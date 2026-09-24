@@ -11,17 +11,43 @@ const isValidObjectId = (id) =>
   mongoose.Types.ObjectId.isValid(id);
 
 //determine products actual Selling Price
-const getEffectivePrice = (product) => {
+// variant is optional — when supplied, its priceDelta is added on top of
+// the product's own effective price (same rule used on the product page).
+const getEffectivePrice = (product, variant = null) => {
+  let base;
+
   if (
     product.discountPrice !== null &&
     product.discountPrice !== undefined &&
     product.discountPrice >= 0 &&
     product.discountPrice < product.price
   ) {
-    return product.discountPrice;
+    base = product.discountPrice;
+  } else {
+    base = product.price;
   }
-  return product.price;
+
+  const delta = variant?.priceDelta ? Number(variant.priceDelta) || 0 : 0;
+
+  return base + delta;
 };
+
+// Find a variant sub-document on a product by its _id. Returns null if the
+// product has no variants array, or the id doesn't match any entry
+// (e.g. an admin removed that color since it was added to the cart).
+const findVariant = (product, variantId) => {
+  if (!variantId || !Array.isArray(product.variants)) return null;
+  return (
+    product.variants.find(
+      (v) => v._id.toString() === variantId.toString()
+    ) || null
+  );
+};
+
+// Effective stock for a cart item: variant stock when a variant is
+// selected, otherwise the product's flat stock.
+const getEffectiveStock = (product, variant) =>
+  variant ? Number(variant.stock) || 0 : product.stock;
 
 //check product availability
 const isProductAvailable = (product) => {
@@ -43,6 +69,25 @@ const isProductAvailable = (product) => {
   return true;
 };
 
+// A prescription is "present" if the customer supplied either typed
+// numbers for at least one eye, or an uploaded file. An empty/all-null
+// object (the schema's default shape) does not count as present.
+const hasPrescriptionData = (prescription) => {
+  if (!prescription) return false;
+
+  const eyeHasValues = (eye) =>
+    eye &&
+    [eye.sphere, eye.cylinder, eye.axis, eye.addPower].some(
+      (v) => v !== null && v !== undefined
+    );
+
+  return (
+    eyeHasValues(prescription.rightEye) ||
+    eyeHasValues(prescription.leftEye) ||
+    Boolean(prescription.file && prescription.file.url)
+  );
+};
+
 //calculate discount according to coupon type
 const calculateCouponDiscount = (coupon, itemsPrice) => {
   if (!coupon) return 0;
@@ -61,7 +106,8 @@ const calculateCouponDiscount = (coupon, itemsPrice) => {
   }
 
   if (
-    coupon.maxDiscount &&
+    coupon.maxDiscount !== null &&
+    coupon.maxDiscount !== undefined &&
     discount > coupon.maxDiscount
   ) {
     discount = coupon.maxDiscount;
@@ -157,17 +203,52 @@ const refreshCart = async (cart) => {
       continue;
     }
 
-    if (product.stock <= 0) {
+    // Re-resolve the variant against the live product. If the item had a
+    // variant selected but that variant no longer exists on the product
+    // (color discontinued/removed by admin), drop the line entirely —
+    // same treatment as the product itself disappearing, since the exact
+    // SKU the customer chose is gone.
+    let variant = null;
+
+    if (item.variant?.variantId) {
+      variant = findVariant(product, item.variant.variantId);
+
+      if (!variant) {
+        changed = true;
+        continue;
+      }
+
+      // Keep the display snapshot (color/colorHex/image) in sync in case
+      // the admin edited the variant's photos or renamed the color.
+      const freshImage = variant.images?.[0]
+        ? { public_id: variant.images[0].public_id, url: variant.images[0].url }
+        : { public_id: "", url: "" };
+
+      if (
+        item.variant.color !== variant.color ||
+        item.variant.colorHex !== (variant.colorHex || "") ||
+        item.variant.image?.url !== freshImage.url
+      ) {
+        item.variant.color = variant.color;
+        item.variant.colorHex = variant.colorHex || "";
+        item.variant.image = freshImage;
+        changed = true;
+      }
+    }
+
+    const effectiveStock = getEffectiveStock(product, variant);
+
+    if (effectiveStock <= 0) {
       changed = true;
       continue;
     }
 
-    if (item.quantity > product.stock) {
-      item.quantity = product.stock;
+    if (item.quantity > effectiveStock) {
+      item.quantity = effectiveStock;
       changed = true;
     }
 
-    const currentPrice = getEffectivePrice(product);
+    const currentPrice = getEffectivePrice(product, variant);
 
     if (item.price !== currentPrice) {
       item.price = currentPrice;
@@ -264,7 +345,7 @@ export const getCart = handleAsyncError(async (req, res) => {
   await cart.populate({
     path: "items.product",
     select:
-      "name slug brand image images price discountPrice stock isOutOfStock category",
+      "name slug brand image images price discountPrice stock isOutOfStock category variants",
   });
 
   cart.items = cart.items.filter((item) => item.product);
@@ -278,10 +359,14 @@ export const getCart = handleAsyncError(async (req, res) => {
 
 // ADD TO CART
 // POST /api/v1/cart
-// Body: { productId, quantity }
+// Body: { productId, quantity, prescription?, variant? }
+// variant, if supplied: { variantId } — the _id of the chosen entry in
+// product.variants. Only variantId is trusted from the client; color,
+// colorHex and image are always taken fresh from the product so a
+// tampered/stale client value can't spoof what was actually purchased.
 export const addToCart = handleAsyncError(
   async (req, res, next) => {
-    const { productId, quantity = 1 } = req.body;
+    const { productId, quantity = 1, prescription, variant: variantInput } = req.body;
 
     if (!productId) {
       return next(
@@ -323,10 +408,69 @@ export const addToCart = handleAsyncError(
       );
     }
 
-    if (product.stock <= 0) {
+    // ── Resolve variant (if the product has any and one was requested) ──
+    let variant = null;
+    let variantSnapshot = null;
+
+    if (Array.isArray(product.variants) && product.variants.length > 0) {
+      const variantId = variantInput?.variantId;
+
+      if (!variantId) {
+        return next(
+          new HandleError(
+            `Please select a color for "${product.name}"`,
+            400
+          )
+        );
+      }
+
+      if (!isValidObjectId(variantId)) {
+        return next(
+          new HandleError("Invalid variant selected", 400)
+        );
+      }
+
+      variant = findVariant(product, variantId);
+
+      if (!variant) {
+        return next(
+          new HandleError(
+            "Selected color is no longer available for this product",
+            400
+          )
+        );
+      }
+
+      variantSnapshot = {
+        variantId: variant._id,
+        color: variant.color,
+        colorHex: variant.colorHex || "",
+        image: variant.images?.[0]
+          ? { public_id: variant.images[0].public_id, url: variant.images[0].url }
+          : { public_id: "", url: "" },
+      };
+    }
+
+    const effectiveStock = getEffectiveStock(product, variant);
+
+    if (effectiveStock <= 0) {
       return next(
         new HandleError(
-          `"${product.name}" is out of stock`,
+          variant
+            ? `"${product.name}" in ${variant.color} is out of stock`
+            : `"${product.name}" is out of stock`,
+          400
+        )
+      );
+    }
+
+    // Prescription-required products must have prescription data attached.
+    // Non-prescription products ignore any prescription data sent by
+    // mistake, rather than erroring — nothing to validate against.
+    if (product.isPrescriptionRequired && !hasPrescriptionData(prescription)) {
+      return next(
+        new HandleError(
+          `Please provide your prescription details for "${product.name}"`,
           400
         )
       );
@@ -343,20 +487,59 @@ export const addToCart = handleAsyncError(
       });
     }
 
-    const existingItem = cart.items.find(
-      (item) =>
-        item.product.toString() === product._id.toString()
-    );
+    const effectivePrice = getEffectivePrice(product, variant);
 
-    const effectivePrice = getEffectivePrice(product);
+    // Prescription items are never merged into an existing line — each
+    // one belongs to a specific person's eyes, so a second submission for
+    // the same product (even with identical numbers) is its own line
+    // item, not an increment to an existing one.
+    if (product.isPrescriptionRequired) {
+      if (qty > effectiveStock) {
+        return next(
+          new HandleError(
+            `Only ${effectiveStock} unit(s) available for "${product.name}"${variant ? ` in ${variant.color}` : ""}`,
+            400
+          )
+        );
+      }
+
+      cart.items.push({
+        product: product._id,
+        quantity: qty,
+        price: effectivePrice,
+        prescription,
+        variant: variantSnapshot,
+      });
+
+      await cart.save();
+
+      return res.status(200).json({
+        success: true,
+        message: `"${product.name}" added to cart`,
+        totalItems: cart.totalItems,
+      });
+    }
+
+    // A line merges only when product AND selected variant both match —
+    // two different colors of the same product are separate lines, same
+    // as how prescription items never merge.
+    const existingItem = cart.items.find((item) => {
+      if (item.product.toString() !== product._id.toString()) return false;
+      if (item.prescription) return false;
+
+      const itemVariantId = item.variant?.variantId?.toString() ?? null;
+      const newVariantId = variantSnapshot?.variantId?.toString() ?? null;
+
+      return itemVariantId === newVariantId;
+    });
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + qty;
 
-      if (newQuantity > product.stock) {
+      if (newQuantity > effectiveStock) {
         const remaining = Math.max(
           0,
-          product.stock - existingItem.quantity
+          effectiveStock - existingItem.quantity
         );
 
         return next(
@@ -369,10 +552,10 @@ export const addToCart = handleAsyncError(
       existingItem.quantity = newQuantity;
       existingItem.price = effectivePrice;
     } else {
-      if (qty > product.stock) {
+      if (qty > effectiveStock) {
         return next(
           new HandleError(
-            `Only ${product.stock} unit(s) available for "${product.name}"`,
+            `Only ${effectiveStock} unit(s) available for "${product.name}"${variant ? ` in ${variant.color}` : ""}`,
             400
           )
         );
@@ -382,6 +565,7 @@ export const addToCart = handleAsyncError(
         product: product._id,
         quantity: qty,
         price: effectivePrice,
+        variant: variantSnapshot,
       });
     }
 
@@ -483,29 +667,54 @@ export const updateCartItem = handleAsyncError(
       );
     }
 
-    if (product.stock <= 0) {
+    // Re-resolve the variant (if this line has one) against the live
+    // product, same as refreshCart does — the color may have been
+    // removed since it was added.
+    let variant = null;
+
+    if (item.variant?.variantId) {
+      variant = findVariant(product, item.variant.variantId);
+
+      if (!variant) {
+        cart.items.pull(req.params.itemId);
+        await cart.save();
+
+        return next(
+          new HandleError(
+            "This color is no longer available for this product",
+            400
+          )
+        );
+      }
+    }
+
+    const effectiveStock = getEffectiveStock(product, variant);
+
+    if (effectiveStock <= 0) {
       cart.items.pull(req.params.itemId);
       await cart.save();
 
       return next(
         new HandleError(
-          `"${product.name}" is out of stock`,
+          variant
+            ? `"${product.name}" in ${variant.color} is out of stock`
+            : `"${product.name}" is out of stock`,
           400
         )
       );
     }
 
-    if (qty > product.stock) {
+    if (qty > effectiveStock) {
       return next(
         new HandleError(
-          `Only ${product.stock} unit(s) available for "${product.name}"`,
+          `Only ${effectiveStock} unit(s) available for "${product.name}"${variant ? ` in ${variant.color}` : ""}`,
           400
         )
       );
     }
 
     item.quantity = qty;
-    item.price = getEffectivePrice(product);
+    item.price = getEffectivePrice(product, variant);
 
     await cart.save();
 

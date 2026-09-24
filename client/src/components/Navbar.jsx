@@ -5,10 +5,11 @@ import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
 import logo from "../assets/hoh_logo.png";
 import SearchDropdown from "./SearchDropdown";
-import { fetchAutocomplete, fetchSearchResults } from "../services/searchClient";
+import { fetchAutocomplete } from "../services/searchClient";
+import { fetchSearchPreview } from "../services/searchPreview";
 import CoinBadge from "./CoinBadge";
 
-const SEARCH_MIN_CHARS = 2;
+const SEARCH_MIN_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 const SEARCH_PREVIEW_LIMIT = 5;
 
@@ -20,7 +21,6 @@ function Navbar() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  
 
   const { totalItems } = useCart();
   const { user } = useAuth();
@@ -30,14 +30,12 @@ function Navbar() {
   const debounceRef = useRef(null);
   const navigate = useNavigate();
 
-  
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
- 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
@@ -48,7 +46,6 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  
   // Debounced autocomplete + product preview search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -67,12 +64,12 @@ function Navbar() {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const [autocompleteData, searchData] = await Promise.all([
+        const [autocompleteData, previewResults] = await Promise.all([
           fetchAutocomplete(query),
-          fetchSearchResults(query, SEARCH_PREVIEW_LIMIT),
+          fetchSearchPreview(query, SEARCH_PREVIEW_LIMIT),
         ]);
         setSuggestions(autocompleteData.suggestions ?? []);
-        setResults(searchData.results ?? []);
+        setResults(previewResults);
         setHighlightedIndex(-1);
       } catch (error) {
         console.error("Search request failed:", error);
@@ -166,6 +163,14 @@ function Navbar() {
             >
               Products
             </Link>
+            <Link
+              to="/shop?category=contact-lenses"
+              style={{ color: textColor, textDecoration: "none", fontSize: "0.875rem", fontWeight: "500", transition: "opacity 0.2s" }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              Contact Lenses
+            </Link>
           </div>
         </div>
 
@@ -192,7 +197,7 @@ function Navbar() {
               onFocus={() => { if (searchValue.trim().length >= SEARCH_MIN_CHARS) setDropdownOpen(true); }}
               onKeyDown={handleKeyDown}
               className={`bg-transparent text-base outline-none w-full ${
-                scrolled ? "text-#0d1a2a placeholder-gray-400" : "white placeholder-white/50"
+                scrolled ? "text-[#0d1a2a]placeholder-gray-400" : "white placeholder-white/50"
               }`}
             />
 
@@ -253,46 +258,45 @@ function Navbar() {
             )}
           </Link>
 
-         
           {/* Account */}
-{user ? (
-  <Link
-    to="/account"
-    style={{
-      display: 'flex', alignItems: 'center', gap: '8px',
-      textDecoration: 'none',
-      color: scrolled ? '#0d1a2a' : '#ffffff',
-    }}
-  >
-    <div style={{
-      width: '32px', height: '32px', borderRadius: '50%',
-      backgroundColor: 'var(--color-taupe)', color: 'var(--color-navy)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '0.82rem', fontWeight: '700',
-    }}>
-      {user.name?.charAt(0).toUpperCase()}
-    </div>
-    <span style={{
-      fontSize: '0.82rem', fontWeight: '600',
-      color: scrolled ? '#0d1a2a' : '#ffffff',
-      maxWidth: '80px', overflow: 'hidden',
-      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-    }}>
-      {user.name?.split(' ')[0]}
-    </span>
-  </Link>
-) : (
-  <Link
-    to="/login"
-    className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
-    aria-label="Account"
-  >
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </Link>
-)}
+          {user ? (
+            <Link
+              to="/account"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                textDecoration: 'none',
+                color: scrolled ? '#0d1a2a' : '#ffffff',
+              }}
+            >
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                backgroundColor: 'var(--color-taupe)', color: 'var(--color-navy)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.82rem', fontWeight: '700',
+              }}>
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+              <span style={{
+                fontSize: '0.82rem', fontWeight: '600',
+                color: scrolled ? '#0d1a2a' : '#ffffff',
+                maxWidth: '80px', overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {user.name?.split(' ')[0]}
+              </span>
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className={`transition-opacity hover:opacity-70 ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
+              aria-label="Account"
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          )}
 
           {/* Coin Balance */}
           <CoinBadge scrolled={scrolled} />
@@ -334,17 +338,6 @@ function Navbar() {
       </div>
     </nav>
   );
-}
-
-const dropdownItemStyle = {
-  display: 'block',
-  padding: '10px 18px',
-  fontSize: '0.85rem',
-  fontWeight: '500',
-  color: 'var(--color-navy)',
-  textDecoration: 'none',
-  backgroundColor: 'transparent',
-  transition: 'background-color 0.15s ease',
 }
 
 export default Navbar;

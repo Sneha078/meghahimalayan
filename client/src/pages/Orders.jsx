@@ -784,7 +784,13 @@ function Orders() {
                                       '1.2rem',
                                   }}
                                 >
-                                  📦
+                                  {item.category === "watches"
+                                    ? "⌚"
+                                    : item.category === "perfumes"
+                                      ? "🧴"
+                                      : item.category === "contact-lenses"
+                                        ? "👁️"
+                                        : "📦"}
                                 </div>
                               )}
                             </div>
@@ -833,6 +839,42 @@ function Orders() {
                                 · Rs.{' '}
                                 {item.price.toLocaleString()}
                               </p>
+
+                              {/* Prescription Details */}
+                              {item.prescription && (
+                                <div style={{
+                                  marginTop: "4px",
+                                  padding: "3px 6px",
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "4px",
+                                  fontSize: "0.65rem",
+                                  color: "#475569",
+                                }}>
+                                  <div style={{ fontWeight: "600", marginBottom: "1px" }}>
+                                    👁️ Prescription:
+                                  </div>
+                                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                    {item.prescription.rightEye?.sphere !== null && item.prescription.rightEye?.sphere !== undefined && (
+                                      <span>
+                                        <strong>OD:</strong> SPH {item.prescription.rightEye.sphere > 0 ? `+${item.prescription.rightEye.sphere}` : item.prescription.rightEye.sphere}
+                                        {item.prescription.rightEye.cylinder ? ` CYL ${item.prescription.rightEye.cylinder}` : ''}
+                                      </span>
+                                    )}
+                                    {item.prescription.leftEye?.sphere !== null && item.prescription.leftEye?.sphere !== undefined && (
+                                      <span>
+                                        <strong>OS:</strong> SPH {item.prescription.leftEye.sphere > 0 ? `+${item.prescription.leftEye.sphere}` : item.prescription.leftEye.sphere}
+                                        {item.prescription.leftEye.cylinder ? ` CYL ${item.prescription.leftEye.cylinder}` : ''}
+                                      </span>
+                                    )}
+                                    {item.prescription.notes && (
+                                      <span style={{ fontStyle: "italic", color: "#64748b" }}>
+                                        ({item.prescription.notes})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )

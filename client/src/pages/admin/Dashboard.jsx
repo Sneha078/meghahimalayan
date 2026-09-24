@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { Wallet, ShoppingCart, Package, Users } from 'lucide-react'
 import { getDashboardStats } from '../../api/adminClient'
 import { useSocket } from '../../context/SocketContext'
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon, color, link, live }) {
+function StatCard({ label, value, icon: Icon, color, link, live }) {
   return (
     <Link to={link ?? '#'} style={{ textDecoration: 'none' }}>
       <div
@@ -41,9 +42,9 @@ function StatCard({ label, value, icon, color, link, live }) {
           width: '52px', height: '52px', borderRadius: '12px',
           backgroundColor: (color ?? '#64748b') + '20',
           display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0,
+          justifyContent: 'center', flexShrink: 0,
         }}>
-          {icon}
+          <Icon size={24} color={color ?? '#64748b'} strokeWidth={2} />
         </div>
         <div>
           <p style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '500', marginBottom: '4px' }}>
@@ -230,14 +231,14 @@ function Dashboard() {
             <StatCard
               label="Total Revenue"
               value={`Rs. ${(stats.totalRevenue ?? 0).toLocaleString()}`}
-              icon="💰"
+              icon={Wallet}
               color="#16a34a"
               link="/admin/analytics"
             />
             <StatCard
               label="Total Orders"
               value={totalOrders}
-              icon="🛒"
+              icon={ShoppingCart}
               color="#2563eb"
               link="/admin/orders"
               live={liveOrders > 0}
@@ -245,14 +246,14 @@ function Dashboard() {
             <StatCard
               label="Total Products"
               value={stats.totalProducts ?? 0}
-              icon="📦"
+              icon={Package}
               color="#9333ea"
               link="/admin/products"
             />
             <StatCard
               label="Total Users"
               value={totalUsers}
-              icon="👥"
+              icon={Users}
               color="#0891b2"
               link="/admin/users"
               live={liveUsers > 0}

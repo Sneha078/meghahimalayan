@@ -14,6 +14,14 @@ const STATUS_COLORS = {
 
 const STATUSES = ['All', 'Pending', 'Approved', 'Item Received', 'Completed', 'Rejected', 'Cancelled', 'Expired']
 
+const getEvidence = (ret) => {
+  const images = [
+    ...(ret.images ?? []),
+    ...(ret.items ?? []).flatMap((item) => item.images ?? []),
+  ]
+  return { first: images[0]?.url, count: images.length }
+}
+
 function AdminReturns() {
   const [returns, setReturns] = useState([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +124,7 @@ function AdminReturns() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc' }}>
-                  {['Return #', 'Order #', 'Customer', 'Reason', 'Requested', 'Refund Status', 'Status', 'Date', ''].map((h) => (
+                  {['Return #', 'Order #', 'Customer', 'Reason', 'Evidence', 'Requested', 'Refund Status', 'Status', 'Date', ''].map((h) => (
                     <th key={h} style={{
                       padding: '12px 16px', textAlign: 'left',
                       fontSize: '0.75rem', fontWeight: '700',
@@ -131,6 +139,7 @@ function AdminReturns() {
               <tbody>
                 {returns.map((ret) => {
                   const s = STATUS_COLORS[ret.status] ?? STATUS_COLORS.Pending
+                  const { first, count } = getEvidence(ret)
                   return (
                     <tr key={ret._id} style={{ borderTop: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>
@@ -144,6 +153,40 @@ function AdminReturns() {
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                         {ret.reason}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        {first ? (
+                          <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+                            <img
+                              src={first}
+                              alt="Return evidence"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                border: '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                                display: 'block',
+                              }}
+                              onClick={() => window.open(first, '_blank')}
+                              title="Click to view full size"
+                            />
+                            {count > 1 && (
+                              <span style={{
+                                position: 'absolute', bottom: '-6px', right: '-6px',
+                                backgroundColor: 'var(--color-navy)', color: '#ffffff',
+                                fontSize: '0.65rem', fontWeight: '700',
+                                borderRadius: '10px', padding: '1px 6px',
+                                border: '2px solid #ffffff',
+                              }}>
+                                +{count - 1}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '14px 16px', fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>
                         Rs. {ret.refund?.requestedAmount?.toLocaleString() ?? '0'}

@@ -49,6 +49,17 @@ def build_product_text(product: dict) -> str:
         product.get("fragranceFamily"),
         product.get("fragranceType"),
         product.get("volume"),
+
+        # ----------------------------------------------------
+        # Contact Lenses
+        # ----------------------------------------------------
+
+        product.get("baseCurve"),
+        product.get("diameter"),
+        product.get("waterContent"),
+        product.get("replacementSchedule"),
+        product.get("packSize"),
+        "Prescription" if product.get("isPrescriptionRequired") else "Cosmetic Makeup Non-Prescription Zero Power Plano",
     ]
 
     return " ".join(

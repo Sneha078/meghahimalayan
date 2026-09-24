@@ -12,6 +12,8 @@ import {
   deleteReturn,
 } from "../controllers/returnController.js";
 
+import {uploadReturnImages} from "../controllers/uploadController.js"
+import upload from "../middleware/multer.js"
 import {
   verifyUserAuth,
   roleBasedAccess,
@@ -25,10 +27,19 @@ const router = express.Router();
 
 // Create return request
 router.post(
+  "/returns/upload-images",
+  verifyUserAuth,
+  upload.array("images", 5),
+  uploadReturnImages
+);
+
+// Create return request
+router.post(
   "/returns",
   verifyUserAuth,
   createReturnRequest
 );
+
 
 // Cancel own return
 router.put(

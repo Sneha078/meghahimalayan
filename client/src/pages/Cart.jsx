@@ -264,7 +264,7 @@ function Cart() {
             display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: '1.5rem',
           }}>
-            {item.category === 'watches' ? '⌚' : item.category === 'perfumes' ? '🧴' : '👓'}
+            {item.category === 'watches' ? '⌚' : item.category === 'perfumes' ? '🧴' : item.category === 'contact-lenses' ? '👁️' : '👓'}
           </div>
         )}
       </div>
@@ -287,9 +287,40 @@ function Cart() {
           fontWeight: '600',
           color: 'var(--color-navy)',
           lineHeight: '1.3',
+          marginBottom: item.prescription ? '6px' : '0',
         }}>
           {item.name}
         </h3>
+
+        {/* Prescription Details Chip */}
+        {item.prescription && (
+          <div style={{
+            display: 'inline-flex',
+            flexDirection: 'column',
+            gap: '2px',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '4px 8px',
+            fontSize: '0.72rem',
+            color: '#334155',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600', color: 'var(--color-navy)' }}>
+              <span>👁️ Power / Prescription:</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {item.prescription.rightEye?.sphere !== null && item.prescription.rightEye?.sphere !== undefined && (
+                <span><strong>OD:</strong> SPH {item.prescription.rightEye.sphere > 0 ? `+${item.prescription.rightEye.sphere}` : item.prescription.rightEye.sphere}{item.prescription.rightEye.cylinder ? ` / CYL ${item.prescription.rightEye.cylinder}` : ''}</span>
+              )}
+              {item.prescription.leftEye?.sphere !== null && item.prescription.leftEye?.sphere !== undefined && (
+                <span><strong>OS:</strong> SPH {item.prescription.leftEye.sphere > 0 ? `+${item.prescription.leftEye.sphere}` : item.prescription.leftEye.sphere}{item.prescription.leftEye.cylinder ? ` / CYL ${item.prescription.leftEye.cylinder}` : ''}</span>
+              )}
+              {item.prescription.notes && (
+                <span style={{ color: '#64748b', fontStyle: 'italic' }}>({item.prescription.notes})</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
 

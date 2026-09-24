@@ -9,20 +9,27 @@ class APIFunctionality {
   // Function for product search (based on name, brand and description)
   search() {
     if (this.queryString.keyword) {
+      const escaped = String(this.queryString.keyword).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
       // regex (check whether text follows a specific format)
       const regex = {
-        $regex: this.queryString.keyword,
+        $regex: escaped,
         $options: "i",
       };
+      const categoryRegex = {
+      $regex: escaped.replace(/\s+/g, "[- ]"),
+      $options: "i",}
 
       this.query = this.query.find({
-        $or: [
-          { name: regex },
-          { brand: regex },
-          { description: regex },
-        ],
-      });
-    }
+      $or: [
+        { name: regex },
+        { brand: regex },
+        { description: regex },
+        { category: categoryRegex },
+        { subcategory: regex },
+        { lensType: regex },
+      ],
+    });
+  }
 
     return this;
   }
@@ -39,6 +46,7 @@ class APIFunctionality {
       "sort",
       "category",
       "brand",
+      "subcategory",
       "gender",
       "minPrice",
       "maxPrice",
@@ -73,6 +81,15 @@ class APIFunctionality {
         .map((b) => b.trim());
 
       filters.brand = { $in: brands };
+    }
+
+    // Subcategory filter
+    if (this.queryString.subcategory) {
+      const subcategories = this.queryString.subcategory
+        .split(",")
+        .map((s) => s.trim());
+
+      filters.subcategory = { $in: subcategories };
     }
 
     // Gender filter

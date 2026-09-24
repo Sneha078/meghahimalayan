@@ -154,6 +154,7 @@ export async function cancelOrder(orderId) {
   }
   return res.json()
 }
+
 // GET /api/v1/wishlist
 export async function getWishlist() {
   const res = await fetch(`${API_URL}/wishlist`, {
@@ -165,7 +166,6 @@ export async function getWishlist() {
   }
   return res.json()  // returns { success, wishlist: [...products] }
 }
-
 
 export async function addToWishlist(productId) {
   const res = await fetch(`${API_URL}/wishlist`, {
@@ -181,7 +181,6 @@ export async function addToWishlist(productId) {
   return res.json()
 }
 
-
 export async function removeFromWishlist(productId) {
   const res = await fetch(`${API_URL}/wishlist/${productId}`, {
     method: 'DELETE',
@@ -196,17 +195,64 @@ export async function removeFromWishlist(productId) {
 
 // POST /api/v1/returns
 export async function submitReturnRequest(payload) {
-  const res = await fetch(`${API_URL}/returns`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to submit return request')
+  console.log('Submitting return request:', payload)
+  
+  try {
+    const res = await fetch(`${API_URL}/returns`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      console.error('Return request failed:', data)
+      throw new Error(data.message || `Request failed: ${res.status} ${res.statusText}`)
+    }
+    
+    const data = await res.json()
+    console.log('Return request success:', data)
+    return data
+  } catch (error) {
+    console.error('Return request error:', error)
+    throw error
   }
-  return res.json()
+}
+
+// POST /api/v1/returns/upload-images
+export async function uploadReturnImages(files) {
+  if (!files || files.length === 0) {
+    return []
+  }
+  
+  const formData = new FormData()
+  
+  // Ensure files are properly appended
+  Array.from(files).forEach((file, index) => {
+    console.log(`Uploading file ${index}:`, file.name, file.type, file.size)
+    formData.append('images', file)
+  })
+
+  try {
+    const res = await fetch(`${API_URL}/returns/upload-images`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    })
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      throw new Error(errorData.message || `Upload failed: ${res.status} ${res.statusText}`)
+    }
+    
+    const data = await res.json()
+    console.log('Upload response:', data)
+    return data.images // [{ url, public_id }, ...]
+  } catch (error) {
+    console.error('Image upload error:', error)
+    throw error
+  }
 }
 
 // GET /api/v1/invoice/order/:id/invoice — returns a PDF blob

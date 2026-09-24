@@ -26,6 +26,7 @@ import returnRoutes       from "./routes/returnRoutes.js";
 import rewardRoutes from "./routes/rewards.routes.js"
 import paymentRoutes from "./routes/paymentRoutes.js"
 import notificationRoutes from "./routes/notificationRoutes.js";
+import businessSettingsRoutes from "./routes/businessSettingsRoutes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
@@ -155,6 +156,7 @@ app.use("/api/v1", returnRoutes);
 app.use("/api/v1", notificationRoutes);
 app.use("/api/v1", rewardRoutes)
 app.use("/api/v1",paymentRoutes)
+app.use("/api/v1", businessSettingsRoutes)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
 import { getFilterOptions } from '../api/productClient'
@@ -26,17 +26,17 @@ function Shop() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Filter state — category and discount initialize from the URL
-  const [category,       setCategory]       = useState(searchParams.get('category') || '')
-  const [gender,         setGender]         = useState('')
-  const [selectedBrands, setSelectedBrands] = useState([])
-  const [priceRange,     setPriceRange]     = useState({ min: 0, max: undefined })
-  const [discount,       setDiscount]       = useState(searchParams.get('discount') === 'true')
-  const [sortBy,         setSortBy]         = useState('featured')
-  const [page,           setPage]           = useState(1)
+  const [category,              setCategory]              = useState(searchParams.get('category') || '')
+  const [gender,                setGender]                = useState('')
+  const [selectedBrands,        setSelectedBrands]        = useState([])
+  const [selectedSubcategories, setSelectedSubcategories] = useState([])
+  const [priceRange,            setPriceRange]            = useState({ min: 0, max: undefined })
+  const [discount,              setDiscount]              = useState(searchParams.get('discount') === 'true')
+  const [sortBy,                setSortBy]                = useState('featured')
+  const [page,                  setPage]                  = useState(1)
 
-  // Filter options fetched from the backend — brands/genders are scoped to
-  // whichever category is currently selected (or global, when category is '')
-  const [filterOpts, setFilterOpts] = useState({ categories: [], brands: [], genders: [] })
+  // Filter options fetched from the backend — brands/genders/subcategories scoped to category
+  const [filterOpts, setFilterOpts] = useState({ categories: [], brands: [], genders: [], subcategories: [] })
 
   useEffect(() => {
     getFilterOptions(category ? { category } : {})
@@ -53,13 +53,14 @@ function Shop() {
 
   // Build the query object sent to useProducts / the API
   const query = {
-    ...(category                  && { category }),
-    ...(gender                    && { gender }),
-    ...(selectedBrands.length > 0 && { brand: selectedBrands.join(',') }),
-    ...(priceRange.min > 0        && { minPrice: priceRange.min }),
-    ...(priceRange.max            && { maxPrice: priceRange.max }),
-    ...(discount                  && { discount: 'true' }),
-    ...(sortBy !== 'featured'     && { sort: sortBy }),
+    ...(category                         && { category }),
+    ...(gender                           && { gender }),
+    ...(selectedBrands.length > 0        && { brand: selectedBrands.join(',') }),
+    ...(selectedSubcategories.length > 0 && { subcategory: selectedSubcategories.join(',') }),
+    ...(priceRange.min > 0               && { minPrice: priceRange.min }),
+    ...(priceRange.max                   && { maxPrice: priceRange.max }),
+    ...(discount                         && { discount: 'true' }),
+    ...(sortBy !== 'featured'            && { sort: sortBy }),
     limit: 24,
     page,
   }
@@ -71,9 +72,9 @@ function Shop() {
 
   const handleCategory = (val) => {
     setCategory(val)
-    // Brand/gender picks from the previous category may not exist in the new
-    // one — clear them so there's no invisible stale filter narrowing results.
+    // Brand/gender/subcategory picks from previous category may not exist in new one — clear them
     setSelectedBrands([])
+    setSelectedSubcategories([])
     setGender('')
     resetPage()
     setSearchParams(prev => {
@@ -95,6 +96,13 @@ function Shop() {
     resetPage()
   }
 
+  const toggleSubcategory = (sub) => {
+    setSelectedSubcategories((prev) =>
+      prev.includes(sub) ? prev.filter((s) => s !== sub) : [...prev, sub]
+    )
+    resetPage()
+  }
+
   const toggleDiscount = () => {
     const next = !discount
     setDiscount(next)
@@ -111,6 +119,7 @@ function Shop() {
     setCategory('')
     setGender('')
     setSelectedBrands([])
+    setSelectedSubcategories([])
     setPriceRange({ min: 0, max: undefined })
     setDiscount(false)
     setSortBy('featured')
@@ -122,18 +131,26 @@ function Shop() {
     (category ? 1 : 0) +
     (gender ? 1 : 0) +
     selectedBrands.length +
+    selectedSubcategories.length +
     (priceRange.min > 0 || priceRange.max ? 1 : 0) +
     (discount ? 1 : 0)
+
+  const formatCategoryLabel = (cat) => {
+    if (!cat) return 'All Products'
+    if (cat.toLowerCase() === 'contact-lenses') return 'Contact Lenses'
+    return cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' ')
+  }
 
   // Use backend categories if loaded, otherwise a sensible fallback
   const categoryTabs = [
     { value: '', label: 'All Products' },
     ...( filterOpts.categories.length > 0
-      ? filterOpts.categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+      ? filterOpts.categories.map((c) => ({ value: c, label: formatCategoryLabel(c) }))
       : [
-          { value: 'eyeglasses', label: 'Eyeglasses' },
-          { value: 'watches',    label: 'Watches' },
-          { value: 'perfumes',   label: 'Perfumes' },
+          { value: 'eyeglasses',     label: 'Eyeglasses' },
+          { value: 'watches',        label: 'Watches' },
+          { value: 'perfumes',       label: 'Perfumes' },
+          { value: 'contact-lenses', label: 'Contact Lenses' },
         ]
     ),
   ]
@@ -356,6 +373,43 @@ function Shop() {
               ))}
             </div>
           </div>
+
+          {filterOpts.subcategories && filterOpts.subcategories.length > 0 && (
+            <>
+              <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
+              <div style={{ marginBottom: '24px' }}>
+                <p style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '800',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-muted)',
+                  marginBottom: '10px',
+                }}>
+                  Type / Subcategory
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                  {filterOpts.subcategories.map((sub) => (
+                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSubcategories.includes(sub)}
+                        onChange={() => toggleSubcategory(sub)}
+                        style={{ accentColor: 'var(--color-navy)', width: '14px', height: '14px', cursor: 'pointer' }}
+                      />
+                      <span style={{
+                        fontSize: '0.83rem',
+                        color: selectedSubcategories.includes(sub) ? 'var(--color-navy)' : 'var(--color-muted)',
+                        fontWeight: selectedSubcategories.includes(sub) ? '600' : '400',
+                      }}>
+                        {sub}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <div style={{ borderTop: '1px solid var(--color-border)', marginBottom: '20px' }} />
 

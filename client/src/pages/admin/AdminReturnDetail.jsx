@@ -259,6 +259,34 @@ function AdminReturnDetail() {
         {ret.description && (
           <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: '1.6' }}>{ret.description}</p>
         )}
+
+        {/* Return Images */}
+        {ret.images && ret.images.length > 0 && (
+          <>
+            <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '16px 0' }} />
+            <p style={sectionLabel}>Return Images ({ret.images.length})</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+              {ret.images.map((image, index) => (
+                <div key={index} style={{ position: 'relative' }}>
+                  <img
+                    src={image.url}
+                    alt={`Return evidence ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '120px',
+                      objectFit: 'cover',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => window.open(image.url, '_blank')}
+                    title="Click to view full size"
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Items */}
@@ -286,6 +314,35 @@ function AdminReturnDetail() {
                   Rs. {(item.refundUnitPrice * item.quantity)?.toLocaleString()}
                 </p>
               </div>
+
+              {/* Item Images */}
+              {item.images && item.images.length > 0 && (
+                <div>
+                  <p style={{ fontSize: '0.76rem', color: '#64748b', marginBottom: '8px' }}>
+                    Evidence photos ({item.images.length})
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {item.images.map((image, imgIndex) => (
+                      <div key={imgIndex} style={{ position: 'relative' }}>
+                        <img
+                          src={image.url}
+                          alt={`${item.name} evidence ${imgIndex + 1}`}
+                          style={{
+                            width: '80px',
+                            height: '80px',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => window.open(image.url, '_blank')}
+                          title="Click to view full size"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {!showInspection && item.itemCondition && item.itemCondition !== 'Not Evaluated' && (
                 <p style={{ fontSize: '0.78rem', color: '#64748b' }}>

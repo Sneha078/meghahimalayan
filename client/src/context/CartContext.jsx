@@ -38,6 +38,7 @@ function normalizeCartItem(item) {
     quantity: item.quantity ?? 1,
     category: product.category ?? "",
     stock: product.stock ?? 0,
+    prescription: item.prescription ?? null,
   };
 }
 
@@ -256,21 +257,22 @@ export function CartProvider({ children }) {
   // Guest cart helpers
   // --------------------------------------------------
 
-  const addItemGuest = useCallback((product) => {
-    const quantity = product.quantity ?? 1;
+  const addItemGuest = useCallback((product, qty = 1, prescription = undefined) => {
+    const quantity = Number(qty) || product.quantity || 1;
     const productId = product.id ?? product._id;
+    const itemPrescription = prescription ?? product.prescription ?? null;
 
     setCartItems((prev) => {
-      const existing = prev.find(
-        (item) =>
-          (item.productId ?? item.id) === productId
-      );
+      // If prescription data is attached, don't merge - create separate line
+      const existing = !itemPrescription
+        ? prev.find((item) => (item.productId ?? item.id) === productId && !item.prescription)
+        : null;
 
       let next;
 
       if (existing) {
         next = prev.map((item) =>
-          (item.productId ?? item.id) === productId
+          (item.productId ?? item.id) === productId && !item.prescription
             ? {
                 ...item,
                 quantity: item.quantity + quantity,
@@ -278,10 +280,11 @@ export function CartProvider({ children }) {
             : item
         );
       } else {
+        const uniqueGuestId = itemPrescription ? `${productId}_${Date.now()}` : productId;
         next = [
           ...prev,
           {
-            id: productId,
+            id: uniqueGuestId,
             productId,
             name: product.name ?? "",
             slug: product.slug ?? "",
@@ -295,6 +298,7 @@ export function CartProvider({ children }) {
             quantity,
             category: product.category ?? "",
             stock: product.stock ?? 0,
+            prescription: itemPrescription,
           },
         ];
       }
@@ -306,14 +310,17 @@ export function CartProvider({ children }) {
   }, []);
 
   const addItemAuth = useCallback(
-    async (product) => {
+    async (product, qty = 1, prescription = undefined, variant = undefined) => {
       const productId = product.id ?? product._id;
-      const quantity = product.quantity ?? 1;
+      const quantity = Number(qty) || product.quantity || 1;
+      const itemPrescription = prescription ?? product.prescription ?? undefined;
+      const itemVariant = variant ?? product.selectedVariant ?? undefined
 
       try {
-        await apiAddToCart(productId, quantity);
+        await apiAddToCart(productId, quantity, itemPrescription);
       } catch (err) {
         console.error("Failed to add to cart", err);
+        throw err;
       }
 
       await syncCart();
@@ -322,12 +329,26 @@ export function CartProvider({ children }) {
   );
 
   const addItem = useCallback(
-    (product) => {
-      if (user) {
-        return addItemAuth(product);
+    (product, qtyOrPrescription = 1, maybePrescription = undefined, maybeVariant = undefined) => {
+      let quantity = 1;
+      let prescription = undefined;
+
+      if (typeof qtyOrPrescription === 'number') {
+        quantity = qtyOrPrescription;
+        prescription = maybePrescription;
+      } else if (typeof qtyOrPrescription === 'object' && qtyOrPrescription !== null) {
+        prescription = qtyOrPrescription;
+        quantity = Number(maybePrescription) || product.quantity || 1;
+      } else {
+        quantity = product.quantity || 1;
+        prescription = product.prescription;
       }
 
-      addItemGuest(product);
+      if (user) {
+        return addItemAuth(product, quantity, prescription, maybeVariant);
+      }
+
+      return addItemGuest(product, quantity, prescription, maybeVariant);
     },
     [user, addItemAuth, addItemGuest]
   );

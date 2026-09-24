@@ -51,6 +51,38 @@ export const ITEM_CONDITIONS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VARIANT SNAPSHOT
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Same shape as orderModel.js's orderVariantSchema / cartModel.js's
+// cartVariantSchema — duplicated here for the same reason: a return
+// permanently records which color of the product was actually returned,
+// independent of whatever the product's live variants look like later.
+const returnVariantSchema = new mongoose.Schema(
+  {
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    color: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    colorHex: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    image: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
+  },
+  { _id: false }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1. RETURN ITEM SUB-SCHEMA
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -74,6 +106,36 @@ const returnItemSchema = new mongoose.Schema(
       trim: true,
       default: "",
       maxlength: 1000,
+    },
+
+    images: {
+      type: [
+        {
+          public_id: {
+            type: String,
+            trim: true,
+            maxlength: 300,
+          },
+          url: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 1000,
+          },
+        },
+      ],
+      default: [],
+      _id: false,
+    },
+
+    // Present only when the original order line had a color variant
+    // selected. Carried forward from orderItem.variant at return-creation
+    // time, permanently — the admin inspecting/refunding this return needs
+    // to know exactly which color is coming back, unaffected by later
+    // product edits.
+    variant: {
+      type: returnVariantSchema,
+      default: null,
     },
 
     quantity: {

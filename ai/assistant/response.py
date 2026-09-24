@@ -151,10 +151,15 @@ I can help you with:
 • 🧴 Finding perfumes and fragrances
 • ⌚ Finding watches
 • 👓 Finding eyeglasses
+• 👁️ Finding contact lenses (cosmetic, makeup, & prescription)
 
 Try asking:
 
 "Show me watches under 5000"
+
+"Show me cosmetic contact lenses for makeup"
+
+"Find daily disposable contact lenses"
 
 "Find a fresh perfume for summer"
 

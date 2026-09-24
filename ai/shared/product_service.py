@@ -37,6 +37,7 @@ def _product_to_dict(product: dict) -> dict:
         "brand": product.get("brand", ""),
         "subcategory": product.get("subcategory", ""),
         "gender": product.get("gender", "Unisex"),
+        "color": product.get("color", ""),
         "price": product.get("price", 0),
         "discountPrice": product.get("discountPrice"),
         "rating": product.get("ratings", 0),
@@ -60,6 +61,12 @@ def _product_to_dict(product: dict) -> dict:
         "fragranceFamily": product.get("fragranceFamily", ""),
         "fragranceType": product.get("fragranceType", ""),
         "volume": product.get("volume", ""),
+        "baseCurve": product.get("baseCurve", ""),
+        "diameter": product.get("diameter", ""),
+        "waterContent": product.get("waterContent", ""),
+        "replacementSchedule": product.get("replacementSchedule", ""),
+        "packSize": product.get("packSize", ""),
+        "isPrescriptionRequired": product.get("isPrescriptionRequired", False),
     }
 
 
@@ -146,11 +153,10 @@ def filter_products(
     if gender:
         query["gender"] = {"$in": [gender, "Unisex"]}
     if color:
-        # Match against dialColor (watches) and frameColor (eyeglasses).
-        # Perfumes have no colour field so this naturally returns nothing
-        # for perfumes when a colour is requested, which is correct.
+        # Match against color (all products), dialColor (watches) and frameColor (eyeglasses).
         color_regex = {"$regex": color, "$options": "i"}
         query["$or"] = [
+            {"color": color_regex},
             {"dialColor": color_regex},
             {"frameColor": color_regex},
         ]
@@ -171,6 +177,7 @@ def get_products_dataframe() -> pd.DataFrame:
     df["image"] = df["image_url"].fillna("").astype(str)
 
     attribute_columns = [
+        "color",
         "frameShape",
         "frameMaterial",
         "frameColor",
@@ -184,6 +191,11 @@ def get_products_dataframe() -> pd.DataFrame:
         "fragranceFamily",
         "fragranceType",
         "volume",
+        "baseCurve",
+        "diameter",
+        "waterContent",
+        "replacementSchedule",
+        "packSize",
     ]
 
     for column in attribute_columns:

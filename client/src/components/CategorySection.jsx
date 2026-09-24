@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
 import { getFilterOptions } from '../api/productClient'
+import { useState } from 'react'
 
 const categories = [
   {
@@ -30,10 +30,19 @@ const categories = [
     link:        '/shop?category=perfumes',
     categoryKey: 'perfumes',
   },
+  {
+    id: 4,
+    title:       'Contact Lenses',
+    description: 'Acuvue, Alcon, CooperVision, Bausch + Lomb & more',
+    tagline:     'CLARITY & ALL-DAY COMFORT',
+    image:       'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=900&q=80&fit=crop',
+    link:        '/shop?category=contact-lenses',
+    categoryKey: 'contact-lenses',
+  },
 ]
 
 
-function CategoryCard({ cat, count }) {
+function CategoryCard({ cat }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -77,17 +86,7 @@ function CategoryCard({ cat, count }) {
   left: '28px',
   zIndex: 2,
 }}>
-  <p style={{
-    color: '#ffffff',
-    fontSize: '0.68rem',
-    fontWeight: '700',
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    marginBottom: '4px',
-    textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-  }}>
-    {count === null ? '\u00A0' : `${count} PRODUCT${count === 1 ? '' : 'S'}`}
-  </p>
+
 
   <p style={{
     color: 'rgba(255,255,255,0.65)',
@@ -158,12 +157,7 @@ function CategoryCard({ cat, count }) {
 
 
 function CategorySection() {
-  const [counts, setCounts] = useState({})
-  useEffect(()=> {
-    getFilterOptions()
-    .then((data) => setCounts(data.categoryCounts || {}))
-    .catch(() => {/* non-critical, cards just show blank count */})
-  }, [])
+  
   return (
     <section style={{
       backgroundColor: 'var(--color-white)',
@@ -194,12 +188,12 @@ function CategorySection() {
   
       <div style={{
         display:  'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         gap:'24px',
       }}>
         {categories.map(cat => (
           <CategoryCard key={cat.id} cat={cat}
-          count = {counts[cat.categoryKey] ?? null} />
+           />
         ))}
       </div>
     </section>

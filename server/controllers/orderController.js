@@ -44,7 +44,9 @@ export const generateOrderNumber = () => {
 
 // Gets the actual selling price from the database product.
 // Frontend price is NEVER trusted.
-const getEffectivePrice = (product) => {
+// variant is optional — when supplied, its priceDelta is added on top,
+// same rule cartController.js uses.
+const getEffectivePrice = (product, variant = null) => {
   const hasDiscountPrice =
     product.discountPrice !== null &&
     product.discountPrice !== undefined &&
@@ -52,10 +54,32 @@ const getEffectivePrice = (product) => {
     Number(product.discountPrice) >= 0 &&
     Number(product.discountPrice) < Number(product.price);
 
-  return hasDiscountPrice
+  const base = hasDiscountPrice
     ? Number(product.discountPrice)
     : Number(product.price);
+
+  const delta = variant?.priceDelta ? Number(variant.priceDelta) || 0 : 0;
+
+  return base + delta;
 };
+
+
+// Finds a variant sub-document on a product by its _id. Returns null if
+// the product has no variants array, or the id doesn't match any entry.
+const findVariant = (product, variantId) => {
+  if (!variantId || !Array.isArray(product.variants)) return null;
+  return (
+    product.variants.find(
+      (v) => v._id.toString() === variantId.toString()
+    ) || null
+  );
+};
+
+
+// Effective stock for an order line: variant stock when a variant is
+// selected, otherwise the product's flat stock.
+const getEffectiveStock = (product, variant) =>
+  variant ? Number(variant.stock) || 0 : product.stock;
 
 
 // Checks whether a product can currently be purchased.
@@ -150,7 +174,7 @@ const validateCoupon = async (
   }
 
   if (
-    itemsPrice <
+    itemsPrice < 
     Number(coupon.minOrder || 0)
   ) {
     throw new HandleError(
@@ -283,10 +307,13 @@ export const validateShippingInfo = (
 // ORDER ITEM VALIDATION
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Two order lines can share a product ID only if they're different color
+// variants of it — same rule cartController.js's line-merge logic follows.
+// A plain product (no variant) still can't repeat.
 const validateDuplicateProducts = (
   orderItems
 ) => {
-  const productIds = new Set();
+  const seen = new Set();
 
   for (const item of orderItems) {
     if (!item.product) {
@@ -296,16 +323,20 @@ const validateDuplicateProducts = (
       );
     }
 
-    const productId = String(item.product);
+    const variantKey = item.variant?.variantId
+      ? String(item.variant.variantId)
+      : "";
 
-    if (productIds.has(productId)) {
+    const key = `${String(item.product)}::${variantKey}`;
+
+    if (seen.has(key)) {
       throw new HandleError(
         "The same product cannot appear more than once in an order",
         400
       );
     }
 
-    productIds.add(productId);
+    seen.add(key);
   }
 };
 
@@ -317,6 +348,55 @@ const addStatusHistory = (order, status, changedBy = null, note = '') => {
     changedBy,
     note: note.trim().slice(0, 500),
   });
+};
+
+
+// Restores stock for one order item — variant stock (and the product's
+// flat stock, kept in sync) when the item had a variant, otherwise just
+// the flat stock. Used by both customer cancellation and admin
+// cancellation, so the two paths can't drift apart.
+const restoreStockForItem = async (item, session) => {
+  if (item.variant?.variantId) {
+    const updated = await Product.findOneAndUpdate(
+      {
+        _id: item.product,
+        "variants._id": item.variant.variantId,
+      },
+      {
+        $inc: {
+          "variants.$[v].stock": item.quantity,
+          stock: item.quantity,
+        },
+      },
+      {
+        arrayFilters: [{ "v._id": item.variant.variantId }],
+        new: true,
+        session,
+      }
+    );
+
+    if (!updated) {
+      throw new HandleError(
+        `Unable to restore stock for "${item.name}"`,
+        500
+      );
+    }
+
+    return;
+  }
+
+  const product = await Product.findOneAndUpdate(
+    { _id: item.product },
+    { $inc: { stock: item.quantity } },
+    { new: true, session }
+  );
+
+  if (!product) {
+    throw new HandleError(
+      `Unable to restore stock for "${item.name}"`,
+      500
+    );
+  }
 };
 
 
@@ -626,8 +706,72 @@ export const createNewOrder =
                 );
               }
 
+              // ── Resolve variant (if the product has any) ──
+              // Only variantId is trusted from the client — color,
+              // colorHex, image are always re-read from the product so a
+              // stale/tampered client value can't misrepresent what was
+              // actually purchased.
+              let variant = null;
+              let variantSnapshot = null;
+
+              if (
+                Array.isArray(product.variants) &&
+                product.variants.length > 0
+              ) {
+                const variantId = item.variant?.variantId;
+
+                if (!variantId) {
+                  throw new HandleError(
+                    `Please select a color for "${product.name}"`,
+                    400
+                  );
+                }
+
+                if (
+                  !mongoose.Types.ObjectId.isValid(variantId)
+                ) {
+                  throw new HandleError(
+                    "Invalid variant selected",
+                    400
+                  );
+                }
+
+                variant = findVariant(product, variantId);
+
+                if (!variant) {
+                  throw new HandleError(
+                    `Selected color is no longer available for "${product.name}"`,
+                    400
+                  );
+                }
+
+                variantSnapshot = {
+                  variantId: variant._id,
+                  color: variant.color,
+                  colorHex: variant.colorHex || "",
+                  image: variant.images?.[0]
+                    ? {
+                        public_id: variant.images[0].public_id,
+                        url: variant.images[0].url,
+                      }
+                    : { public_id: "", url: "" },
+                };
+              }
+
+              const effectiveStock = getEffectiveStock(
+                product,
+                variant
+              );
+
+              if (quantity > effectiveStock) {
+                throw new HandleError(
+                  `Insufficient stock for "${product.name}"${variant ? ` in ${variant.color}` : ""}`,
+                  400
+                );
+              }
+
               const unitPrice =
-                getEffectivePrice(product);
+                getEffectivePrice(product, variant);
 
               if (
                 !Number.isFinite(unitPrice) ||
@@ -651,6 +795,7 @@ export const createNewOrder =
                 quantity,
 
                 image:
+                  variant?.images?.[0]?.url ||
                   product.images?.[0]?.url ||
                   product.image?.[0]?.url ||
                   "",
@@ -658,6 +803,10 @@ export const createNewOrder =
                 product: product._id,
 
                 price: unitPrice,
+
+                variant: variantSnapshot,
+
+                prescription: item.prescription ?? null,
               });
             }
 
@@ -818,6 +967,52 @@ export const createNewOrder =
             // ─────────────────────────────
 
             for (const item of verifiedItems) {
+              if (item.variant?.variantId) {
+                const updatedProduct =
+                  await Product.findOneAndUpdate(
+                    {
+                      _id: item.product,
+
+                      isDeleted: {
+                        $ne: true,
+                      },
+
+                      isActive: {
+                        $ne: false,
+                      },
+
+                      variants: {
+                        $elemMatch: {
+                          _id: item.variant.variantId,
+                          stock: { $gte: item.quantity },
+                        },
+                      },
+                    },
+                    {
+                      $inc: {
+                        "variants.$[v].stock": -item.quantity,
+                        stock: -item.quantity,
+                      },
+                    },
+                    {
+                      arrayFilters: [
+                        { "v._id": item.variant.variantId },
+                      ],
+                      new: true,
+                      session,
+                    }
+                  );
+
+                if (!updatedProduct) {
+                  throw new HandleError(
+                    `Insufficient stock for "${item.name}" in ${item.variant.color}`,
+                    400
+                  );
+                }
+
+                continue;
+              }
+
               const updatedProduct =
                 await Product.findOneAndUpdate(
                   {
@@ -1208,29 +1403,7 @@ export const cancelMyOrder =
             // ─────────────────────────
 
             for (const item of order.orderItems) {
-              const product =
-                await Product.findOneAndUpdate(
-                  {
-                    _id: item.product,
-                  },
-                  {
-                    $inc: {
-                      stock:
-                        item.quantity,
-                    },
-                  },
-                  {
-                    new: true,
-                    session,
-                  }
-                );
-
-              if (!product) {
-                throw new HandleError(
-                  `Unable to restore stock for "${item.name}"`,
-                  500
-                );
-              }
+              await restoreStockForItem(item, session);
             }
 
             // ─────────────────────────
@@ -1626,32 +1799,7 @@ export const updateOrderStatus =
                 const item of
                   order.orderItems
               ) {
-                const product =
-                  await Product.findOneAndUpdate(
-                    {
-                      _id:
-                        item.product,
-                    },
-
-                    {
-                      $inc: {
-                        stock:
-                          item.quantity,
-                      },
-                    },
-
-                    {
-                      new: true,
-                      session,
-                    }
-                  );
-
-                if (!product) {
-                  throw new HandleError(
-                    `Unable to restore stock for "${item.name}"`,
-                    500
-                  );
-                }
+                await restoreStockForItem(item, session);
               }
 
               // Release coupon usage.

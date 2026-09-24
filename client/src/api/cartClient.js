@@ -15,12 +15,20 @@ export async function getCart() {
   return handleResponse(res);
 }
 
-export async function addToCart(productId, quantity = 1) {
+export async function addToCart(productId, quantity = 1, prescription = undefined, variant = undefined) {
+  const payload = { productId, quantity };
+  if (prescription) {
+    payload.prescription = prescription;
+  }
+  if (variant) {
+    payload.variant = variant
+  }
+  
   const res = await fetch(`${API_URL}/cart`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productId, quantity }),
+    body: JSON.stringify(payload),
   });
   return handleResponse(res);
 }

@@ -58,6 +58,60 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Color variant — each color gets its own photo set, stock, and optional
+// SKU/price override. Products without variants (most perfumes, some
+// simple SKUs) just leave this array empty and use the flat `color` field.
+const variantSchema = new mongoose.Schema(
+  {
+    color: {
+      type: String,
+      required: [true, "Variant color name is required"],
+      trim: true,
+    },
+
+    // For a quick swatch/dot elsewhere in the UI (cart line items, order
+    // history) — the actual selector UI uses `images`, not this.
+    colorHex: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    images: [
+      {
+        public_id: {
+          type: String,
+          default: "",
+        },
+        url: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+
+    stock: {
+      type: Number,
+      default: 0,
+      min: [0, "Variant stock cannot be negative"],
+    },
+
+    sku: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    // Some colors cost more (e.g. limited edition tortoise vs. standard
+    // black) — added to the base `price`, can be 0 or negative.
+    priceDelta: {
+      type: Number,
+      default: 0,
+    },
+  },
+  { _id: true }
+);
+
 //Product schema
 const productSchema = new mongoose.Schema(
   {
@@ -110,7 +164,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Please enter a product category"],
-      enum: ["eyeglasses", "watches", "perfumes"],
+      enum: ["eyeglasses", "watches", "perfumes", "contact-lenses"],
       trim: true,
     },
 
@@ -121,6 +175,10 @@ const productSchema = new mongoose.Schema(
     },
 
     //product subcategory optional fields
+    //for contact-lenses this is expected to be "Prescriptive" or
+    //"Non-Prescriptive" (kept as free text like the other categories'
+    //subcategory usage, rather than a hard enum, so admins aren't blocked
+    //if a new subcategory value is needed later)
     subcategory: {
       type: String,
       default: "",
@@ -132,6 +190,19 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["Men", "Women", "Kids", "Unisex"],
       default: "Unisex",
+    },
+
+    //product color for filtering and display
+    //applies to all categories (frame colors, dial colors, perfume bottle colors, contact lens colors, etc.)
+    color: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    // present only for products sold in multiple colors. When non-empty, the frontend should drive the color picker + per-color stock off this array instead of the flat `color`/`stock` fields aboce.
+    variants: {
+      type: [variantSchema],
+      default: []
     },
 
     //Productoriginal  price
@@ -175,6 +246,20 @@ const productSchema = new mongoose.Schema(
 
     //indicates product availability
     isOutOfStock: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PRESCRIPTION
+    // ─────────────────────────────────────────────────────────────────────
+    //
+    // Not category-specific — applies to any product where the customer
+    // needs to supply their own prescription (contact lenses, prescription
+    // eyeglasses). When true, addToCart requires prescription details on
+    // the cart item; the storefront's product page shows the prescription
+    // entry form for this product.
+    isPrescriptionRequired: {
       type: Boolean,
       default: false,
     },
@@ -247,6 +332,36 @@ const productSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Contact Lenses
+    // Fixed properties of the lens SKU itself — not the customer's
+    // prescription, which lives on the cart/order item instead.
+    baseCurve: {
+      type: String,
+      default: "",
+    },
+
+    diameter: {
+      type: String,
+      default: "",
+    },
+
+    waterContent: {
+      type: String,
+      default: "",
+    },
+
+    // e.g. "Daily", "Bi-Weekly", "Monthly"
+    replacementSchedule: {
+      type: String,
+      default: "",
+    },
+
+    // e.g. "30 lenses", "6 lenses"
+    packSize: {
+      type: String,
+      default: "",
+    },
+
     //product bhitra multiple reviews store hunxa
     reviews: [reviewSchema],
 
@@ -275,8 +390,13 @@ const productSchema = new mongoose.Schema(
 //runs before a product is saved to mongodb
 productSchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate()
+  if (Array.isArray(update.variants) && update.variants.length > 0){
+    update.stock = update.variants.reduce(
+      (sum, v) => sum + (Number(v.stock) || 0), 0
+    )
+  }
   if (update.stock !== undefined) {
-    update.isOutofStock = 
+    update.isOutOfStock = 
       update.stock === 0;
   }
   next();

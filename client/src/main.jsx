@@ -6,6 +6,7 @@ import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { WishlistProvider } from './context/WishlistContext'
 import { RewardsProvider } from './context/RewardsContext'
+import { BusinessSettingsProvider } from './context/BusinessSettingsContext'
 
 import './index.css'
 import App from './App.jsx'
@@ -15,14 +16,16 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         <AuthProvider>
-          <RewardsProvider>
-      <WishlistProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
-          </WishlistProvider>
-        </RewardsProvider>
-      </AuthProvider>
+          <BusinessSettingsProvider>
+            <RewardsProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <App />
+                </CartProvider>
+              </WishlistProvider>
+            </RewardsProvider>
+          </BusinessSettingsProvider>
+        </AuthProvider>
       </GoogleOAuthProvider>
     </BrowserRouter>
   </StrictMode>,

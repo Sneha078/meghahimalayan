@@ -31,7 +31,7 @@ function AdminProducts() {
     }
   }
 
-  const categories = ['All', 'eyeglasses', 'watches', 'perfumes']
+  const categories = ['All', 'eyeglasses', 'watches', 'perfumes', 'contact-lenses']
 
   const filtered = products.filter((p) => {
     const matchCat = filter === 'All' || p.category === filter
@@ -95,7 +95,7 @@ function AdminProducts() {
                 textTransform: 'capitalize',
               }}
             >
-              {c}
+              {c === 'contact-lenses' ? 'Contact Lenses' : c}
             </button>
           ))}
         </div>
@@ -161,7 +161,10 @@ function AdminProducts() {
                             />
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                              
+                              {product.category === 'watches' ? '⌚' : 
+                               product.category === 'perfumes' ? '🧴' : 
+                               product.category === 'contact-lenses' ? '👁️' : 
+                               product.category === 'eyeglasses' ? '👓' : '📦'}
                             </div>
                           )}
                         </div>
@@ -175,7 +178,7 @@ function AdminProducts() {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569', textTransform: 'capitalize' }}>
-                      {product.category}
+                      {product.category === 'contact-lenses' ? 'Contact Lenses' : product.category}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                       {product.brand}

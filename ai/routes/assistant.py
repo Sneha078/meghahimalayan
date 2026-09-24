@@ -128,6 +128,8 @@ def help_get():
         "help_text": format_help(),
         "example_queries": [
             "Show me watches under 5000",
+            "Show me cosmetic contact lenses for makeup",
+            "Find daily disposable contact lenses",
             "Find fresh summer perfume",
             "Similar to W005",
             "Reviews for Ray-Ban sunglasses",

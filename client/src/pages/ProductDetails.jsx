@@ -7,11 +7,22 @@ import SentimentSummary from '../components/SentimentSummary'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { trackProductView } from '../utils/recentlyViewed'
+import ProductImageGallery from '../components/ProductImageGallery'
 
 // ── Upload limits ────────────────────────────────────────────────────────────
 const MAX_IMAGES = 3
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024   // 5MB
 const MAX_VIDEO_SIZE = 25 * 1024 * 1024  // 25MB
+
+// ── Optical Power Options ──────────────────────────────────────────────────
+const SPHERE_OPTIONS = (() => {
+  const list = []
+  for (let s = 8.0; s >= -12.0; s -= 0.25) {
+    const val = (s > 0 ? `+${s.toFixed(2)}` : s === 0 ? '0.00 (Plano)' : s.toFixed(2))
+    list.push({ label: val, value: s.toFixed(2) })
+  }
+  return list
+})()
 
 // ── Star row helper ────────────────────────────────────────────────────────────
 function Stars({ rating, size = 14 }) {
@@ -53,13 +64,20 @@ function ProductDetail() {
   const [product, setProduct]             = useState(null)
   const [loading, setLoading]             = useState(true)
   const [error, setError]                 = useState(null)
-  const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0)
   const [added, setAdded]                 = useState(false)
   const { user } = useAuth()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const navigate = useNavigate()
 
-
+  // ── Prescription state for contact lenses & prescription eyewear ─────────────
+  const [rxMode, setRxMode] = useState('plano') // 'plano' (zero-power cosmetic makeup) vs 'custom' (power Rx)
+  const [sameEyes, setSameEyes] = useState(true) // true: one shared power field; false: separate left/right
+  const [rxForm, setRxForm] = useState({
+    rightEye: { sphere: '' },
+    leftEye:  { sphere: '' },
+  })
+  const [rxError, setRxError] = useState('')
 
   // ── Reviews state ────────────────────────────────────────────────────────────
   const [reviews, setReviews]             = useState([])
@@ -72,9 +90,6 @@ function ProductDetail() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [deletingReview, setDeletingReview] = useState(false)
   const [editingReviewId, setEditingReviewId] = useState(null)
-  // Tracks whether the last successful submit was an edit, since
-  // editingReviewId gets cleared right after — the success banner needs
-  // this to say "updated" vs "submitted".
   const [lastSubmitWasEdit, setLastSubmitWasEdit] = useState(false)
   const photoInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -82,19 +97,23 @@ function ProductDetail() {
   useEffect(() => {
     let cancelled = false
 
-    //remember that this product was viewed
     trackProductView(id)
     setLoading(true)
     setError(null)
-    setSelectedImage(0)
+    setSelectedVariantIdx(0)
     setReviews([])
     setSubmitSuccess(false)
+    setRxError('')
 
     getProductById(id)
-      .then((data) => { if (!cancelled){
-      setProduct(data)
-    }
-  })
+      .then((data) => {
+        if (!cancelled) {
+          setProduct(data)
+          // Plano is the default: customers can buy without entering
+          // prescription power and can switch to Custom Power if needed.
+          setRxMode('plano')
+        }
+      })
     .catch((err) => { if (!cancelled) setError(err.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
@@ -144,14 +163,7 @@ function ProductDetail() {
   const handleSubmitReview = async (e) => {
     e.preventDefault()
     if (!reviewForm.comment.trim()) return
-    
-    console.log('handleSubmitReview called with:', {
-      reviewImages: reviewImages.length,
-      reviewVideos: reviewVideos.length,
-      imageFiles: reviewImages.map(f => ({ name: f.name, size: f.size, type: f.type })),
-      videoFiles: reviewVideos.map(f => ({ name: f.name, size: f.size, type: f.type }))
-    })
-    
+
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -168,28 +180,28 @@ function ProductDetail() {
       setReviewImages([])
       setReviewVideos([])
       setEditingReviewId(null)
-      
+
       // Clear file inputs
       if (photoInputRef.current) photoInputRef.current.value = ''
       if (videoInputRef.current) videoInputRef.current.value = ''
-      
+
       // Reload reviews to include the new one
       const updated = await getProductReviews(id)
       setReviews(updated)
     } catch (err) {
       console.error('Review submission error:', err)
       let errorMessage = 'Failed to submit review. Please try again.'
-      
+
       if (err.message.includes('401')) {
         errorMessage = 'Please log in to leave a review.'
       } else if (err.message.includes('400')) {
-        errorMessage = err.message.includes('API error') 
+        errorMessage = err.message.includes('API error')
           ? err.message.replace('API error 400: ', '')
           : 'Invalid review data. Please check your input.'
       } else if (err.message.includes('413')) {
         errorMessage = 'Files are too large. Please use smaller images/videos.'
       }
-      
+
       setSubmitError(errorMessage)
     } finally {
       setSubmitting(false)
@@ -237,10 +249,88 @@ function ProductDetail() {
     }
   }
 
-  const handleAddToCart = () => {
-    addItem(product)
-    setAdded(true)
-    setTimeout(() => setAdded(false), 2000)
+  const isLensOrRx = product?.category === 'contact-lenses' || product?.isPrescriptionRequired
+
+  // ── "Same for both eyes" toggle ───────────────────────────────────────────
+  // When switching to "same", sync the left eye to whatever the right eye is
+  // currently set to, so a value picked while separate doesn't silently
+  // survive as a mismatched left-eye value once merged.
+  const handleSameEyesChange = (value) => {
+    setSameEyes(value)
+    if (value) {
+      setRxForm((prev) => ({
+        rightEye: prev.rightEye,
+        leftEye: { sphere: prev.rightEye.sphere },
+      }))
+    }
+  }
+
+  const validateAndBuildPrescription = () => {
+    if (!isLensOrRx) return null
+
+    if ( rxMode === 'custom') {
+      const right = rxForm.rightEye
+      const left = sameEyes ? rxForm.rightEye : rxForm.leftEye
+
+      if (right.sphere === '' || left.sphere === '') {
+        setRxError(
+          sameEyes
+            ? 'Please select your lens power.'
+            : 'Please select the power for both eyes.'
+        )
+        return false
+      }
+
+      setRxError('')
+      return {
+        rightEye: {
+          sphere: Number(right.sphere),
+          cylinder: null,
+          axis: null,
+          addPower: null,
+        },
+        leftEye: {
+          sphere: Number(left.sphere),
+          cylinder: null,
+          axis: null,
+          addPower: null,
+        },
+        notes: product.isPrescriptionRequired ? 'Prescription Lens' : 'Custom Power',
+      }
+    }
+
+    // Cosmetic / zero-power makeup lens
+    setRxError('')
+    return {
+      rightEye: { sphere: 0, cylinder: null, axis: null, addPower: null },
+      leftEye: { sphere: 0, cylinder: null, axis: null, addPower: null },
+      notes: 'Plano (0.00) / Cosmetic Makeup Wear',
+    }
+  }
+
+  const handleAddToCart = async () => {
+    const rx = validateAndBuildPrescription()
+    if (rx === false) return
+
+    try {
+      await addItem(product, 1, rx)
+      setAdded(true)
+      setTimeout(() => setAdded(false), 2000)
+    } catch (err) {
+      alert(err.message || 'Failed to add to cart.')
+    }
+  }
+
+  const handleBuyNow = async () => {
+    const rx = validateAndBuildPrescription()
+    if (rx === false) return
+
+    try {
+      await addItem(product, 1, rx)
+      navigate('/checkout')
+    } catch (err) {
+      alert(err.message || 'Failed to process item.')
+    }
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────────
@@ -279,13 +369,21 @@ function ProductDetail() {
   }
 
   // ── Derived values ───────────────────────────────────────────────────────────
-  const images       = product.image ?? []
-  const imageUrl     = images[selectedImage]?.url ?? null
-  const originalPrice = product.discountPrice ? product.price : null
-  const sellingPrice  = product.discountPrice ?? product.price
-  const discount      = originalPrice
+  const hasVariants= Array.isArray(product.variants) && product.variants.length > 0
+  const activeVariant = hasVariants ? product.variants[selectedVariantIdx]: null
+
+  const images       = (activeVariant?.images?.length > 0 ? activeVariant.images : product.image) ?? []
+  
+  const variantDelta = activeVariant?.priceDelta ?? 0
+  const basePrice = product.discountPrice ?? product.price
+  const sellingPrice = basePrice + variantDelta
+  const originalPrice = product.discountPrice ? product.price + variantDelta : null
+  const discount = originalPrice && sellingPrice < originalPrice
     ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100)
     : null
+  const stockCount = hasVariants ? (activeVariant?.stock ?? 0) : product.stock
+  const outOfStock = hasVariants ? stockCount <= 0 : product.isOutOfStock
+
   const rating      = product.ratings ?? 0
   const reviewCount = product.numOfReviews ?? 0
   const isNew        = product.isNewArrival ?? false
@@ -294,14 +392,14 @@ function ProductDetail() {
   // Current user's id, for matching against a review's owner (r.user).
   const currentUserId = user?._id ?? user?.id ?? null
 
-  // Watch / eyeglasses / perfume specific spec fields
+  // Watch / eyeglasses / perfume / contact lens specific spec fields
   const specs = product.category === 'watches'
     ? [
-        { label: 'Watch Type',      value: product.watchType },
-        { label: 'Dial Color',      value: product.dialColor },
-        { label: 'Strap Material',  value: product.strapMaterial },
-        { label: 'Case Size',       value: product.caseSize },
-        { label: 'Movement',        value: product.movementType },
+        { label: 'Watch Type',       value: product.watchType },
+        { label: 'Dial Color',       value: product.dialColor },
+        { label: 'Strap Material',   value: product.strapMaterial },
+        { label: 'Case Size',        value: product.caseSize },
+        { label: 'Movement',         value: product.movementType },
         { label: 'Water Resistance', value: product.waterResistance },
       ]
     : product.category === 'eyeglasses'
@@ -316,6 +414,16 @@ function ProductDetail() {
         { label: 'Fragrance Family', value: product.fragranceFamily },
         { label: 'Fragrance Type',   value: product.fragranceType },
         { label: 'Volume',           value: product.volume },
+      ]
+    : product.category === 'contact-lenses'
+    ? [
+        { label: 'Base Curve (BC)',        value: product.baseCurve },
+        { label: 'Diameter (DIA)',         value: product.diameter },
+        { label: 'Water Content',          value: product.waterContent },
+        { label: 'Replacement Schedule',   value: product.replacementSchedule },
+        { label: 'Pack Size',              value: product.packSize },
+        { label: 'Lens Type',              value: product.lensType },
+        { label: 'Prescription Status',    value: 'Power Optional — Plano (0.00) or Custom Prescription' },
       ]
     : []
 
@@ -360,84 +468,29 @@ function ProductDetail() {
 
         {/* ── Left: Image gallery ──────────────────────────────────────────── */}
         <div>
-          {/* Main image */}
-          <div style={{
-            backgroundColor: '#f3f4f6',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            height: '480px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '16px',
-            position: 'relative',
-          }}>
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            ) : (
-              <div style={{ opacity: 0.2, color: 'var(--color-navy)' }}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
+          <ProductImageGallery 
+            images={images} 
+            productName={product.name}
+            badges={
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {isNew && (
+                  <span style={{ backgroundColor: '#C9A84C', color: '#0d1a2a', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
+                    NEW
+                  </span>
+                )}
+                {isBestseller && (
+                  <span style={{ backgroundColor: '#0d1a2a', color: '#C9A84C', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
+                    BESTSELLER
+                  </span>
+                )}
+                {discount && (
+                  <span style={{ backgroundColor: '#e74c3c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px' }}>
+                    {discount}% OFF
+                  </span>
+                )}
               </div>
-            )}
-
-            {/* Badges overlay */}
-            <div style={{ position: 'absolute', top: '14px', left: '14px', display: 'flex', gap: '6px' }}>
-              {isNew && (
-                <span style={{ backgroundColor: '#C9A84C', color: '#0d1a2a', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
-                  NEW
-                </span>
-              )}
-              {isBestseller && (
-                <span style={{ backgroundColor: '#0d1a2a', color: '#C9A84C', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
-                  BESTSELLER
-                </span>
-              )}
-              {discount && (
-                <span style={{ backgroundColor: '#e74c3c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px' }}>
-                  {discount}% OFF
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Thumbnail strip — only shown if multiple images */}
-          {images.length > 1 && (
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    border: i === selectedImage
-                      ? '2px solid var(--color-navy)'
-                      : '2px solid var(--color-border)',
-                    padding: 0,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    backgroundColor: '#f3f4f6',
-                  }}
-                >
-                  <img
-                    src={img.url}
-                    alt={`View ${i + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
+            }
+          />
         </div>
 
         {/* ── Right: Product info ───────────────────────────────────────────── */}
@@ -529,6 +582,198 @@ function ProductDetail() {
             )}
           </div>
 
+          {/* ── Prescription / Power Selection (for Contact Lenses & Prescription Products) ── */}
+          {isLensOrRx && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid var(--color-border)',
+              padding: '20px',
+              marginBottom: '24px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  
+                  <h3 style={{
+                    fontSize: '0.9rem',
+                    fontWeight: '700',
+                    color: 'var(--color-navy)',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    margin: 0,
+                  }}>
+                    Lens Power & Prescription
+                  </h3>
+                </div>
+                {product.isPrescriptionRequired ? (
+                  <span style={{
+                    backgroundColor: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #fecaca',
+                  }}>
+                    Power Optional
+                  </span>
+                ) : (
+                  <span style={{
+                    backgroundColor: '#f0fdf4',
+                    color: '#16a34a',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #bbf7d0',
+                  }}>
+                    Zero Power / Cosmetic Ready
+                  </span>
+                )}
+              </div>
+
+              {/* Power mode selector: Plano is the default; Custom Power is optional. */}
+              
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setRxMode('plano'); setRxError('') }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${rxMode === 'plano' ? 'var(--color-navy)' : 'var(--color-border)'}`,
+                      backgroundColor: rxMode === 'plano' ? 'var(--color-navy)' : '#f8fafc',
+                      color: rxMode === 'plano' ? 'var(--color-taupe)' : '#334155',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                     Plano (Zero Power / Makeup)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRxMode('custom'); setRxError('') }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${rxMode === 'custom' ? 'var(--color-navy)' : 'var(--color-border)'}`,
+                      backgroundColor: rxMode === 'custom' ? 'var(--color-navy)' : '#f8fafc',
+                      color: rxMode === 'custom' ? 'var(--color-taupe)' : '#334155',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                   Custom Power Prescription
+                  </button>
+                </div>
+              
+
+              {/* Power Selection Form — only shown when the customer chooses Custom Power */}
+              {rxMode === 'custom' && (
+                <div style={{ marginTop: '12px' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '4px' }}>
+                    Prescription Power
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '16px' }}>
+                    Select the lens power recommended by your eye care professional.
+                  </p>
+
+                  {/* Same for both eyes toggle */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <p style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '8px' }}>
+                      Same power for both eyes?
+                    </p>
+                    <div style={{ display: 'flex', gap: '18px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#334155', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="sameEyes"
+                          checked={sameEyes === true}
+                          onChange={() => handleSameEyesChange(true)}
+                        />
+                        Yes
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#334155', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="sameEyes"
+                          checked={sameEyes === false}
+                          onChange={() => handleSameEyesChange(false)}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+
+                  {sameEyes ? (
+                    /* One shared power field */
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '6px' }}>
+                        Lens power
+                      </label>
+                      <select
+                        value={rxForm.rightEye.sphere}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setRxForm({ rightEye: { sphere: val }, leftEye: { sphere: val } })
+                        }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="">Select power</option>
+                        {SPHERE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    /* Separate left / right power fields */
+                    <>
+                      <div style={{ marginBottom: '14px' }}>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '6px' }}>
+                          Power of your left eye
+                        </label>
+                        <select
+                          value={rxForm.leftEye.sphere}
+                          onChange={(e) => setRxForm(prev => ({ ...prev, leftEye: { sphere: e.target.value } }))}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        >
+                          <option value="">Select power</option>
+                          {SPHERE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '700', color: 'var(--color-navy)', marginBottom: '6px' }}>
+                          Power of your right eye
+                        </label>
+                        <select
+                          value={rxForm.rightEye.sphere}
+                          onChange={(e) => setRxForm(prev => ({ ...prev, rightEye: { sphere: e.target.value } }))}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                        >
+                          <option value="">Select power</option>
+                          {SPHERE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Prescription Validation Error */}
+              {rxError && (
+                <div style={{ marginTop: '12px', padding: '8px 12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: '500' }}>
+                  ⚠️ {rxError}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* CTA buttons */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
             <button
@@ -558,10 +803,7 @@ function ProductDetail() {
 
             <button
               disabled={product.isOutOfStock}
-              onClick={() => {
-                addItem(product)
-                navigate('/checkout')
-              }}
+              onClick={handleBuyNow}
               style={{
                 flex: 1,
                 padding: '14px 24px',
@@ -614,6 +856,41 @@ function ProductDetail() {
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </button>
+            {hasVariants && (
+  <div style={{ marginTop: '20px' }}>
+    <h3 style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: '10px' }}>
+      Color: <span style={{ color: 'var(--color-navy)', textTransform: 'none', letterSpacing: 'normal' }}>{activeVariant?.color}</span>
+    </h3>
+    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      {product.variants.map((v, i) => (
+        <button
+          key={v._id ?? i}
+          onClick={() => setSelectedVariantIdx(i)}
+          style={{
+            width: '76px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: i === selectedVariantIdx ? '2px solid var(--color-navy)' : '2px solid var(--color-border)',
+            padding: 0,
+            cursor: 'pointer',
+            backgroundColor: '#f3f4f6',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ width: '100%', height: '76px', backgroundColor: '#f3f4f6' }}>
+            {v.images?.[0]?.url && (
+              <img src={v.images[0].url} alt={v.color}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            )}
+          </div>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', display: 'block', padding: '4px 2px' }}>
+            {v.color}
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
+)}
           </div>
 
           {/* Description */}

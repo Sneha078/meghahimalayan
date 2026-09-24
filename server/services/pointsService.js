@@ -206,6 +206,156 @@ export async function refundPointsForOrder(orderId, session = null) {
   }
 }
 
+// ---- Review reward configuration ----
+export const REVIEW_TEXT_POINTS = 5; // for any valid text review + rating
+export const REVIEW_MEDIA_BONUS = 10; // extra, if a photo OR video is attached
+
+/**
+ * Award points for a customer's first-ever review on a product. Only fires
+ * once per review, ever — no points for edits, and no retroactive bonus if
+ * a photo/video gets added on a later edit (matches the product decision:
+ * points are a one-time reward for the original submission only).
+ *
+ * hasMedia should be true if the review included at least one image OR
+ * video — doesn't matter which; both count equally toward the same bonus,
+ * so there's no need for separate photo-specific vs video-specific logic.
+ *
+ * Idempotent via the same DB-level mechanism as everything else in this
+ * file: a unique index on { review: 1, type: 1 } means a second call for
+ * the same reviewId hits a duplicate-key error, which we treat as
+ * "already awarded" rather than a failure.
+ */
+export async function awardReviewPoints(userId, reviewId, hasMedia) {
+  const amount = REVIEW_TEXT_POINTS + (hasMedia ? REVIEW_MEDIA_BONUS : 0);
+
+  const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  try {
+    return await PointsLedger.create({
+      user: userId,
+      type: "earn",
+      amount,
+      reason: hasMedia ? "Review with photo/video" : "Product review",
+      review: reviewId,
+      expiresAt,
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      // Already awarded for this review — not an error.
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Reverse the points awarded for a review, when that review gets deleted.
+ * Looks up the ORIGINAL "earn" entry to find how many points were actually
+ * awarded (5 or 15) — this can't be recomputed from the review's current
+ * media state, since by the time a review is deleted its photos/videos
+ * have already been destroyed on Cloudinary.
+ *
+ * No-op if no points were ever awarded for this review (e.g. the review
+ * was created before this feature existed). Idempotent — safe to call
+ * more than once for the same reviewId; a second call hits the {review,
+ * type:"redeem"} unique index and no-ops via the duplicate-key catch.
+ */
+export async function clawbackReviewPoints(reviewId, session = null) {
+  const earnEntry = await PointsLedger.findOne({ review: reviewId, type: "earn" }).session(session);
+
+  if (!earnEntry) return null;
+
+  try {
+    const [entry] = await PointsLedger.create(
+      [
+        {
+          user: earnEntry.user,
+          type: "redeem",
+          amount: -earnEntry.amount,
+          reason: "Points removed: review deleted",
+          review: reviewId,
+        },
+      ],
+      { session }
+    );
+
+    return entry;
+  } catch (err) {
+    if (err?.code === 11000) {
+      // Already clawed back — not an error.
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Claw back points proportional to a processed refund, when a return is
+ * completed. Handles PARTIAL returns correctly: if a customer returns one
+ * item worth 30% of the order's total, they lose ~30% of the points that
+ * order originally earned — the rest of the points stay intact.
+ *
+ * refundAmount is THIS specific payout (already correctly computed
+ * per-item, discount-adjusted, by returnController.js's processRefund) —
+ * not the order's cumulative refundedAmount. orderTotal is the order's
+ * fixed original total, used as the denominator so each partial refund
+ * event claws back its own independent share.
+ *
+ * Looks up the order's ORIGINAL "earn" ledger entry to find how many
+ * points were actually awarded — not recomputed from order.totalPrice
+ * independently, so this stays consistent even if rounding at award time
+ * meant the actual awarded amount differs slightly from a fresh
+ * calculation.
+ *
+ * Idempotent per Return document (via the {returnRequest, type:"redeem"}
+ * unique index) — safe to call again for the same return without
+ * double-clawing-back, even across multiple separate return requests on
+ * the same order over time.
+ *
+ * No-op if the order never earned any points in the first place, or if
+ * the proportional clawback rounds down to zero.
+ */
+export async function clawbackOrderPoints(orderId, returnRequestId, refundAmount, orderTotal, session = null, orderLabel, returnLabel) {
+  const earnEntry = await PointsLedger.findOne({ order: orderId, type: "earn" }).session(session);
+
+  if (!earnEntry) return null;
+
+  if (!orderTotal || orderTotal <= 0) return null;
+
+  const proportion = Math.min(1, refundAmount / orderTotal);
+  const clawbackAmount = Math.floor(earnEntry.amount * proportion);
+
+  if (clawbackAmount <= 0) return null;
+
+  const reason = `Points removed: refund on Order #${orderLabel ?? orderId}${
+    returnLabel ? ` (Return #${returnLabel})` : ""
+  }`;
+
+  try {
+    const [entry] = await PointsLedger.create(
+      [
+        {
+          user: earnEntry.user,
+          type: "redeem",
+          amount: -clawbackAmount,
+          reason,
+          order: orderId,
+          returnRequest: returnRequestId,
+        },
+      ],
+      { session }
+    );
+
+    return entry;
+  } catch (err) {
+    if (err?.code === 11000) {
+      // Already clawed back for this specific return — not an error.
+      return null;
+    }
+    throw err;
+  }
+}
+
 /**
  * Redeem points for a catalog reward product (Rewards Page flow).
  * orderId is optional — pass the Order created for this redemption so the
