@@ -110,16 +110,14 @@ function Footer() {
             }}>
               {businessSettings?.tagline || 'Optical House'}
             </p>
-          </div>
 
      
           <p style={{
             color: 'rgba(255,255,255,0.45)',
             fontSize: '0.85rem',
             lineHeight: '1.75',
+            marginTop: '1.25rem',
             marginBottom: '1.25rem',
-            maxWidth: '260px',
-            textAlign:'justify',
           }}>
             {businessSettings?.description || "Pokhara's premier destination for international eyewear, watches and fragrances founded by Mr. Suraj Singh in 2001."}
           </p>
@@ -225,6 +223,7 @@ function Footer() {
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <FooterLink to="/shop">All Products</FooterLink>
                   <FooterLink to="/shop?category=eyeglasses">Eyeglasses</FooterLink>
+                  <FooterLink to="/shop?category=contact-lenses">Contact Lenses</FooterLink>
                   <FooterLink to="/shop?category=sunglasses">Sunglasses</FooterLink>
                   <FooterLink to="/shop?category=watches">Watches</FooterLink>
                   <FooterLink to="/shop?category=perfumes">Perfumes</FooterLink>
@@ -324,6 +323,7 @@ function Footer() {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Feature Badges Bar */}
       <div className="border-b border-white/10">

@@ -32,20 +32,19 @@ function CoinBadge({ scrolled }) {
         to="/rewards"
         onClick={() => setOpen((v) => !v)}
         onMouseEnter={() => setOpen(true)}
-        className={`flex items-center gap-1.5 rounded-full border transition-all duration-300 ${
+        className={`flex items-center justify-center rounded-full border transition-all duration-300 h-7 px-2 gap-1 lg:w-auto lg:h-auto lg:gap-1.5 lg:px-3 lg:py-[5px] ${
           scrolled
             ? "bg-gray-100 border-gray-200 text-[#0d1a2a]"
             : "bg-white/20 border-white/30 text-white"
         }`}
         style={{
-          padding: "6px 12px",
-          fontSize: "0.78rem",
+          fontSize: "0.75rem",
           fontWeight: 600,
           cursor: "pointer",
           whiteSpace: "nowrap",
         }}
       >
-        🪙 {balance.toLocaleString()}
+        🪙 <span>{balance.toLocaleString()}</span>
       </Link>
 
       {/* Expiring coins popover */}

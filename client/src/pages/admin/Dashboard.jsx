@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Wallet, ShoppingCart, Package, Users } from 'lucide-react'
 import { getDashboardStats } from '../../api/adminClient'
@@ -6,17 +6,36 @@ import { useSocket } from '../../context/SocketContext'
 
 // ── Stat card ──────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, color, link, live }) {
+  const valueRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const el = valueRef.current
+    if (!el) return
+    const fit = () => {
+      el.style.fontSize = ''
+      let size = parseFloat(getComputedStyle(el).fontSize)
+      while (el.scrollWidth > el.clientWidth && size > 11) {
+        size -= 1
+        el.style.fontSize = `${size}px`
+      }
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [value])
+
   return (
     <Link to={link ?? '#'} style={{ textDecoration: 'none' }}>
       <div
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '12px',
-          padding: '24px',
+          padding: 'clamp(14px, 3vw, 24px)',
           border: `1px solid ${live ? '#bfdbfe' : '#e2e8f0'}`,
           display: 'flex',
           alignItems: 'center',
-          gap: '16px',
+          gap: 'clamp(10px, 2vw, 16px)',
           transition: 'box-shadow 0.2s ease, border-color 0.3s ease',
           cursor: link ? 'pointer' : 'default',
           position: 'relative',
@@ -39,18 +58,24 @@ function StatCard({ label, value, icon: Icon, color, link, live }) {
           }} />
         )}
         <div style={{
-          width: '52px', height: '52px', borderRadius: '12px',
+          width: 'clamp(40px, 9vw, 52px)', height: 'clamp(40px, 9vw, 52px)', borderRadius: '12px',
           backgroundColor: (color ?? '#64748b') + '20',
           display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexShrink: 0,
         }}>
           <Icon size={24} color={color ?? '#64748b'} strokeWidth={2} />
         </div>
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '500', marginBottom: '4px' }}>
             {label}
           </p>
-          <p style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', lineHeight: 1 }}>
+          <p
+            ref={valueRef}
+            style={{
+              fontSize: 'clamp(1.15rem, 4.5vw, 1.6rem)', fontWeight: '800', color: '#0f172a',
+              lineHeight: 1.1, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {value ?? '—'}
           </p>
         </div>
