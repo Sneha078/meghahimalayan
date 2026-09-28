@@ -10,6 +10,7 @@ import User from "../models/userModel.js";
 
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
+import { resolvePrice } from "../shared/pricing.js";
 
 import {
   sendOrderConfirmationEmail,
@@ -44,23 +45,10 @@ export const generateOrderNumber = () => {
 
 // Gets the actual selling price from the database product.
 // Frontend price is NEVER trusted.
-// variant is optional — when supplied, its priceDelta is added on top,
-// same rule cartController.js uses.
+// Uses shared pricing function for consistency with cart controller
 const getEffectivePrice = (product, variant = null) => {
-  const hasDiscountPrice =
-    product.discountPrice !== null &&
-    product.discountPrice !== undefined &&
-    Number.isFinite(Number(product.discountPrice)) &&
-    Number(product.discountPrice) >= 0 &&
-    Number(product.discountPrice) < Number(product.price);
-
-  const base = hasDiscountPrice
-    ? Number(product.discountPrice)
-    : Number(product.price);
-
-  const delta = variant?.priceDelta ? Number(variant.priceDelta) || 0 : 0;
-
-  return base + delta;
+  const pricing = resolvePrice(product, variant);
+  return pricing.finalPrice;
 };
 
 

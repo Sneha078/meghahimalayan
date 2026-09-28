@@ -9,7 +9,7 @@ import { fetchAutocomplete } from "../services/searchClient";
 import { fetchSearchPreview } from "../services/searchPreview";
 import CoinBadge from "./CoinBadge";
 
-const SEARCH_MIN_CHARS = 3;
+const SEARCH_MIN_CHARS = 2;
 const SEARCH_DEBOUNCE_MS = 300;
 const SEARCH_PREVIEW_LIMIT = 5;
 

@@ -12,7 +12,8 @@ const EMPTY_VARIANT = {
   colorHex: '',
   stock: '',
   sku: '',
-  priceDelta: '',
+  price: '',
+  discountPrice: '',
   images: [],
   previews: [],
   existingImages: [],
@@ -226,7 +227,8 @@ function AdminProductForm() {
             colorHex: v.colorHex ?? '',
             stock: v.stock ?? '',
             sku: v.sku ?? '',
-            priceDelta: v.priceDelta ?? '',
+            price: v.price ?? '',
+            discountPrice: v.discountPrice ?? '',
             images: [],
             previews: [],
             existingImages: v.images ?? [],
@@ -373,7 +375,8 @@ const removeExistingImage = (publicId) => {
           colorHex: v.colorHex,
           stock: Number(v.stock) || 0,
           sku: v.sku,
-          priceDelta: Number(v.priceDelta) || 0,
+          price: v.price ? Number(v.price) : null,
+          discountPrice: v.discountPrice ? Number(v.discountPrice) : null,
           images: await Promise.all(
             v.images.map(toBase64)
           ),
@@ -1147,69 +1150,115 @@ const removeExistingImage = (publicId) => {
                 style={{
                   display: 'grid',
                   gridTemplateColumns:
-                    '1fr 1fr 1fr 1fr',
+                    '2fr 1fr 1.5fr 2fr',
                   gap: '12px',
                   marginBottom: '12px',
                 }}
               >
-                <input
-                  placeholder="Color name (e.g. Pink)"
-                  value={v.color}
-                  onChange={(e) =>
-                    updateVariantField(
-                      i,
-                      'color',
-                      e.target.value
-                    )
-                  }
-                  style={inputStyle}
-                />
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    Color Name
+                  </label>
+                  <input
+                    placeholder="e.g. Blue"
+                    value={v.color}
+                    onChange={(e) =>
+                      updateVariantField(
+                        i,
+                        'color',
+                        e.target.value
+                      )
+                    }
+                    style={inputStyle}
+                  />
+                </div>
 
-                <input
-                  type="color"
-                  value={v.colorHex || '#000000'}
-                  onChange={(e) =>
-                    updateVariantField(
-                      i,
-                      'colorHex',
-                      e.target.value
-                    )
-                  }
-                  style={{
-                    ...inputStyle,
-                    padding: '2px',
-                    cursor: 'pointer',
-                  }}
-                />
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    Swatch
+                  </label>
+                  <input
+                    type="color"
+                    value={v.colorHex || '#000000'}
+                    onChange={(e) =>
+                      updateVariantField(
+                        i,
+                        'colorHex',
+                        e.target.value
+                      )
+                    }
+                    style={{
+                      ...inputStyle,
+                      padding: '2px',
+                      height: '38px',
+                      cursor: 'pointer',
+                    }}
+                  />
+                </div>
 
-                <input
-                  type="number"
-                  placeholder="Stock"
-                  value={v.stock}
-                  onChange={(e) =>
-                    updateVariantField(
-                      i,
-                      'stock',
-                      e.target.value
-                    )
-                  }
-                  style={inputStyle}
-                />
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                    Stock
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 12"
+                    value={v.stock}
+                    onChange={(e) =>
+                      updateVariantField(
+                        i,
+                        'stock',
+                        e.target.value
+                      )
+                    }
+                    style={inputStyle}
+                  />
+                </div>
 
-                <input
-                  type="number"
-                  placeholder="Price delta"
-                  value={v.priceDelta}
-                  onChange={(e) =>
-                    updateVariantField(
-                      i,
-                      'priceDelta',
-                      e.target.value
-                    )
-                  }
-                  style={inputStyle}
-                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                      Variant Price (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 3000"
+                      value={v.price}
+                      onChange={(e) =>
+                        updateVariantField(
+                          i,
+                          'price',
+                          e.target.value
+                        )
+                      }
+                      style={inputStyle}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                      Variant Discount Price (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 2700"
+                      value={v.discountPrice}
+                      onChange={(e) =>
+                        updateVariantField(
+                          i,
+                          'discountPrice',
+                          e.target.value
+                        )
+                      }
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
               </div>
+
+              <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', marginBottom: '12px' }}>
+                💡 <b>Pricing tip:</b> Leave variant price blank to use the product's price. Enter the full price for this option, not the difference. Variant discount is optional.
+              </p>
 
               <input
                 placeholder="SKU (optional)"
@@ -1285,20 +1334,44 @@ const removeExistingImage = (publicId) => {
                 </>
               )}
 
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) =>
-                  handleVariantImages(
-                    i,
-                    e.target.files
-                  )
-                }
-                style={{
-                  fontSize: '0.8rem',
-                }}
-              />
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: '12px', border: '1px solid #e2e8f0', borderRadius: '8px',
+                padding: '8px', backgroundColor: '#ffffff',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById(`variant-file-input-${i}`)?.click()}
+                  style={{
+                    padding: '8px 16px', borderRadius: '6px', border: '1px solid #e2e8f0',
+                    backgroundColor: '#f8fafc', color: '#0f172a', fontSize: '0.8rem',
+                    fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}
+                >
+                  Choose Files
+                </button>
+
+                <span style={{
+                  fontSize: '0.8rem', color: '#64748b', textAlign: 'right',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {v.images?.length > 0
+                    ? v.images.map((f) => f.name).join(', ')
+                    : 'No file chosen'}
+                </span>
+
+                <input
+                  id={`variant-file-input-${i}`}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    handleVariantImages(i, e.target.files);
+                    e.target.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </div>
 
               {v.previews.length > 0 && (
                 <>

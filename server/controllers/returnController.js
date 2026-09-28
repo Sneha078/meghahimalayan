@@ -430,6 +430,8 @@ const validateImages = (images) => {
 // Accepts base64 data URLs from the customer and returns { public_id, url }.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+// DEPRECATED: This function is not used. Use uploadController.js instead.
 const uploadReturnImages = async (
   images,
   folder = "returns"
@@ -449,11 +451,11 @@ const uploadReturnImages = async (
 
   for (const image of images) {
     if (
-      typeof image !== "string" ||
-      !image.startsWith("data:")
+      typeof image !== "string" || 
+      (!image.startsWith("data:") && !image.startsWith("http"))
     ) {
       throw new HandleError(
-        "Each return image must be a base64 data URL",
+        "Each return image must be a base64 data URL or valid HTTP URL",
         400
       );
     }
@@ -475,8 +477,6 @@ const uploadReturnImages = async (
         err?.http_code ? `(http ${err.http_code})` : ""
       );
 
-      // Cloudinary returns http_code 400 with a message like "File size too large" when
-      // the upload exceeds their limit. Give the user a clear, actionable message.
       const isFileSizeError =
         err?.message?.toLowerCase().includes("file size") ||
         err?.message?.toLowerCase().includes("too large") ||
@@ -495,6 +495,7 @@ const uploadReturnImages = async (
 
   return uploaded;
 };
+*/
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REFUND AMOUNT VALIDATION
@@ -651,27 +652,6 @@ export const createReturnRequest = handleAsyncError(
 
     const returnImages = validateImages(images);
 
-    // Upload customer photos to Cloudinary BEFORE opening the DB
-    // transaction. Cloudinary calls are not transactional and would
-    // otherwise hold the Mongo session open.
-    const uploadedItemImages = await Promise.all(
-      items.map((item) =>
-        uploadReturnImages(item?.images)
-      )
-    );
-
-    const itemImagesByProduct = new Map();
-
-    items.forEach((item, index) => {
-      const id = normalizeId(item?.product);
-
-      if (id) {
-        itemImagesByProduct.set(
-          id,
-          uploadedItemImages[index] || []
-        );
-      }
-    });
 
     const session = await mongoose.startSession();
 
@@ -775,17 +755,26 @@ export const createReturnRequest = handleAsyncError(
         });
 
         // DISCOUNT CALCULATION
-        const itemsPrice =
-          Number(order.itemsPrice) || 0;
+        // Includes explicit discounts (coupon + pointsDiscount) as well as implicit discounts
+        // derived from order.totalPrice vs itemsPrice + shippingPrice + taxPrice.
+        const itemsPrice = Number(order.itemsPrice) || 0;
+        const shippingPrice = Number(order.shippingPrice) || 0;
+        const taxPrice = Number(order.taxPrice) || 0;
+        const rawDiscount =
+          (Number(order.discount) || 0) + (Number(order.pointsDiscount) || 0);
 
-        const discount =
-          Number(order.discount) || 0;
+        const implicitDiscount = Math.max(
+          0,
+          itemsPrice + shippingPrice + taxPrice - Number(order.totalPrice || 0)
+        );
+
+        const totalDiscount = Math.max(rawDiscount, implicitDiscount);
 
         const discountRatio =
           itemsPrice > 0
             ? Math.min(
                 Math.max(
-                  discount / itemsPrice,
+                  totalDiscount / itemsPrice,
                   0
                 ),
                 1
@@ -904,10 +893,7 @@ export const createReturnRequest = handleAsyncError(
             product: originalItem.product,
             name: originalItem.name,
             image: originalItem.image || "",
-            images:
-              itemImagesByProduct.get(
-                normalizeId(item.product)
-              ) || [],
+            
             quantity,
             itemPrice: roundMoney(price),
             refundUnitPrice: roundMoney(netPrice),
@@ -946,14 +932,10 @@ export const createReturnRequest = handleAsyncError(
           );
         }
 
-        if (
-          refundAmount >
-          remainingRefundable
-        ) {
-          throw new HandleError(
-            "Calculated refund exceeds the remaining refundable order amount",
-            400
-          );
+        if (refundAmount > remainingRefundable) {
+          // Cap to remaining refundable amount to absorb minor item-level rounding differences
+          // or implicit order-level discounts.
+          refundAmount = remainingRefundable;
         }
 
         validateRefundMethodAgainstOrder(

@@ -400,13 +400,41 @@ function ReturnRequest() {
                       {/* Images */}
                       <div>
                         <label style={styles.label}>Upload photos (up to 5)</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => { handleImages(key, e.target.files); e.target.value = '' }}
-                          style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
-                        />
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '12px', border: '1px solid var(--color-border, #e2e8f0)', borderRadius: '8px',
+                          padding: '8px', backgroundColor: '#ffffff', marginTop: '6px',
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById(`return-file-input-${key}`)?.click()}
+                            style={{
+                              padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--color-border, #e2e8f0)',
+                              backgroundColor: '#f8fafc', color: '#0f172a', fontSize: '0.8rem',
+                              fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                            }}
+                          >
+                            Choose Files
+                          </button>
+
+                          <span style={{
+                            fontSize: '0.8rem', color: 'var(--color-muted, #64748b)', textAlign: 'right',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {meta.images?.length > 0
+                              ? meta.images.map((f) => f.name).join(', ')
+                              : 'No file chosen'}
+                          </span>
+
+                          <input
+                            id={`return-file-input-${key}`}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => { handleImages(key, e.target.files); e.target.value = '' }}
+                            style={{ display: 'none' }}
+                          />
+                        </div>
                         {meta.previews?.length > 0 && (
                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                             {meta.previews.map((src, i) => (

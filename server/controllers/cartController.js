@@ -4,6 +4,7 @@ import Product from "../models/productModel.js";
 import Coupon from "../models/couponModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
+import { resolvePrice } from "../shared/pricing.js";
 
 // HELPERS
 //check valid MongoDB ObjectID
@@ -14,22 +15,8 @@ const isValidObjectId = (id) =>
 // variant is optional — when supplied, its priceDelta is added on top of
 // the product's own effective price (same rule used on the product page).
 const getEffectivePrice = (product, variant = null) => {
-  let base;
-
-  if (
-    product.discountPrice !== null &&
-    product.discountPrice !== undefined &&
-    product.discountPrice >= 0 &&
-    product.discountPrice < product.price
-  ) {
-    base = product.discountPrice;
-  } else {
-    base = product.price;
-  }
-
-  const delta = variant?.priceDelta ? Number(variant.priceDelta) || 0 : 0;
-
-  return base + delta;
+  const pricing = resolvePrice(product, variant);
+  return pricing.finalPrice;
 };
 
 // Find a variant sub-document on a product by its _id. Returns null if the

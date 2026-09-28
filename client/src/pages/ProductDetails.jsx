@@ -313,7 +313,8 @@ function ProductDetail() {
     if (rx === false) return
 
     try {
-      await addItem(product, 1, rx)
+      // Pass the active variant to ensure correct pricing
+      await addItem(product, 1, rx, activeVariant)
       setAdded(true)
       setTimeout(() => setAdded(false), 2000)
     } catch (err) {
@@ -326,7 +327,8 @@ function ProductDetail() {
     if (rx === false) return
 
     try {
-      await addItem(product, 1, rx)
+      // Pass the active variant to ensure correct pricing
+      await addItem(product, 1, rx, activeVariant)
       navigate('/checkout')
     } catch (err) {
       alert(err.message || 'Failed to process item.')
@@ -369,18 +371,45 @@ function ProductDetail() {
   }
 
   // ── Derived values ───────────────────────────────────────────────────────────
-  const hasVariants= Array.isArray(product.variants) && product.variants.length > 0
-  const activeVariant = hasVariants ? product.variants[selectedVariantIdx]: null
+  // Use server-calculated pricing - no client-side calculation needed  
+  const hasVariants = product.hasVariants || false
+  const activeVariant = hasVariants && product.variants ? product.variants[selectedVariantIdx] : null
 
-  const images       = (activeVariant?.images?.length > 0 ? activeVariant.images : product.image) ?? []
+  const rawMainImages = Array.isArray(product.image)
+    ? product.image
+    : product.image
+    ? [product.image]
+    : []
+
+  const rawVariantImages = Array.isArray(activeVariant?.images)
+    ? activeVariant.images
+    : []
+
+  const normalizeImg = (img) => {
+    if (!img) return null
+    if (typeof img === 'string') return { url: img, public_id: '' }
+    if (img.url) return img
+    return null
+  }
+
+  const variantImgObjs = rawVariantImages.map(normalizeImg).filter(Boolean)
+  const mainImgObjs = rawMainImages.map(normalizeImg).filter(Boolean)
+
+  // Put active variant photos first, followed by main product photos (deduplicated by URL)
+  const combinedImgObjs = [...variantImgObjs]
+  mainImgObjs.forEach((mImg) => {
+    if (!combinedImgObjs.some((cImg) => cImg.url === mImg.url)) {
+      combinedImgObjs.push(mImg)
+    }
+  })
+
+  const images = combinedImgObjs.length > 0 ? combinedImgObjs : mainImgObjs
   
-  const variantDelta = activeVariant?.priceDelta ?? 0
-  const basePrice = product.discountPrice ?? product.price
-  const sellingPrice = basePrice + variantDelta
-  const originalPrice = product.discountPrice ? product.price + variantDelta : null
-  const discount = originalPrice && sellingPrice < originalPrice
-    ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100)
-    : null
+  // Get pricing from server-calculated values
+  const sellingPrice = activeVariant?.finalPrice ?? product.finalPrice ?? product.discountPrice ?? product.price
+  const originalPrice = activeVariant?.price ?? product.price
+  const discount = activeVariant?.savePct ?? product.savePct ?? null
+  
   const stockCount = hasVariants ? (activeVariant?.stock ?? 0) : product.stock
   const outOfStock = hasVariants ? stockCount <= 0 : product.isOutOfStock
 
@@ -496,84 +525,6 @@ function ProductDetail() {
               </div>
             }
           />
-          {/* Main image */}
-          <div style={{
-            backgroundColor: '#f3f4f6',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            aspectRatio: '1 / 1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '16px',
-            position: 'relative',
-          }}>
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            ) : (
-              <div style={{ opacity: 0.2, color: 'var(--color-navy)' }}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
-            )}
-
-            {/* Badges overlay */}
-            <div style={{ position: 'absolute', top: '14px', left: '14px', display: 'flex', gap: '6px' }}>
-              {isNew && (
-                <span style={{ backgroundColor: '#C9A84C', color: '#0d1a2a', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
-                  NEW
-                </span>
-              )}
-              {isBestseller && (
-                <span style={{ backgroundColor: '#0d1a2a', color: '#C9A84C', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>
-                  BESTSELLER
-                </span>
-              )}
-              {discount && (
-                <span style={{ backgroundColor: '#e74c3c', color: '#fff', fontSize: '0.7rem', fontWeight: '700', padding: '4px 10px', borderRadius: '4px' }}>
-                  {discount}% OFF
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Thumbnail strip — only shown if multiple images */}
-          {images.length > 1 && (
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }} className="hide-scrollbar">
-              {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    border: i === selectedImage
-                      ? '2px solid var(--color-navy)'
-                      : '2px solid var(--color-border)',
-                    padding: 0,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    backgroundColor: '#f3f4f6',
-                  }}
-                >
-                  <img
-                    src={img.url}
-                    alt={`View ${i + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ── Right: Product info ───────────────────────────────────────────── */}
@@ -664,6 +615,119 @@ function ProductDetail() {
               <span style={{ ...tagStyle, textTransform: 'capitalize' }}>{product.category}</span>
             )}
           </div>
+
+          {/* ── Color / Variant Selection (Daraz Style) ── */}
+          {hasVariants && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid var(--color-border)',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <h3 style={{
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  color: 'var(--color-navy)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  Color Family: <span style={{ color: '#C9A84C', textTransform: 'capitalize', fontWeight: '800' }}>{activeVariant?.color}</span>
+                </h3>
+                {activeVariant?.stock !== undefined && (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    color: activeVariant.stock > 0 ? '#16a34a' : '#dc2626',
+                    backgroundColor: activeVariant.stock > 0 ? '#f0fdf4' : '#fef2f2',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: `1px solid ${activeVariant.stock > 0 ? '#bbf7d0' : '#fecaca'}`,
+                  }}>
+                    {activeVariant.stock > 0 ? `In Stock (${activeVariant.stock})` : 'Out of Stock'}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: '10px' }}>
+                {product.variants.map((v, i) => {
+                  const isSelected = i === selectedVariantIdx
+                  // Use server-calculated pricing from the variant
+                  const vPrice = v.finalPrice ?? v.price ?? product.finalPrice ?? product.price
+                  const vImg = v.images?.[0]?.url || product.image?.[0]?.url
+
+                  return (
+                    <button
+                      key={v._id ?? i}
+                      type="button"
+                      onClick={() => setSelectedVariantIdx(i)}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid var(--color-navy)' : '1px solid var(--color-border)',
+                        backgroundColor: isSelected ? '#f8fafc' : '#ffffff',
+                        padding: '6px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isSelected ? '0 4px 12px rgba(13,32,49,0.12)' : 'none',
+                        outline: 'none',
+                      }}
+                    >
+                      {/* Selected Checkmark Badge */}
+                      {isSelected && (
+                        <span style={{
+                          position: 'absolute', top: '-6px', right: '-6px',
+                          width: '18px', height: '18px', borderRadius: '50%',
+                          backgroundColor: 'var(--color-navy)', color: '#ffffff',
+                          fontSize: '0.65rem', fontWeight: '800', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                          zIndex: 2,
+                        }}>
+                          ✓
+                        </span>
+                      )}
+
+                      {/* Thumbnail Image */}
+                      <div style={{
+                        width: '100%', aspectRatio: '1 / 1', borderRadius: '6px',
+                        overflow: 'hidden', backgroundColor: '#f1f5f9', marginBottom: '6px',
+                      }}>
+                        {vImg ? (
+                          <img src={vImg} alt={v.color} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        ) : (
+                          <div style={{
+                            width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', backgroundColor: v.colorHex || '#e2e8f0'
+                          }} />
+                        )}
+                      </div>
+
+                      {/* Color Name */}
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: isSelected ? '700' : '600',
+                        color: 'var(--color-navy)', display: 'block', textTransform: 'capitalize',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {v.color}
+                      </span>
+
+                      {/* Variant Price */}
+                      <span style={{ fontSize: '0.7rem', color: isSelected ? '#C9A84C' : '#64748b', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                        Rs. {vPrice.toLocaleString()}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Prescription / Power Selection (for Contact Lenses & Prescription Products) ── */}
           {isLensOrRx && (
@@ -860,20 +924,20 @@ function ProductDetail() {
           {/* CTA buttons */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
             <button
-              disabled={product.isOutOfStock}
+              disabled={outOfStock}
               onClick={handleAddToCart}
               style={{
                 flex: 1,
                 padding: '14px 24px',
-                backgroundColor: product.isOutOfStock ? '#e5e7eb' : (added ? '#16a34a' : 'var(--color-navy)'),
-                color: product.isOutOfStock ? '#9ca3af' : 'var(--color-taupe)',
+                backgroundColor: outOfStock ? '#e5e7eb' : (added ? '#16a34a' : 'var(--color-navy)'),
+                color: outOfStock ? '#9ca3af' : 'var(--color-taupe)',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '0.85rem',
                 fontWeight: '700',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                cursor: product.isOutOfStock ? 'not-allowed' : 'pointer',
+                cursor: outOfStock ? 'not-allowed' : 'pointer',
                 transition: 'background-color 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
@@ -881,31 +945,31 @@ function ProductDetail() {
                 gap: '8px',
               }}
             >
-              {added ? '✓ Added to Cart' : product.isOutOfStock ? 'Out of Stock' : '🛒 Add to Cart'}
+              {added ? '✓ Added to Cart' : outOfStock ? 'Out of Stock' : '🛒 Add to Cart'}
             </button>
 
             <button
-              disabled={product.isOutOfStock}
+              disabled={outOfStock}
               onClick={handleBuyNow}
               style={{
                 flex: 1,
                 padding: '14px 24px',
-                backgroundColor: product.isOutOfStock ? '#e5e7eb' : 'var(--color-taupe)',
-                color: product.isOutOfStock ? '#9ca3af' : 'var(--color-navy)',
+                backgroundColor: outOfStock ? '#e5e7eb' : 'var(--color-taupe)',
+                color: outOfStock ? '#9ca3af' : 'var(--color-navy)',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '0.85rem',
                 fontWeight: '700',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                cursor: product.isOutOfStock ? 'not-allowed' : 'pointer',
+                cursor: outOfStock ? 'not-allowed' : 'pointer',
                 transition: 'opacity 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
               }}
-              onMouseEnter={(e) => { if (!product.isOutOfStock) e.currentTarget.style.opacity = '0.85' }}
+              onMouseEnter={(e) => { if (!outOfStock) e.currentTarget.style.opacity = '0.85' }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
             >
               Buy Now
@@ -940,41 +1004,6 @@ function ProductDetail() {
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </button>
-            {hasVariants && (
-  <div style={{ marginTop: '20px' }}>
-    <h3 style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-muted)', marginBottom: '10px' }}>
-      Color: <span style={{ color: 'var(--color-navy)', textTransform: 'none', letterSpacing: 'normal' }}>{activeVariant?.color}</span>
-    </h3>
-    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-      {product.variants.map((v, i) => (
-        <button
-          key={v._id ?? i}
-          onClick={() => setSelectedVariantIdx(i)}
-          style={{
-            width: '76px',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: i === selectedVariantIdx ? '2px solid var(--color-navy)' : '2px solid var(--color-border)',
-            padding: 0,
-            cursor: 'pointer',
-            backgroundColor: '#f3f4f6',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ width: '100%', height: '76px', backgroundColor: '#f3f4f6' }}>
-            {v.images?.[0]?.url && (
-              <img src={v.images[0].url} alt={v.color}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            )}
-          </div>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', display: 'block', padding: '4px 2px' }}>
-            {v.color}
-          </span>
-        </button>
-      ))}
-    </div>
-  </div>
-)}
           </div>
 
           {/* Description */}

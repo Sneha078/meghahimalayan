@@ -87,6 +87,7 @@ function PointsRedeemBox({
   useEffect(() => {
     if (!onChange) return;
 
+    if(loading) return
     if (safePointsUsed > 0) {
       const validPoints = Math.min(
         safePointsUsed,
@@ -118,7 +119,7 @@ function PointsRedeemBox({
     pointsDiscount,
     maxUsable,
     pointsToRupeeRate,
-    onChange,
+    onChange,loading,
   ]);
 
   /**
