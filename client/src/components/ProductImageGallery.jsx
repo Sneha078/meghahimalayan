@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function ProductImageGallery({ images = [], productName = 'Product', badges = null, className = '', style = {} }) {
   const [selectedImage, setSelectedImage] = useState(0)
+
+  useEffect(() => {
+    setSelectedImage(0)
+  }, [images])
 
   // Don't render anything if no images
   if (!images || images.length === 0) {
@@ -27,7 +31,7 @@ function ProductImageGallery({ images = [], productName = 'Product', badges = nu
     )
   }
 
-  const currentImage = images[selectedImage]
+  const currentImage = images[selectedImage] || images[0]
 
   return (
     <div className={className} style={style}>

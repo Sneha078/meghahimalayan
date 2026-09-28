@@ -39,6 +39,7 @@ function normalizeCartItem(item) {
     category: product.category ?? "",
     stock: product.stock ?? 0,
     prescription: item.prescription ?? null,
+    variant: item.variant ?? null,
   };
 }
 
@@ -60,13 +61,18 @@ function mergeGuestIntoBackend(guestItems) {
 
   for (const item of guestItems) {
     const pid = item.productId ?? item.id;
+    const prescriptionKey = item.prescription ? JSON.stringify(item.prescription) : 'no_prescription';
+    const variantKey = item.variant ? JSON.stringify(item.variant) : 'no_variant';
+    const uniqueKey = `${pid}_${prescriptionKey}_${variantKey}`;
 
-    if (seen.has(pid)) {
-      seen.get(pid).quantity += item.quantity;
+    if (seen.has(uniqueKey)) {
+      seen.get(uniqueKey).quantity += item.quantity;
     } else {
-      seen.set(pid, {
+      seen.set(uniqueKey, {
         productId: pid,
         quantity: item.quantity,
+        prescription: item.prescription,
+        variant: item.variant,
       });
     }
   }
@@ -207,7 +213,9 @@ export function CartProvider({ children }) {
               merged.map((item) =>
                 apiAddToCart(
                   item.productId,
-                  item.quantity
+                  item.quantity,
+                  item.prescription,
+                  item.variant
                 ).catch(() => {})
               )
             );
@@ -257,22 +265,23 @@ export function CartProvider({ children }) {
   // Guest cart helpers
   // --------------------------------------------------
 
-  const addItemGuest = useCallback((product, qty = 1, prescription = undefined) => {
+  const addItemGuest = useCallback((product, qty = 1, prescription = undefined, variant = undefined) => {
     const quantity = Number(qty) || product.quantity || 1;
     const productId = product.id ?? product._id;
     const itemPrescription = prescription ?? product.prescription ?? null;
+    const itemVariant = variant ?? product.selectedVariant ?? null;
 
     setCartItems((prev) => {
-      // If prescription data is attached, don't merge - create separate line
-      const existing = !itemPrescription
-        ? prev.find((item) => (item.productId ?? item.id) === productId && !item.prescription)
+      // If prescription data or variant is attached, don't merge - create separate line
+      const existing = !itemPrescription && !itemVariant
+        ? prev.find((item) => (item.productId ?? item.id) === productId && !item.prescription && !item.variant)
         : null;
 
       let next;
 
       if (existing) {
         next = prev.map((item) =>
-          (item.productId ?? item.id) === productId && !item.prescription
+          (item.productId ?? item.id) === productId && !item.prescription && !item.variant
             ? {
                 ...item,
                 quantity: item.quantity + quantity,
@@ -280,7 +289,7 @@ export function CartProvider({ children }) {
             : item
         );
       } else {
-        const uniqueGuestId = itemPrescription ? `${productId}_${Date.now()}` : productId;
+        const uniqueGuestId = itemPrescription || itemVariant ? `${productId}_${Date.now()}` : productId;
         next = [
           ...prev,
           {
@@ -299,6 +308,7 @@ export function CartProvider({ children }) {
             category: product.category ?? "",
             stock: product.stock ?? 0,
             prescription: itemPrescription,
+            variant: itemVariant,
           },
         ];
       }
@@ -317,7 +327,7 @@ export function CartProvider({ children }) {
       const itemVariant = variant ?? product.selectedVariant ?? undefined
 
       try {
-        await apiAddToCart(productId, quantity, itemPrescription);
+        await apiAddToCart(productId, quantity, itemPrescription, itemVariant);
       } catch (err) {
         console.error("Failed to add to cart", err);
         throw err;

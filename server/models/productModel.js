@@ -59,7 +59,7 @@ const reviewSchema = new mongoose.Schema(
 );
 
 // Color variant — each color gets its own photo set, stock, and optional
-// SKU/price override. Products without variants (most perfumes, some
+// price override. Products without variants (most perfumes, some
 // simple SKUs) just leave this array empty and use the flat `color` field.
 const variantSchema = new mongoose.Schema(
   {
@@ -102,11 +102,41 @@ const variantSchema = new mongoose.Schema(
       default: "",
     },
 
-    // Some colors cost more (e.g. limited edition tortoise vs. standard
-    // black) — added to the base `price`, can be 0 or negative.
-    priceDelta: {
+    // Full price for this variant - replaces product price when set
+    // null = use product price
+    price: {
       type: Number,
-      default: 0,
+      default: null,
+      min: [0, "Variant price cannot be negative"],
+      validate: {
+        validator: function(value) {
+          // If discountPrice is set, price must be higher
+          if (this.discountPrice !== null && this.discountPrice !== undefined && value !== null) {
+            return value > this.discountPrice;
+          }
+          return true;
+        },
+        message: "Variant price must be higher than variant discount price"
+      }
+    },
+
+    // Full discounted price for this variant - replaces product discountPrice when set
+    // null = no variant-specific discount
+    discountPrice: {
+      type: Number,
+      default: null,
+      min: [0, "Variant discount price cannot be negative"],
+      validate: {
+        validator: function(value) {
+          // If price is set, discountPrice must be lower
+          if (this.price !== null && this.price !== undefined && value !== null) {
+            return value < this.price;
+          }
+          // If no variant price but product has price, discount must be lower than product price
+          return true;
+        },
+        message: "Variant discount price must be lower than variant price"
+      }
     },
   },
   { _id: true }
@@ -218,6 +248,16 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: null,
       min: [0, "Discount price cannot be negative"],
+      validate: {
+        validator: function(value) {
+          // Discount price must be lower than regular price
+          if (value !== null && value !== undefined) {
+            return value < this.price;
+          }
+          return true;
+        },
+        message: "Discount price must be lower than regular price"
+      }
     },
 
     //featured/Best seller/ New arrival

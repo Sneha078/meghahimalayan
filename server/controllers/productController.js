@@ -4,9 +4,27 @@ import handleAsyncError from "../middleware/handleAsyncError.js"; //asynchronous
 import APIFunctionality from "../utils/apiFunctionality.js"; //Product search/filter/sort/pagination ko common logic handle garcha.
 import cloudinary from "../config/cloudinary.js"; //product images upload/del in cloudinary
 import { awardReviewPoints, clawbackReviewPoints } from "../services/pointsService.js"; //reward points for reviews
+import { resolveProductPricing } from "../shared/pricing.js";
 
 
 // Helper functions
+
+// Attach resolved pricing information to a product
+const attachPricingInfo = (product) => {
+  const pricing = resolveProductPricing(product);
+  
+  return {
+    ...product.toObject ? product.toObject() : product,
+    // Add pricing info to the product
+    price: pricing.product.price,
+    finalPrice: pricing.product.finalPrice,
+    savePct: pricing.product.savePct,
+    hasVariants: pricing.product.hasVariants,
+    variantPriceRange: pricing.product.variantPriceRange,
+    // Add pricing info to each variant
+    variants: pricing.variants
+  };
+};
 
 // Product lookup by ObjectId or slug
 const findProduct = async (id) => {
@@ -88,13 +106,16 @@ export const getAllProducts = handleAsyncError(async (req, res, next) => {
   api.pagination(resultsPerPage);
   const products = await api.query;
 
+  // Attach pricing information to all products
+  const productsWithPricing = products.map(product => attachPricingInfo(product));
+
   res.status(200).json({
     success: true,
     productCount,
     resultsPerPage,
     totalPages,
     currentPage,
-    products,
+    products: productsWithPricing,
   });
 });
 
@@ -109,9 +130,12 @@ export const getSingleProduct = handleAsyncError(async (req, res, next) => {
     return next(new HandleError("Product not found", 404));
   }
 
+  // Attach resolved pricing information
+  const productWithPricing = attachPricingInfo(product);
+
   res.status(200).json({
     success: true,
-    product,
+    product: productWithPricing,
   });
 });
 
@@ -518,7 +542,8 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
           ...variantData,
           images: finalImages,
           stock: Number(variantData.stock) || 0,
-          priceDelta: Number(variantData.priceDelta) || 0,
+          price: variantData.price ? Number(variantData.price) : null,
+          discountPrice: variantData.discountPrice ? Number(variantData.discountPrice) : null,
         };
       })
     );
@@ -583,7 +608,8 @@ const uploadVariants = async (variants) => {
         images: imageLinks,
         stock: Number(variant.stock) || 0,
         sku: variant.sku || "",
-        priceDelta: Number(variant.priceDelta) || 0,
+        price: variant.price ? Number(variant.price) : null,
+        discountPrice: variant.discountPrice ? Number(variant.discountPrice) : null,
       };
     })
   );

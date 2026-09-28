@@ -22,12 +22,26 @@ function ProductCard({ product }) {
   }
 
   const imageUrl = product.image_url ?? product.image?.[0]?.url ?? null
-  const originalPrice = product.discountPrice ? product.price : null
-  const sellingPrice  = product.discountPrice ?? product.price
-
+  
+  // Use server-calculated pricing with "From" logic for variants
+  let displayPrice = product.finalPrice ?? product.discountPrice ?? product.price
+  let originalPrice = null
+  let pricePrefix = ''
+  
+  // Show "From Rs. X" only when variant prices differ and we should show the range
+  if (product.hasVariants && product.variantPriceRange?.showFromPrice) {
+    displayPrice = product.variantPriceRange.min
+    pricePrefix = 'From '
+  }
+  
+  // Show original price for discount calculation
+  if (product.price > displayPrice) {
+    originalPrice = product.price
+  }
+  
   const discount = originalPrice
-    ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100)
-    : null
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+    : (product.savePct || null)
 
   const isNew        = product.isNewArrival  ?? product.isNew        ?? false
   const isBestseller = product.isBestSeller  ?? product.isBestseller ?? false
@@ -257,7 +271,7 @@ function ProductCard({ product }) {
           {/* Price */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--text-base)', fontWeight: '700', color: '#0d2031' }}>
-              Rs. {sellingPrice.toLocaleString()}
+              {pricePrefix}Rs. {displayPrice.toLocaleString()}
             </span>
             {originalPrice && (
               <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>
