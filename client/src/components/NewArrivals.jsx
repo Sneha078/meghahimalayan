@@ -1,5 +1,5 @@
 import { useProducts } from '../hooks/useProducts'
-import ProductCard from './ProductCard'
+import ProductCarousel from './ProductCarousel'
 
 function NewArrivals() {
   const { products: newProducts, loading, error } = useProducts({ new: true, limit: 8 })
@@ -8,7 +8,6 @@ function NewArrivals() {
     <section style={{
       backgroundColor: 'var(--color-sbg)',
       padding: 'var(--section-py) var(--section-px)',
-      overflow: 'hidden',
     }}>
 
       {/* Section Header */}
@@ -59,15 +58,9 @@ function NewArrivals() {
         <p style={{ color: 'var(--color-navy)', opacity: 0.6 }}>No new arrivals right now.</p>
       )}
 
-      {/* 2-column product grid */}
+      {/* Product grid with carousel */}
       {!loading && !error && newProducts.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-          {newProducts.map((product) => (
-            <div key={product._id}>
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
+        <ProductCarousel products={newProducts} perPage={4} />
       )}
 
     </section>

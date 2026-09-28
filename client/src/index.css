@@ -320,6 +320,17 @@ input, select, textarea {
   display: none;
 }
 
+/* ── Carousel card: 2 per view mobile, 4 per view desktop ── */
+.carousel-card {
+  flex: 0 0 calc(50% - (var(--section-gap) / 2));
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .carousel-card {
+    flex: 0 0 calc(25% - (var(--section-gap) * 1.5));
+  }
+}
+
 
 /* ── Screen reader only ── */
 .sr-only {

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ProductCard from './ProductCard'
+import ProductCarousel from './ProductCarousel'
 
 function BestSellers() {
   const [products, setProducts] = useState([])
@@ -48,7 +48,6 @@ function BestSellers() {
       style={{
         backgroundColor: 'var(--color-white)',
         padding: 'var(--section-py) var(--section-px)',
-        overflow: 'hidden',
       }}
     >
       {/* Section Header */}
@@ -125,20 +124,8 @@ function BestSellers() {
 
       {/* Products */}
       {!loading && !error && products.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 'var(--section-gap)',
-            marginBottom: '48px',
-          }}
-        >
-          {products.map((product) => (
-            <ProductCard
-              key={product._id}
-              product={product}
-            />
-          ))}
+        <div style={{ marginBottom: '48px' }}>
+          <ProductCarousel products={products} perPage={4} />
         </div>
       )}
 

@@ -1471,13 +1471,4 @@ const inputStyle = {
   boxSizing: 'border-box',
 }
 
-const inputStyle = {
-  padding: '9px 12px',
-  borderRadius: '8px',
-  border: '1px solid #e2e8f0',
-  fontSize: '0.85rem',
-  outline: 'none',
-  boxSizing: 'border-box',
-}
-
 export default AdminProductForm

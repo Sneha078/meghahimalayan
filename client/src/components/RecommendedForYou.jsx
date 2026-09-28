@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ProductCard from './ProductCard'
+import ProductCarousel from './ProductCarousel'
 
 const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'
 
@@ -60,7 +60,6 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
       backgroundColor: 'var(--color-white)',
       padding: 'clamp(2rem, 5vw, 4rem) var(--section-px)',
       borderTop: '1px solid var(--color-border)',
-      overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
@@ -138,15 +137,9 @@ function RecommendedForYou({ userId = null, viewedIds = [] }) {
         </p>
       )}
 
-      {/* 2-column product grid */}
+      {/* Product grid with carousel */}
       {!loading && !error && products.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-          {products.map((product) => (
-            <div key={product._id ?? product.id}>
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
+        <ProductCarousel products={products} perPage={4} />
       )}
     </section>
   )
