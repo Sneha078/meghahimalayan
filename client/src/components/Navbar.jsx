@@ -279,7 +279,7 @@ function Navbar() {
           />
 
           {/* Right: Icons */}
-          <div className={`flex items-center shrink-0 ${isHome ? "gap-[clamp(4px,1.6vw,18px)] mr-4" : "gap-[8px] mr-2 sm:gap-3 sm:mr-4 lg:gap-5"}`}>
+          <div className={`flex items-center shrink-0 ${isHome ? "gap-[clamp(4px,1.6vw,18px)] mr-4" : "gap-8px mr-2 sm:gap-3 sm:mr-4 lg:gap-5"}`}>
 
           {/* Mobile search — icon only */}
           <button
@@ -334,11 +334,11 @@ function Navbar() {
                 display: 'flex', alignItems: 'center', gap: '8px',
                 textDecoration: 'none',
                 color: scrolled ? '#0d1a2a' : '#ffffff',
-                width: isHome ? '24px' : '22px', height: isHome ? '24px' : '22px',
+                width: isHome ? '36px' : '36px', height: isHome ? '24px' : '22px',
                 flexShrink: 0, lineHeight: 0,
               }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ filter: scrolled ? 'none' : 'drop-shadow(0 0 3px rgba(255,255,255,0.75))' }}>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" style={{ filter: scrolled ? 'none' : 'drop-shadow(0 0 3px rgba(255,255,255,0.75))' }}>
                 <circle cx="12" cy="7.5" r="4.2" />
                 <path d="M20.5 21.5v-1.8c0-2.5-2.2-4.5-5-4.5H8.5c-2.8 0-5 2-5 4.5v1.8z" />
               </svg>
@@ -354,7 +354,7 @@ function Navbar() {
           ) : (
             <Link
               to="/login"
-              className={`flex items-center justify-center ${isHome ? "w-[26px] h-[26px]" : "w-[22px] h-[22px]"} ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
+              className={`flex items-center justify-center ${isHome ? "w-26px h-26px" : "w-22px h-22px"} ${scrolled ? "text-[#0d1a2a]" : "text-white"}`}
               aria-label="Account"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ filter: scrolled ? 'none' : 'drop-shadow(0 0 3px rgba(255,255,255,0.75))' }}>
@@ -422,7 +422,7 @@ function Navbar() {
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </button>
-            <div className="flex-1 flex items-center gap-3 rounded-full bg-white border border-[var(--color-border)]" style={{ padding: "10px 16px" }}>
+            <div className="flex-1 flex items-center gap-3 rounded-full bg-white border border-(--color-border)" style={{ padding: "10px 16px" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-400 shrink-0">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                 <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -434,7 +434,7 @@ function Navbar() {
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent text-sm outline-none text-[var(--color-navy)] placeholder-gray-400"
+                className="flex-1 bg-transparent text-sm outline-none text-(--color-navy) placeholder-gray-400"
                 style={{ minWidth: 0 }}
               />
               {searchValue && (
@@ -504,7 +504,7 @@ function Navbar() {
                       className="flex items-center gap-3 py-3 px-3 rounded-lg hover:bg-white transition-colors"
                       style={{ textDecoration: "none", color: "var(--color-navy)" }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-taupe)]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-(--color-taupe)">
                         <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                         <line x1="3" y1="6" x2="21" y2="6" />
                         <path d="M16 10a4 4 0 0 1-8 0" />

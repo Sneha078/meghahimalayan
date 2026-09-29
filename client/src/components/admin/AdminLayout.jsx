@@ -50,7 +50,7 @@ function AdminLayoutInner({ children }) {
 
   const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? '64px' : '240px')
 
-  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? '64px' : '240px')
+  
 
   // Interns only manage products — show just the Products menu
   const visibleNav = user?.role === 'intern'
