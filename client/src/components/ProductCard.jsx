@@ -158,7 +158,7 @@ function ProductCard({ product }) {
 
           {/* Wishlist */}
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation()
               e.preventDefault()
               if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
