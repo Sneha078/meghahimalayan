@@ -133,7 +133,7 @@ export default function NotificationBell() {
           position: 'absolute',
           top: 'calc(100% + 8px)',
           right: 0,
-          width: '360px',
+          width: 'min(360px, 90vw)',
           backgroundColor: '#ffffff',
           borderRadius: '14px',
           border: '1px solid #e2e8f0',

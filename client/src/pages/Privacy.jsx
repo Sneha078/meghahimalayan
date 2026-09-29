@@ -7,7 +7,7 @@ function Privacy() {
       style={{
         backgroundColor: '#f8f6f2',
         minHeight: '100vh',
-        padding: '60px 20px 80px',
+        padding: 'clamp(24px, 5vw, 60px) var(--section-px) 80px',
       }}
     >
       <div

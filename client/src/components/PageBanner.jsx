@@ -3,7 +3,7 @@ function PageBanner({ eyebrow, title }) {
     <div
       style={{
         backgroundColor: "var(--color-navy)",
-        padding: "48px 5rem 36px",
+        padding: "clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)",
       }}
     >
       <p
@@ -22,7 +22,7 @@ function PageBanner({ eyebrow, title }) {
         style={{
           fontFamily: "var(--font-serif)",
           color: "#ffffff",
-          fontSize: "2.4rem",
+          fontSize: "clamp(1.6rem, 5vw, 2.4rem)",
           fontWeight: "800",
         }}
       >

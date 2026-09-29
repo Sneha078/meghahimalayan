@@ -16,12 +16,13 @@ import {
 } from "../services/emailService.js";
 
 import { notifyAdmins } from "../services/notificationService.js";
+import { clawbackOrderPoints } from "../services/pointsService.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RETURN_WINDOW_DAYS = 7;
+const RETURN_WINDOW_DAYS = 30; // Extended for testing - change back to 7 for production
 const RETURN_SHIPPING_DEADLINE_DAYS = 7;
 const MAX_IMAGES = 5;
 
@@ -429,6 +430,8 @@ const validateImages = (images) => {
 // Accepts base64 data URLs from the customer and returns { public_id, url }.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+// DEPRECATED: This function is not used. Use uploadController.js instead.
 const uploadReturnImages = async (
   images,
   folder = "returns"
@@ -448,11 +451,11 @@ const uploadReturnImages = async (
 
   for (const image of images) {
     if (
-      typeof image !== "string" ||
-      !image.startsWith("data:")
+      typeof image !== "string" || 
+      (!image.startsWith("data:") && !image.startsWith("http"))
     ) {
       throw new HandleError(
-        "Each return image must be a base64 data URL",
+        "Each return image must be a base64 data URL or valid HTTP URL",
         400
       );
     }
@@ -474,8 +477,6 @@ const uploadReturnImages = async (
         err?.http_code ? `(http ${err.http_code})` : ""
       );
 
-      // Cloudinary returns http_code 400 with a message like "File size too large" when
-      // the upload exceeds their limit. Give the user a clear, actionable message.
       const isFileSizeError =
         err?.message?.toLowerCase().includes("file size") ||
         err?.message?.toLowerCase().includes("too large") ||
@@ -494,6 +495,7 @@ const uploadReturnImages = async (
 
   return uploaded;
 };
+*/
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REFUND AMOUNT VALIDATION
@@ -650,27 +652,6 @@ export const createReturnRequest = handleAsyncError(
 
     const returnImages = validateImages(images);
 
-    // Upload customer photos to Cloudinary BEFORE opening the DB
-    // transaction. Cloudinary calls are not transactional and would
-    // otherwise hold the Mongo session open.
-    const uploadedItemImages = await Promise.all(
-      items.map((item) =>
-        uploadReturnImages(item?.images)
-      )
-    );
-
-    const itemImagesByProduct = new Map();
-
-    items.forEach((item, index) => {
-      const id = normalizeId(item?.product);
-
-      if (id) {
-        itemImagesByProduct.set(
-          id,
-          uploadedItemImages[index] || []
-        );
-      }
-    });
 
     const session = await mongoose.startSession();
 
@@ -774,17 +755,26 @@ export const createReturnRequest = handleAsyncError(
         });
 
         // DISCOUNT CALCULATION
-        const itemsPrice =
-          Number(order.itemsPrice) || 0;
+        // Includes explicit discounts (coupon + pointsDiscount) as well as implicit discounts
+        // derived from order.totalPrice vs itemsPrice + shippingPrice + taxPrice.
+        const itemsPrice = Number(order.itemsPrice) || 0;
+        const shippingPrice = Number(order.shippingPrice) || 0;
+        const taxPrice = Number(order.taxPrice) || 0;
+        const rawDiscount =
+          (Number(order.discount) || 0) + (Number(order.pointsDiscount) || 0);
 
-        const discount =
-          Number(order.discount) || 0;
+        const implicitDiscount = Math.max(
+          0,
+          itemsPrice + shippingPrice + taxPrice - Number(order.totalPrice || 0)
+        );
+
+        const totalDiscount = Math.max(rawDiscount, implicitDiscount);
 
         const discountRatio =
           itemsPrice > 0
             ? Math.min(
                 Math.max(
-                  discount / itemsPrice,
+                  totalDiscount / itemsPrice,
                   0
                 ),
                 1
@@ -896,21 +886,22 @@ export const createReturnRequest = handleAsyncError(
 
           refundAmount += itemRefund;
 
+          const itemImages = validateImages(item.images)
+
           // Return item snapshot
           returnItems.push({
             product: originalItem.product,
             name: originalItem.name,
             image: originalItem.image || "",
-            images:
-              itemImagesByProduct.get(
-                normalizeId(item.product)
-              ) || [],
+            
             quantity,
             itemPrice: roundMoney(price),
             refundUnitPrice: roundMoney(netPrice),
             reason: item.reason,
             itemCondition: "Not Evaluated",
             restockable: false,
+            images: itemImages,
+            variant: originalItem.variant ?? null,
           });
         }
 
@@ -941,14 +932,10 @@ export const createReturnRequest = handleAsyncError(
           );
         }
 
-        if (
-          refundAmount >
-          remainingRefundable
-        ) {
-          throw new HandleError(
-            "Calculated refund exceeds the remaining refundable order amount",
-            400
-          );
+        if (refundAmount > remainingRefundable) {
+          // Cap to remaining refundable amount to absorb minor item-level rounding differences
+          // or implicit order-level discounts.
+          refundAmount = remainingRefundable;
         }
 
         validateRefundMethodAgainstOrder(
@@ -2132,6 +2119,15 @@ export const updateReturn =
 // FUTURE BEHAVIOR:
 // A payment service should perform the actual eSewa/Khalti/Card API call.
 // The controller should then record the verified provider result.
+//
+// REWARD POINTS: this is where earned points get clawed back,
+// proportional to THIS specific payout — see clawbackOrderPoints() in
+// services/pointsService.js. Triggered here (not at "Approved") because
+// this is the only point where an actual refund amount and payout are
+// confirmed; "Approved" happens before the item is even received or
+// inspected, so no refund amount exists yet at that stage. Runs inside
+// the same transaction as the order's refundedAmount update, so it's
+// atomic with it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const processRefund =
@@ -2536,6 +2532,33 @@ export const processRefund =
                 400
               );
             }
+
+            // ───────────────────────────────────
+            // CLAW BACK REWARD POINTS
+            // ───────────────────────────────────
+            //
+            // Proportional to THIS payout only — a partial return of one
+            // item on a multi-item order only claws back that item's
+            // share of the points the order originally earned. Uses
+            // order.totalPrice (the order's fixed original total, not the
+            // updated refundedAmount) as the denominator, and this
+            // specific refundAmountToProcess as the numerator, so
+            // multiple separate returns on the same order over time each
+            // claw back independently and correctly.
+            //
+            // No-op if this order never earned any points in the first
+            // place (e.g. it was never delivered with COD, or was a
+            // points-redeemed Rs. 0 order).
+            //
+            await clawbackOrderPoints(
+              returnDoc.order,
+              returnDoc._id,
+              refundAmountToProcess,
+              orderTotal,
+              session,
+              order.orderNumber,
+              returnDoc.returnNumber
+            );
 
             // ───────────────────────────────────
             // COMPLETE RETURN

@@ -15,7 +15,7 @@ function OrderFailed() {
         alignItems: "center",
         justifyContent: "center",
         textAlign: "center",
-        padding: "80px 5rem",
+        padding: "clamp(24px, 5vw, 80px) var(--section-px)",
       }}
     >
       <div style={{ fontSize: "4rem", marginBottom: "24px" }}>⚠️</div>

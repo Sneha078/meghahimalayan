@@ -62,7 +62,7 @@ function Contact() {
     <div style={{ backgroundColor: "var(--color-sbg)", minHeight: "100vh" }}>
       <PageBanner eyebrow="Customer Care" title="Contact Us" />
 
-      <div style={{ padding: "40px 5rem", maxWidth: "700px" }}>
+      <div style={{ padding: "clamp(20px, 4vw, 40px) var(--section-px)", maxWidth: "700px" }}>
         <p style={{ color: "var(--color-muted)", fontSize: "0.92rem", marginBottom: "28px" }}>
           Have a question about an order, product, or your account? Send us a message and we'll get back to you within 1–2 business days.
         </p>

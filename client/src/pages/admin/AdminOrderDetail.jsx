@@ -191,7 +191,7 @@ function AdminOrderDetail() {
         </div>
 
        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           <div style={{
             backgroundColor: '#ffffff', borderRadius: '12px',
             border: '1px solid #e2e8f0', padding: '24px',

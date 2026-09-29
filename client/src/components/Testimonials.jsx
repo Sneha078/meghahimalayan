@@ -42,14 +42,15 @@ function Testimonials() {
     <section
       style={{
         backgroundColor: 'var(--color-white)',
-        padding: '80px 5rem',
+        padding: 'var(--section-py) var(--section-px)',
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
       <div
         style={{
           textAlign: 'center',
-          marginBottom: '56px',
+          marginBottom: 'clamp(28px, 4vw, 56px)',
         }}
       >
         <p
@@ -68,7 +69,7 @@ function Testimonials() {
         <h2
           style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2.5rem',
+            fontSize: 'var(--text-3xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -81,10 +82,9 @@ function Testimonials() {
 
       {/* Testimonials Grid */}
       <div
+        className="grid grid-cols-2 lg:grid-cols-4"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '24px',
+          gap: 'var(--section-gap)',
           alignItems: 'stretch',
         }}
       >
@@ -94,18 +94,15 @@ function Testimonials() {
             style={{
               backgroundColor: 'var(--color-sbg)',
               borderRadius: '16px',
-              padding: '32px',
+              padding: 'clamp(20px, 3vw, 32px)',
               border: '3px solid var(--color-border)',
               borderTop: '3px solid var(--color-taupe)',
               boxShadow: '0 4px 16px rgba(13,32,49,0.08)',
               transition:
                 'transform 0.3s ease, box-shadow 0.3s ease',
-
-              // Keep all cards equal in height
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
-              minHeight: '390px',
               boxSizing: 'border-box',
             }}
             onMouseEnter={(e) => {
@@ -147,15 +144,12 @@ function Testimonials() {
             <p
               style={{
                 color: 'var(--color-muted)',
-                fontSize: '0.88rem',
+                fontSize: 'var(--text-sm)',
                 lineHeight: '1.75',
                 margin: 0,
                 marginBottom: '20px',
                 fontStyle: 'italic',
                 textAlign: 'justify',
-
-                // Makes the comment area the same height
-                minHeight: '175px',
               }}
             >
               "{t.comment}"
@@ -180,7 +174,6 @@ function Testimonials() {
                 marginTop: 'auto',
               }}
             >
-              {/* Initial */}
               <div
                 style={{
                   width: '38px',
@@ -199,15 +192,10 @@ function Testimonials() {
                 {t.name[0]}
               </div>
 
-              {/* Name + Location */}
-              <div
-                style={{
-                  minWidth: 0,
-                }}
-              >
+              <div style={{ minWidth: 0 }}>
                 <p
                   style={{
-                    fontSize: '0.85rem',
+                    fontSize: 'var(--text-sm)',
                     fontWeight: '700',
                     color: 'var(--color-navy)',
                     margin: 0,
@@ -219,7 +207,7 @@ function Testimonials() {
 
                 <p
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: 'var(--text-xs)',
                     color: 'var(--color-muted)',
                     margin: 0,
                     whiteSpace: 'nowrap',

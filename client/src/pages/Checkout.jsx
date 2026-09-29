@@ -15,7 +15,7 @@ import PointsRedeemBox from "./PointsRedeemBox";
 const STEPS = ["Delivery", "Payment", "Review"];
 
 function Checkout() {
-  const { cartItems, subtotal, discount, couponCode, clearCart } = useCart();
+  const { cartItems, subtotal, discount, couponCode, clearCart, pointsUsed, pointsDiscount, setPointsRedemption, } = useCart();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,8 +47,6 @@ function Checkout() {
   // instant UI feedback (mirrors the server's formula) — the server
   // recomputes the real discount from pointsUsed when the order is
   // actually created, and is the final authority on the charged amount.
-  const [pointsUsed, setPointsUsed] = useState(0);
-  const [pointsDiscount, setPointsDiscount] = useState(0);
 
   const shipping = subtotal >= 5000 ? 0 : 200;
 
@@ -56,7 +54,8 @@ function Checkout() {
   // (see PointsRedeemBox) is based on what's actually still owed after
   // the coupon, not the raw pre-coupon subtotal.
   const discounted = Math.max(0, subtotal - discount);
-  const total = Math.max(0, discounted + shipping - pointsDiscount);
+  const calculatedTotal = Math.max(0, discounted + shipping - pointsDiscount)
+  const total = Math.floor(calculatedTotal)
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -223,7 +222,7 @@ function Checkout() {
           alignItems: "center",
           justifyContent: "center",
           textAlign: "center",
-          padding: "80px 5rem",
+          padding: "80px var(--section-px)",
         }}
       >
         <div style={{ fontSize: "4rem", marginBottom: "24px" }}>🛒</div>
@@ -278,7 +277,7 @@ function Checkout() {
       <div
         style={{
           backgroundColor: "var(--color-navy)",
-          padding: "48px 5rem 36px",
+          padding: "clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)",
         }}
       >
         <p
@@ -298,7 +297,7 @@ function Checkout() {
           style={{
             fontFamily: "var(--font-serif)",
             color: "#ffffff",
-            fontSize: "2.8rem",
+            fontSize: "clamp(1.8rem, 5vw, 2.8rem)",
             fontWeight: "800",
             marginBottom: "32px",
           }}
@@ -308,6 +307,7 @@ function Checkout() {
 
         {/* Steps */}
         <div
+          className="overflow-x-auto"
           style={{
             display: "flex",
             alignItems: "center",
@@ -388,11 +388,10 @@ function Checkout() {
 
       {/* Main Content */}
       <div
+        className="grid grid-cols-1 lg:grid-cols-[1fr_360px]"
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 360px",
           gap: "32px",
-          padding: "40px 5rem",
+          padding: "clamp(20px, 4vw, 40px) var(--section-px)",
           alignItems: "flex-start",
         }}
       >
@@ -401,7 +400,7 @@ function Checkout() {
           style={{
             backgroundColor: "var(--color-white)",
             borderRadius: "16px",
-            padding: "36px",
+            padding: "clamp(20px, 4vw, 36px)",
             border: "1px solid var(--color-border)",
           }}
         >
@@ -421,9 +420,8 @@ function Checkout() {
               </h2>
 
               <div
+                className="grid grid-cols-1 sm:grid-cols-2"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
                   gap: "20px",
                 }}
               >
@@ -815,7 +813,9 @@ function Checkout() {
                               ? "⌚"
                               : item.category === "perfumes"
                                 ? "🧴"
-                                : "👓"}
+                                : item.category === "contact-lenses"
+                                  ? "👁️"
+                                  : "👓"}
                           </div>
                         )}
                       </div>
@@ -839,6 +839,42 @@ function Checkout() {
                         >
                           Qty: {item.quantity}
                         </p>
+
+                        {/* Prescription Details */}
+                        {item.prescription && (
+                          <div style={{
+                            marginTop: "4px",
+                            padding: "4px 8px",
+                            backgroundColor: "#f1f5f9",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            color: "#475569",
+                          }}>
+                            <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                              👁️ Prescription:
+                            </div>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              {item.prescription.rightEye?.sphere !== null && item.prescription.rightEye?.sphere !== undefined && (
+                                <span>
+                                  <strong>OD:</strong> SPH {item.prescription.rightEye.sphere > 0 ? `+${item.prescription.rightEye.sphere}` : item.prescription.rightEye.sphere}
+                                  {item.prescription.rightEye.cylinder ? ` CYL ${item.prescription.rightEye.cylinder}` : ''}
+                                </span>
+                              )}
+                              {item.prescription.leftEye?.sphere !== null && item.prescription.leftEye?.sphere !== undefined && (
+                                <span>
+                                  <strong>OS:</strong> SPH {item.prescription.leftEye.sphere > 0 ? `+${item.prescription.leftEye.sphere}` : item.prescription.leftEye.sphere}
+                                  {item.prescription.leftEye.cylinder ? ` CYL ${item.prescription.leftEye.cylinder}` : ''}
+                                </span>
+                              )}
+                              {item.prescription.notes && (
+                                <span style={{ fontStyle: "italic", color: "#64748b" }}>
+                                  ({item.prescription.notes})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1104,12 +1140,13 @@ function Checkout() {
               final total below. Cap is based on the post-coupon subtotal,
               not the raw cart subtotal. */}
           <PointsRedeemBox
-            subtotal={discounted}
-            onChange={(points, pointsDisc) => {
-              setPointsUsed(points);
-              setPointsDiscount(pointsDisc);
-            }}
-          />
+  subtotal={discounted}
+  pointsUsed={pointsUsed}
+  pointsDiscount={pointsDiscount}
+  onChange={(points, discount) => {
+    setPointsRedemption(points, discount);
+  }}
+/>
 
           {/* Subtotal & Shipping */}
           <div

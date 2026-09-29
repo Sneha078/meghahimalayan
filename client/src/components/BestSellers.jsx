@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ProductCard from './ProductCard'
+import ProductCarousel from './ProductCarousel'
 
 function BestSellers() {
   const [products, setProducts] = useState([])
@@ -47,14 +47,14 @@ function BestSellers() {
     <section
       style={{
         backgroundColor: 'var(--color-white)',
-        padding: '80px 5rem',
+        padding: 'var(--section-py) var(--section-px)',
       }}
     >
       {/* Section Header */}
       <div
         style={{
           textAlign: 'center',
-          marginBottom: '48px',
+          marginBottom: 'clamp(24px, 4vw, 48px)',
         }}
       >
         <p
@@ -73,7 +73,7 @@ function BestSellers() {
         <h2
           style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '2.8rem',
+            fontSize: 'var(--text-4xl)',
             fontWeight: '700',
             color: 'var(--color-navy)',
             lineHeight: '1.2',
@@ -86,7 +86,7 @@ function BestSellers() {
         <p
           style={{
             color: 'var(--color-muted)',
-            fontSize: '1rem',
+            fontSize: 'var(--text-base)',
             maxWidth: '480px',
             margin: '0 auto',
             lineHeight: '1.7',
@@ -124,21 +124,8 @@ function BestSellers() {
 
       {/* Products */}
       {!loading && !error && products.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fill, minmax(230px, 1fr))',
-            gap: '24px',
-            marginBottom: '48px',
-          }}
-        >
-          {products.map((product) => (
-            <ProductCard
-              key={product._id}
-              product={product}
-            />
-          ))}
+        <div style={{ marginBottom: '48px' }}>
+          <ProductCarousel products={products} perPage={4} />
         </div>
       )}
 
@@ -190,4 +177,3 @@ function BestSellers() {
 }
 
 export default BestSellers
-

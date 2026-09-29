@@ -7,27 +7,42 @@ import { useAuth } from '../context/AuthContext'
 function ProductCard({ product }) {
   const [added, setAdded] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [touchActive, setTouchActive] = useState(false)
   const { addItem } = useCart()
   const { user } = useAuth()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e) => {
+    if (e) { e.stopPropagation(); e.preventDefault() }
     addItem(product)
     setAdded(true)
+    setTouchActive(false)
     setTimeout(() => setAdded(false), 2000)
   }
 
-  // Backend stores images as [{ public_id, url }], discountPrice as the sale price,
-  // and originalPrice doesn't exist — price is always the base price.
   const imageUrl = product.image_url ?? product.image?.[0]?.url ?? null
-  const originalPrice = product.discountPrice ? product.price : null
-  const sellingPrice  = product.discountPrice ?? product.price
-
+  
+  // Use server-calculated pricing with "From" logic for variants
+  let displayPrice = product.finalPrice ?? product.discountPrice ?? product.price
+  let originalPrice = null
+  let pricePrefix = ''
+  
+  // Show "From Rs. X" only when variant prices differ and we should show the range
+  if (product.hasVariants && product.variantPriceRange?.showFromPrice) {
+    displayPrice = product.variantPriceRange.min
+    pricePrefix = 'From '
+  }
+  
+  // Show original price for discount calculation
+  if (product.price > displayPrice) {
+    originalPrice = product.price
+  }
+  
   const discount = originalPrice
-    ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100)
-    : null
+    ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+    : (product.savePct || null)
 
   const isNew        = product.isNewArrival  ?? product.isNew        ?? false
   const isBestseller = product.isBestSeller  ?? product.isBestseller ?? false
@@ -57,14 +72,16 @@ function ProductCard({ product }) {
           e.currentTarget.style.transform = 'translateY(0)'
           e.currentTarget.style.boxShadow = 'none'
           setHovered(false)
+          setTouchActive(false)
         }}
+        onTouchStart={() => setTouchActive(true)}
       >
         {/* Image */}
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           <div
             style={{
               backgroundColor: '#f3f4f6',
-              height: '220px',
+              aspectRatio: '1 / 1',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
@@ -141,7 +158,7 @@ function ProductCard({ product }) {
 
           {/* Wishlist */}
           <button
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
               if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
@@ -154,8 +171,8 @@ function ProductCard({ product }) {
               backgroundColor: 'rgba(255,255,255,0.9)',
               border: 'none',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '36px',
+              height: '36px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -172,14 +189,14 @@ function ProductCard({ product }) {
             </svg>
           </button>
 
-          {/* Add to Cart Overlay */}
+          {/* Add to Cart — visible on hover (desktop) or tap (mobile) */}
           <div style={{
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
             backgroundColor: 'rgba(13, 32, 49, 0.92)',
-            transform: hovered ? 'translateY(0)' : 'translateY(100%)',
+            transform: (hovered || touchActive) ? 'translateY(0)' : 'translateY(100%)',
             transition: 'transform 0.35s ease',
             padding: '12px 16px',
             display: 'flex',
@@ -187,10 +204,10 @@ function ProductCard({ product }) {
             justifyContent: 'center',
           }}>
             <button
-              onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleAddToCart() }}
+              onClick={handleAddToCart}
               style={{
                 width: '100%',
-                padding: '8px',
+                padding: '10px',
                 backgroundColor: 'transparent',
                 color: added ? '#15803D' : 'var(--color-taupe)',
                 border: 'none',
@@ -228,7 +245,7 @@ function ProductCard({ product }) {
 
           {/* Name */}
           <h3 style={{
-            fontSize: '0.9rem',
+            fontSize: 'var(--text-sm)',
             fontWeight: '600',
             color: '#0d2031',
             marginBottom: '8px',
@@ -253,9 +270,9 @@ function ProductCard({ product }) {
           </div>
 
           {/* Price */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1rem', fontWeight: '700', color: '#0d2031' }}>
-              Rs. {sellingPrice.toLocaleString()}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 'var(--text-base)', fontWeight: '700', color: '#0d2031' }}>
+              {pricePrefix}Rs. {displayPrice.toLocaleString()}
             </span>
             {originalPrice && (
               <span style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'line-through' }}>

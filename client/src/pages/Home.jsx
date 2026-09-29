@@ -1,5 +1,4 @@
 import StatsBar from '../components/StatsBar'
-import CategorySection from '../components/CategorySection'
 import FeaturedCollection from '../components/FeaturedCollection'
 import OffersBanner from '../components/OffersBanner'
 import NewArrivals from '../components/NewArrivals'
@@ -16,7 +15,6 @@ function Home() {
     <main>
       <SplitVideoSection />
       <StatsBar />
-      <CategorySection />
       <FeaturedCollection />
       <OffersBanner />
       <NewArrivals />

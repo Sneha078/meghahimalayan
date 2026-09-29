@@ -1,6 +1,75 @@
 import mongoose from "mongoose";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PRESCRIPTION SNAPSHOT
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Same shape as cartModel.js's prescriptionSchema — duplicated here rather
+// than imported because an order item is a permanent snapshot: if the cart
+// schema's prescription shape changes later, past orders must keep showing
+// exactly what the customer submitted at purchase time, not be reinterpreted
+// under a newer schema.
+
+const eyePrescriptionSchema = new mongoose.Schema(
+  {
+    sphere: { type: Number, default: null },
+    cylinder: { type: Number, default: null },
+    axis: { type: Number, default: null, min: 0, max: 180 },
+    addPower: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
+const prescriptionSchema = new mongoose.Schema(
+  {
+    rightEye: { type: eyePrescriptionSchema, default: () => ({}) },
+    leftEye: { type: eyePrescriptionSchema, default: () => ({}) },
+    pd: { type: Number, default: null },
+    pdRight: { type: Number, default: null },
+    pdLeft: { type: Number, default: null },
+    file: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
+    notes: { type: String, default: "", trim: true, maxlength: 300 },
+  },
+  { _id: false }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VARIANT SNAPSHOT
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Same shape as cartModel.js's cartVariantSchema — duplicated here for the
+// same reason as prescriptionSchema above: an order item is a permanent
+// record of what was actually purchased, so it must not shift if the
+// product's live variants change or the cart schema evolves later.
+// null/absent for any order line that came from a non-variant product.
+const orderVariantSchema = new mongoose.Schema(
+  {
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    color: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    colorHex: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    image: {
+      public_id: { type: String, default: "" },
+      url: { type: String, default: "" },
+    },
+  },
+  { _id: false }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1. ORDER STATUS HISTORY
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -93,6 +162,25 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Product price is required"],
       min: [0, "Product price cannot be negative"],
+    },
+
+    // Present only when this line item came from a cart item that had
+    // prescription data (i.e. the product had isPrescriptionRequired:
+    // true). Snapshotted here — permanently — from the cart item at the
+    // moment the order was created, same as name/category/price above.
+    prescription: {
+      type: prescriptionSchema,
+      default: null,
+    },
+
+    // Present only when this line item came from a cart item with a
+    // selected color variant. Snapshotted permanently at order creation,
+    // same as prescription above — a later change to the product's
+    // variants (color renamed, removed) never alters what past orders
+    // show as purchased.
+    variant: {
+      type: orderVariantSchema,
+      default: null,
     },
   },
   {

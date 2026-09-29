@@ -55,7 +55,7 @@ function SearchResults() {
       style={{
         maxWidth: '1400px',
         margin: '0 auto',
-        padding: '48px 32px 80px',
+        padding: 'clamp(20px, 4vw, 48px) var(--section-px) 80px',
       }}
     >
       {/* Search heading */}

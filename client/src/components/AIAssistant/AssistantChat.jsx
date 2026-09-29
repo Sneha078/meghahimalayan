@@ -8,6 +8,8 @@ import { useStoreLocator } from '../../hooks/useStoreLocator'
 
 const STARTER_PROMPTS = [
   'Find Our Store',
+  'Cosmetic lenses for makeup',
+  'Prescription contact lenses',
   'Watches under Rs. 10,000',
   'Something for a summer fragrance',
   'Best sunglasses',
@@ -163,6 +165,7 @@ function AssistantChat({ onClose }) {
           padding: '18px 20px',
           maxHeight: '360px',
           overflowY: 'auto',
+          overflowX: 'hidden',
           backgroundColor: '#f7f4f0',
         }}
       >

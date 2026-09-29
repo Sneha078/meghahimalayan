@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getMySingleOrder, submitReturnRequest } from '../api/productClient'
+import { getMySingleOrder, submitReturnRequest, uploadReturnImages } from '../api/productClient'
 import PageBanner from '../components/PageBanner'
 
 const RETURN_REASONS = [
@@ -176,22 +176,24 @@ function ReturnRequest() {
     setSubmitting(true)
 
     try {
-      // Convert images to base64
+      // Upload each item's photos to Cloudinary first, then build the payload
       const returnItems = await Promise.all(
         selectedItems.map(async (item) => {
           const key = item.product?._id ?? item.product ?? item._id
           const meta = items[key]
-          const imageBase64 = await Promise.all(
-            meta.images.map(
-              (file) =>
-                new Promise((res, rej) => {
-                  const reader = new FileReader()
-                  reader.onload = () => res(reader.result)
-                  reader.onerror = rej
-                  reader.readAsDataURL(file)
-                })
-            )
-          )
+
+          let uploadedImages = []
+          if (meta.images && meta.images.length > 0) {
+            try {
+              console.log(`Uploading ${meta.images.length} images for item ${item.name}`)
+              uploadedImages = await uploadReturnImages(meta.images)
+              console.log(`Successfully uploaded images:`, uploadedImages)
+            } catch (uploadError) {
+              console.error(`Failed to upload images for ${item.name}:`, uploadError)
+              throw new Error(`Failed to upload images for ${item.name}: ${uploadError.message}`)
+            }
+          }
+
           return {
             product: key,
             name: item.name,
@@ -199,7 +201,7 @@ function ReturnRequest() {
             price: item.price,
             reason: meta.reason,
             description: meta.description,
-            images: imageBase64,
+            images: uploadedImages, // [{ url, public_id }]
           }
         })
       )
@@ -261,7 +263,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem' }}>Loading order…</p>
         </div>
       </div>
@@ -272,7 +274,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)' }}>
           <div style={styles.errorBox}>{error}</div>
         </div>
       </div>
@@ -286,7 +288,7 @@ function ReturnRequest() {
     return (
       <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
         <PageBanner eyebrow="My Orders" title="Return Request" />
-        <div style={{ padding: '60px 5rem', maxWidth: '700px' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 60px) var(--section-px)', maxWidth: '700px' }}>
           <div style={{ ...styles.card, textAlign: 'center', padding: '48px' }}>
             <p style={{ fontSize: '2rem', marginBottom: '16px' }}>⚠️</p>
             <p style={{ fontWeight: '700', color: 'var(--color-navy)', marginBottom: '8px' }}>
@@ -306,7 +308,7 @@ function ReturnRequest() {
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
       <PageBanner eyebrow="My Orders" title="Return Request" />
 
-      <form onSubmit={handleSubmit} style={{ padding: '40px 5rem', maxWidth: '780px' }}>
+      <form onSubmit={handleSubmit} style={{ padding: 'clamp(20px, 4vw, 40px) var(--section-px)', maxWidth: '780px' }}>
 
         {/* Order reference */}
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '28px' }}>
@@ -399,13 +401,41 @@ function ReturnRequest() {
                       {/* Images */}
                       <div>
                         <label style={styles.label}>Upload photos (up to 5)</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => { handleImages(key, e.target.files); e.target.value = '' }}
-                          style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
-                        />
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '12px', border: '1px solid var(--color-border, #e2e8f0)', borderRadius: '8px',
+                          padding: '8px', backgroundColor: '#ffffff', marginTop: '6px',
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById(`return-file-input-${key}`)?.click()}
+                            style={{
+                              padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--color-border, #e2e8f0)',
+                              backgroundColor: '#f8fafc', color: '#0f172a', fontSize: '0.8rem',
+                              fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                            }}
+                          >
+                            Choose Files
+                          </button>
+
+                          <span style={{
+                            fontSize: '0.8rem', color: 'var(--color-muted, #64748b)', textAlign: 'right',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {meta.images?.length > 0
+                              ? meta.images.map((f) => f.name).join(', ')
+                              : 'No file chosen'}
+                          </span>
+
+                          <input
+                            id={`return-file-input-${key}`}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => { handleImages(key, e.target.files); e.target.value = '' }}
+                            style={{ display: 'none' }}
+                          />
+                        </div>
                         {meta.previews?.length > 0 && (
                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                             {meta.previews.map((src, i) => (

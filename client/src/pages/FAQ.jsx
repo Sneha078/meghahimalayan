@@ -31,7 +31,7 @@ function FAQ() {
     <div style={{ backgroundColor: "var(--color-sbg)", minHeight: "100vh" }}>
       <PageBanner eyebrow="Customer Care" title="Frequently Asked Questions" />
 
-      <div style={{ padding: "40px 5rem", maxWidth: "800px" }}>
+      <div style={{ padding: "clamp(20px, 4vw, 40px) var(--section-px)", maxWidth: "800px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {FAQ_ITEMS.map((item, i) => {
             const isOpen = openIndex === i;

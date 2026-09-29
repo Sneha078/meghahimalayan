@@ -232,7 +232,7 @@ function Orders() {
       <div
         style={{
           backgroundColor: 'var(--color-navy)',
-          padding: '48px 5rem 36px',
+          padding: 'clamp(24px, 5vw, 48px) var(--section-px) clamp(20px, 4vw, 36px)',
         }}
       >
         <p
@@ -252,7 +252,7 @@ function Orders() {
           style={{
             fontFamily: 'var(--font-serif)',
             color: '#ffffff',
-            fontSize: '2.4rem',
+            fontSize: 'clamp(1.6rem, 5vw, 2.4rem)',
             fontWeight: '800',
           }}
         >
@@ -266,7 +266,7 @@ function Orders() {
 
       <div
         style={{
-          padding: '40px 5rem',
+          padding: 'clamp(20px, 4vw, 40px) var(--section-px)',
           maxWidth: '900px',
         }}
       >
@@ -606,7 +606,7 @@ function Orders() {
                         ? '2px solid var(--color-taupe)'
                         : '1px solid var(--color-border)',
 
-                      padding: '24px 28px',
+                      padding: 'clamp(16px, 3vw, 28px)',
 
                       boxShadow: isTargetOrder
                         ? '0 4px 18px rgba(13, 26, 42, 0.08)'
@@ -812,7 +812,13 @@ function Orders() {
                                       '1.2rem',
                                   }}
                                 >
-                                  📦
+                                  {item.category === "watches"
+                                    ? "⌚"
+                                    : item.category === "perfumes"
+                                      ? "🧴"
+                                      : item.category === "contact-lenses"
+                                        ? "👁️"
+                                        : "📦"}
                                 </div>
                               )}
                             </div>
@@ -861,6 +867,42 @@ function Orders() {
                                 · Rs.{' '}
                                 {item.price.toLocaleString()}
                               </p>
+
+                              {/* Prescription Details */}
+                              {item.prescription && (
+                                <div style={{
+                                  marginTop: "4px",
+                                  padding: "3px 6px",
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "4px",
+                                  fontSize: "0.65rem",
+                                  color: "#475569",
+                                }}>
+                                  <div style={{ fontWeight: "600", marginBottom: "1px" }}>
+                                    👁️ Prescription:
+                                  </div>
+                                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                    {item.prescription.rightEye?.sphere !== null && item.prescription.rightEye?.sphere !== undefined && (
+                                      <span>
+                                        <strong>OD:</strong> SPH {item.prescription.rightEye.sphere > 0 ? `+${item.prescription.rightEye.sphere}` : item.prescription.rightEye.sphere}
+                                        {item.prescription.rightEye.cylinder ? ` CYL ${item.prescription.rightEye.cylinder}` : ''}
+                                      </span>
+                                    )}
+                                    {item.prescription.leftEye?.sphere !== null && item.prescription.leftEye?.sphere !== undefined && (
+                                      <span>
+                                        <strong>OS:</strong> SPH {item.prescription.leftEye.sphere > 0 ? `+${item.prescription.leftEye.sphere}` : item.prescription.leftEye.sphere}
+                                        {item.prescription.leftEye.cylinder ? ` CYL ${item.prescription.leftEye.cylinder}` : ''}
+                                      </span>
+                                    )}
+                                    {item.prescription.notes && (
+                                      <span style={{ fontStyle: "italic", color: "#64748b" }}>
+                                        ({item.prescription.notes})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )

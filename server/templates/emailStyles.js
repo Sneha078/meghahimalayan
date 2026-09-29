@@ -174,7 +174,9 @@ export const renderOrderItems = (items) => {
   const rows = items
     .map((item) => {
       const name = escapeHtml(item?.name || "Product");
-      const image = escapeHtml(item?.image || "");
+      const rawImage = Array.isArray(item?.image) ? item.item[0]?.url : (item?.image?.url || item?.image)
+
+      const image = escapeHtml(rawImage || "")
 
       const quantity =
         Number.isFinite(Number(item?.quantity))

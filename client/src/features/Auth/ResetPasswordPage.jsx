@@ -61,7 +61,7 @@ function ResetPasswordPage() {
       }}>
         <div style={{
           backgroundColor: 'var(--color-white)', borderRadius: '20px',
-          padding: '48px', maxWidth: '440px', width: '100%',
+          padding: 'clamp(24px, 5vw, 48px)', maxWidth: '440px', width: '100%',
           border: '1px solid var(--color-border)', textAlign: 'center',
         }}>
           <div style={{
@@ -97,7 +97,7 @@ function ResetPasswordPage() {
     }}>
       <div style={{
         backgroundColor: 'var(--color-white)', borderRadius: '20px',
-        padding: '48px', width: '100%', maxWidth: '440px',
+        padding: 'clamp(24px, 5vw, 48px)', width: '100%', maxWidth: '440px',
         border: '1px solid var(--color-border)',
         boxShadow: '0 20px 60px rgba(13,32,49,0.08)',
       }}>

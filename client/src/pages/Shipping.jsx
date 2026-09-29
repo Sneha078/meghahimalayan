@@ -24,7 +24,7 @@ function Shipping() {
     <div style={{ backgroundColor: "var(--color-sbg)", minHeight: "100vh" }}>
       <PageBanner eyebrow="Customer Care" title="Shipping Information" />
 
-      <div style={{ padding: "40px 5rem", maxWidth: "800px" }}>
+      <div style={{ padding: "clamp(20px, 4vw, 40px) var(--section-px)", maxWidth: "800px" }}>
         <p style={{ color: "var(--color-muted)", fontSize: "0.92rem", marginBottom: "32px" }}>
           Placeholder policy — replace with your actual shipping terms.
         </p>

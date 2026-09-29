@@ -40,7 +40,7 @@ _PRICE_PATTERNS = [
     re.compile(r"(?:rs\.?|npr\.?|रु\.?)\s*([\d,]+)"),
 ]
  
-_PRODUCT_ID_PATTERN = re.compile(r"\b([WGP]\d{3})\b")
+_PRODUCT_ID_PATTERN = re.compile(r"\b([WGP]\d{3}|CL\d{3})\b")
  
 _GREETING_PATTERN = re.compile(r"\b(hello|hi|hey)\b")
  
@@ -58,9 +58,18 @@ _EYEGLASSES_KEYWORDS = [
 _PERFUME_KEYWORDS = [
     "perfume", "perfumes", "fragrance", "fragrances", "attar", "ittar",
 ]
+_CONTACT_LENS_KEYWORDS = [
+    "contact lens", "contact lenses", "contacts", "lens", "lenses",
+    "cosmetic lens", "cosmetic lenses", "makeup lens", "makeup lenses",
+    "colored lens", "colored lenses", "beauty lens", "beauty lenses",
+    "prescription lens", "prescription lenses", "toric lens", "toric lenses",
+    "dailies", "acuvue", "biofinity", "optix", "soflens", "biotrue",
+    "alcon", "coopervision", "lomb", "freshlook"
+]
 
 # Color keywords mapped to normalised colour names.
 # Watches use dialColor + frameColor, eyeglasses use frameColor.
+# Contact lenses use the color field.
 # We match colours as whole words to avoid "golden" matching "old" etc.
 _COLOR_MAP = {
     "black":     "Black",
@@ -82,7 +91,23 @@ _COLOR_MAP = {
     "orange":    "Orange",
     "beige":     "Beige",
     "transparent": "Transparent",
-    "clear":     "Transparent",
+    "clear":     "Clear",
+    # Contact lens specific colors
+    "hazel":     "Hazel",
+    "honey":     "Honey",
+    "amber":     "Amber",
+    "natural":   "Natural",
+    "violet":    "Violet",
+    "aqua":      "Aqua",
+    "turquoise": "Turquoise",
+    "emerald":   "Emerald",
+    "sapphire":  "Sapphire",
+    "ruby":      "Ruby",
+    "topaz":     "Topaz",
+    "jade":      "Jade",
+    "pearl":     "Pearl",
+    "crystal":   "Crystal",
+    "diamond":   "Diamond",
 }
  
 _REVIEW_PHRASES = [
@@ -223,7 +248,10 @@ def detect_category(text: str) -> Optional[str]:
  
     if any(_word_in_text(word, text) for word in _PERFUME_KEYWORDS):
         return "perfumes"
- 
+
+    if any(phrase in text for phrase in ["contact lens", "contact lenses", "cosmetic lens", "makeup lens", "colored lens", "beauty lens", "prescription lens"]) or any(_word_in_text(word, text) for word in _CONTACT_LENS_KEYWORDS):
+        return "contact-lenses"
+
     return None
  
  

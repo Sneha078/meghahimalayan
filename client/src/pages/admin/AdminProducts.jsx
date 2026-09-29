@@ -58,7 +58,7 @@ function AdminProducts() {
       .catch(() => {})
   }, [])
 
-  const [categories, setCategories] = useState(['All', 'eyeglasses', 'watches', 'perfumes'])
+  const [categories, setCategories] = useState(['All', 'eyeglasses', 'watches', 'perfumes', 'contact-lenses'])
 
   // Category filtering happens server-side (so pagination + count stay
   // correct); this leaves only the name/brand search to filter locally.
@@ -104,7 +104,7 @@ function AdminProducts() {
           style={{
             padding: '9px 14px', borderRadius: '8px',
             border: '1px solid #e2e8f0', fontSize: '0.88rem',
-            outline: 'none', minWidth: '240px',
+            outline: 'none', width: '100%',
           }}
         />
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -122,7 +122,7 @@ function AdminProducts() {
                 textTransform: 'capitalize',
               }}
             >
-              {c}
+              {c === 'contact-lenses' ? 'Contact Lenses' : c}
             </button>
           ))}
         </div>
@@ -188,7 +188,10 @@ function AdminProducts() {
                             />
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                              
+                              {product.category === 'watches' ? '⌚' : 
+                               product.category === 'perfumes' ? '🧴' : 
+                               product.category === 'contact-lenses' ? '👁️' : 
+                               product.category === 'eyeglasses' ? '👓' : '📦'}
                             </div>
                           )}
                         </div>
@@ -202,7 +205,7 @@ function AdminProducts() {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569', textTransform: 'capitalize' }}>
-                      {product.category}
+                      {product.category === 'contact-lenses' ? 'Contact Lenses' : product.category}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                       {product.brand}

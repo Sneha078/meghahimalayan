@@ -3,9 +3,28 @@ import HandleError from "../utils/handleError.js"; //application error handle
 import handleAsyncError from "../middleware/handleAsyncError.js"; //asynchronous error handle
 import APIFunctionality from "../utils/apiFunctionality.js"; //Product search/filter/sort/pagination ko common logic handle garcha.
 import cloudinary from "../config/cloudinary.js"; //product images upload/del in cloudinary
+import { awardReviewPoints, clawbackReviewPoints } from "../services/pointsService.js"; //reward points for reviews
+import { resolveProductPricing } from "../shared/pricing.js";
 
 
 // Helper functions
+
+// Attach resolved pricing information to a product
+const attachPricingInfo = (product) => {
+  const pricing = resolveProductPricing(product);
+  
+  return {
+    ...product.toObject ? product.toObject() : product,
+    // Add pricing info to the product
+    price: pricing.product.price,
+    finalPrice: pricing.product.finalPrice,
+    savePct: pricing.product.savePct,
+    hasVariants: pricing.product.hasVariants,
+    variantPriceRange: pricing.product.variantPriceRange,
+    // Add pricing info to each variant
+    variants: pricing.variants
+  };
+};
 
 // Product lookup by ObjectId or slug
 const findProduct = async (id) => {
@@ -87,13 +106,16 @@ export const getAllProducts = handleAsyncError(async (req, res, next) => {
   api.pagination(resultsPerPage);
   const products = await api.query;
 
+  // Attach pricing information to all products
+  const productsWithPricing = products.map(product => attachPricingInfo(product));
+
   res.status(200).json({
     success: true,
     productCount,
     resultsPerPage,
     totalPages,
     currentPage,
-    products,
+    products: productsWithPricing,
   });
 });
 
@@ -108,9 +130,12 @@ export const getSingleProduct = handleAsyncError(async (req, res, next) => {
     return next(new HandleError("Product not found", 404));
   }
 
+  // Attach resolved pricing information
+  const productWithPricing = attachPricingInfo(product);
+
   res.status(200).json({
     success: true,
-    product,
+    product: productWithPricing,
   });
 });
 
@@ -271,14 +296,26 @@ export const createOrUpdateReview = handleAsyncError(
       await destroyMedia(existing.videos || [], "video")
       existing.videos = videoLinks
     } else {
-      product.reviews.push({
+      // Create new review
+      const newReview = {
         user: req.user._id,
         name: req.user.name,
         rating: Number(rating),
         comment,
         images: imageLinks,
         videos: videoLinks
-      });
+      };
+      
+      product.reviews.push(newReview);
+
+      // Award points for new review (not for updates)
+      try {
+        const hasMedia = imageLinks.length > 0 || videoLinks.length > 0;
+        await awardReviewPoints(req.user._id, newReview._id, hasMedia);
+      } catch (pointsError) {
+        console.error('Failed to award review points:', pointsError.message);
+        // Don't fail the whole review creation if points award fails
+      }
     }
 
     // total reviews count update
@@ -403,6 +440,12 @@ export const createProduct = handleAsyncError(async (req, res, next) => {
     imageLinks = await uploadImages(rawImages);
   }
 
+
+  // Variant(optional) - each carries its own base64 images
+  let variantLinks = []
+  if(Array.isArray(req.body.variants) && req.body.variants.length > 0){
+    variantLinks = await uploadVariants(req.body.variants)
+  }
   //create product with user id
   const product = await Product.create({
     ...req.body,
@@ -418,7 +461,15 @@ export const createProduct = handleAsyncError(async (req, res, next) => {
 
 // ADMIN — UPDATE PRODUCT(existing product update)
 // PUT /api/v1/admin/product/:id
-
+//
+// Images are now additive, not a wholesale replace: `existingImages` tells
+// the server which of the product's current photos the admin wants to
+// KEEP (anything currently stored but absent from this list gets
+// destroyed on Cloudinary and removed); `image` carries new base64 photos
+// to upload and append on top of whatever's kept. Sending an empty
+// `image` array with a full `existingImages` list is a pure no-op on
+// photos; sending a shorter `existingImages` list is how an admin removes
+// specific photos without touching the rest.
 export const updateProduct = handleAsyncError(async (req, res, next) => {
   let product = await findProduct(req.params.id);
 
@@ -426,11 +477,11 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     return next(new HandleError("Product not found", 404));
   }
 
-  // If new images supplied → replace all existing ones
-  let rawImages = [];
+  // New images to upload (base64)
+  let rawNewImages = [];
 
   if (req.body.image) {
-    rawImages = Array.isArray(req.body.image)
+    rawNewImages = Array.isArray(req.body.image)
       ? req.body.image
       : [req.body.image];
   }
@@ -484,9 +535,176 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     updateData.newArrivalNotified = false;
   }
 
-  if (rawImages.length > 0) {
-    await destroyImages(product.image);
-    updateData.image = await uploadImages(rawImages);
+  // Only process image changes at all if the request actually included
+  // either field — an admin form that doesn't touch images shouldn't
+  // wipe them by omission.
+  if (req.body.image !== undefined || req.body.existingImages !== undefined) {
+    // If existingImages is provided, use it; otherwise keep all existing images
+    // This handles the case where new images are added but existingImages isn't properly sent
+    let keepList;
+    if (req.body.existingImages !== undefined) {
+      keepList = Array.isArray(req.body.existingImages) ? req.body.existingImages : [];
+    } else if (req.body.image !== undefined) {
+      // If only new images are being added and no existingImages specified, keep all existing
+      keepList = product.image;
+    } else {
+      keepList = product.image;
+    }
+
+    const keepIds = new Set(
+      keepList.map((img) => img.public_id).filter(Boolean)
+    );
+
+    const toDestroy = product.image.filter(
+      (img) => img.public_id && !keepIds.has(img.public_id)
+    );
+
+    const keptImages = product.image.filter(
+      (img) => !img.public_id || keepIds.has(img.public_id)
+    );
+
+    if (toDestroy.length > 0) {
+      await destroyImages(toDestroy);
+    }
+
+    let uploadedImages = [];
+
+    if (rawNewImages.length > 0) {
+      uploadedImages = await uploadImages(rawNewImages);
+    }
+
+    req.body.image = [...keptImages, ...uploadedImages];
+  } else {
+    // Neither field present at all — leave images untouched.
+    delete req.body.image;
+  }
+
+  delete req.body.existingImages; // not a schema field, don't pass through
+
+  // Handle variants with image preservation
+  if (req.body.variants !== undefined) {
+    const updatedVariants = await Promise.all(
+      req.body.variants.map(async (variant) => {
+        // For existing variants, preserve images unless explicitly changed
+        const existingVariant = product.variants.find(v => v._id && v._id.toString() === variant._id);
+        
+        let finalImages = [];
+        
+        if (existingVariant) {
+          // Keep existing images that weren't explicitly removed
+          const keepList = Array.isArray(variant.existingImages) 
+            ? variant.existingImages 
+            : existingVariant.images;
+          
+          const keepIds = new Set(
+            keepList.map((img) => img.public_id).filter(Boolean)
+          );
+
+          const toDestroy = existingVariant.images.filter(
+            (img) => img.public_id && !keepIds.has(img.public_id)
+          );
+
+          const keptImages = existingVariant.images.filter(
+            (img) => !img.public_id || keepIds.has(img.public_id)
+          );
+
+          // Destroy removed images
+          if (toDestroy.length > 0) {
+            await destroyMedia(toDestroy, "image");
+          }
+
+          // Upload new images
+          let uploadedImages = [];
+          if (Array.isArray(variant.images) && variant.images.length > 0) {
+            uploadedImages = await uploadMedia(variant.images, "image", "products/variants");
+          }
+
+          finalImages = [...keptImages, ...uploadedImages];
+        } else {
+          // New variant - just upload the images
+          finalImages = Array.isArray(variant.images) && variant.images.length > 0
+            ? await uploadMedia(variant.images, "image", "products/variants")
+            : [];
+        }
+
+        // Remove the raw images and existingImages from the variant data
+        const { images: _, existingImages: __, ...variantData } = variant;
+        
+        return {
+          ...variantData,
+          images: finalImages,
+          stock: Number(variantData.stock) || 0,
+          price: variantData.price ? Number(variantData.price) : null,
+          discountPrice: variantData.discountPrice ? Number(variantData.discountPrice) : null,
+        };
+      })
+    );
+    
+    req.body.variants = updatedVariants;
+  }
+
+  delete req.body.existingImages; // not a schema field, don't pass through
+
+  // Handle variants with image preservation
+  if (req.body.variants !== undefined) {
+    const updatedVariants = await Promise.all(
+      req.body.variants.map(async (variant) => {
+        // For existing variants, preserve images unless explicitly changed
+        const existingVariant = product.variants.find(v => v._id && v._id.toString() === variant._id);
+        
+        let finalImages = [];
+        
+        if (existingVariant) {
+          // Keep existing images that weren't explicitly removed
+          const keepList = Array.isArray(variant.existingImages) 
+            ? variant.existingImages 
+            : existingVariant.images;
+          
+          const keepIds = new Set(
+            keepList.map((img) => img.public_id).filter(Boolean)
+          );
+
+          const toDestroy = existingVariant.images.filter(
+            (img) => img.public_id && !keepIds.has(img.public_id)
+          );
+
+          const keptImages = existingVariant.images.filter(
+            (img) => !img.public_id || keepIds.has(img.public_id)
+          );
+
+          // Destroy removed images
+          if (toDestroy.length > 0) {
+            await destroyMedia(toDestroy, "image");
+          }
+
+          // Upload new images
+          let uploadedImages = [];
+          if (Array.isArray(variant.images) && variant.images.length > 0) {
+            uploadedImages = await uploadMedia(variant.images, "image", "products/variants");
+          }
+
+          finalImages = [...keptImages, ...uploadedImages];
+        } else {
+          // New variant - just upload the images
+          finalImages = Array.isArray(variant.images) && variant.images.length > 0
+            ? await uploadMedia(variant.images, "image", "products/variants")
+            : [];
+        }
+
+        // Remove the raw images and existingImages from the variant data
+        const { images: _, existingImages: __, ...variantData } = variant;
+        
+        return {
+          ...variantData,
+          images: finalImages,
+          stock: Number(variantData.stock) || 0,
+          price: variantData.price ? Number(variantData.price) : null,
+          discountPrice: variantData.discountPrice ? Number(variantData.discountPrice) : null,
+        };
+      })
+    );
+    
+    req.body.variants = updatedVariants;
   }
 
   //update product in mongodb
@@ -517,7 +735,7 @@ export const deleteProduct = handleAsyncError(async (req, res, next) => {
 
   // Remove Cloudinary images before deleting the document
   await destroyImages(product.image);
-
+  await destroyVariants(product.variants);
   await product.deleteOne();
 
   res.status(200).json({
@@ -525,6 +743,41 @@ export const deleteProduct = handleAsyncError(async (req, res, next) => {
     message: "Product deleted successfully",
   });
 });
+
+// Variant images: each variant carries its own base64 image array in the
+// request body, gets uploaded to its own Cloudinary folder, and comes back
+// with the same {public_id, url} shape as the top-level product images.
+const uploadVariants = async (variants) => {
+  if (!Array.isArray(variants) || variants.length === 0) return [];
+
+  return Promise.all(
+    variants.map(async (variant) => {
+      const rawImages = Array.isArray(variant.images) ? variant.images : [];
+      const imageLinks =
+        rawImages.length > 0
+          ? await uploadMedia(rawImages, "image", "products/variants")
+          : [];
+
+      return {
+        color: variant.color,
+        colorHex: variant.colorHex || "",
+        images: imageLinks,
+        stock: Number(variant.stock) || 0,
+        sku: variant.sku || "",
+        price: variant.price ? Number(variant.price) : null,
+        discountPrice: variant.discountPrice ? Number(variant.discountPrice) : null,
+      };
+    })
+  );
+};
+
+const destroyVariants = async (variants) => {
+  if (!Array.isArray(variants) || variants.length === 0) return;
+
+  await Promise.all(
+    variants.map((variant) => destroyMedia(variant.images || [], "image"))
+  );
+};
 
 // AUTH — DELETE REVIEW
 // DELETE /api/v1/reviews?productId=<id>&id=<reviewId>
@@ -565,6 +818,15 @@ export const deleteReview = handleAsyncError(async (req, res, next) => {
       )
     );
   }
+
+  // Clawback points for this review before deleting it
+  try {
+    await clawbackReviewPoints(req.query.id);
+  } catch (pointsError) {
+    console.error('Failed to clawback review points:', pointsError.message);
+    // Don't fail the whole review deletion if points clawback fails
+  }
+
   await destroyMedia(review.images || [], "image")
   await destroyMedia(review.videos || [], "video")
 

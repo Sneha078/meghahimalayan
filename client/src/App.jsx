@@ -41,6 +41,7 @@ import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import OrderFailed from './pages/OrderFailed'
+import HowToChooseEyewear from './pages/HowToChooseEyewear'
 import NotFound from "./pages/NotFound";
 
 
@@ -70,7 +71,7 @@ function ScrollToTop() {
 
 function App() {
   return (
-    <div>
+    <div style={{ overflowX: 'clip', width: '100%' }}>
       <ScrollToTop />
       <Navbar />
       <Routes>
@@ -166,6 +167,7 @@ function App() {
 < Route path='/privacy' element={<Privacy/>} /> 
 <Route path='/terms' element={<Terms />} />
 <Route path ='/order-failed' element={<OrderFailed />} />  
+<Route path='/how-to-choose-eyewear' element={<HowToChooseEyewear />} />
 <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />

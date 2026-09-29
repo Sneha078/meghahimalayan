@@ -51,7 +51,7 @@ async function seed() {
     name:     "Admin User",
     email:    adminEmail,
     password: adminPassword,
-    phone:    "+977-1-4220404",
+    phone:    "+9779841234567",
     role:     "admin",
   });
 
@@ -68,6 +68,7 @@ async function seed() {
     category:      p.category,
     subcategory:   p.subcategory   || "",
     gender:        p.gender        || "Unisex",
+    color:         p.color         || "",
     price:         p.price,
     discountPrice: p.discountPrice ?? null,
     ratings:       p.ratings       || 0,
@@ -95,6 +96,13 @@ async function seed() {
     fragranceFamily: p.fragranceFamily || "",
     fragranceType:   p.fragranceType   || "",
     volume:          p.volume          || "",
+    // Contact Lenses
+    baseCurve:              p.baseCurve              || "",
+    diameter:               p.diameter               || "",
+    waterContent:           p.waterContent           || "",
+    replacementSchedule:    p.replacementSchedule    || "",
+    packSize:               p.packSize               || "",
+    isPrescriptionRequired: p.isPrescriptionRequired ?? false,
     user: admin._id,
   }));
 
@@ -153,12 +161,12 @@ async function seed() {
     name:     "Ram Prasad Shrestha",
     email:    demoEmail,
     password: "Demo@12345",
-    phone:    "+977 9841-234567",
+    phone:    "+9779841234567",
     role:     "user",
     addresses: [
       {
         name:       "Ram Prasad Shrestha",
-        phone:      "+977 9841-234567",
+        phone:      "+9779841234567",
         street:     "Chabahil Chowk, House No. 14",
         city:       "Kathmandu",
         province:   "Bagmati Province",
@@ -182,8 +190,8 @@ async function seed() {
     city:    "Kathmandu",
     state:   "Bagmati Province",
     country: "Nepal",
-    pinCode: "44600",
-    phoneNo: "+977 9841-234567",
+    pincode: "44600",
+    phoneNo: "+9779841234567",
   };
 
   // Order 1 — Delivered, Paid
@@ -195,6 +203,7 @@ async function seed() {
         image:    seededProducts[0].image[0]?.url || "",
         product:  seededProducts[0]._id,
         price:    unitPrice(seededProducts[0]),
+        category: seededProducts[0].category,
       },
       {
         name:     seededProducts[1].name,
@@ -202,6 +211,7 @@ async function seed() {
         image:    seededProducts[1].image[0]?.url || "",
         product:  seededProducts[1]._id,
         price:    unitPrice(seededProducts[1]),
+        category: seededProducts[1].category,
       },
     ];
     const items1Total = items1.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -232,6 +242,7 @@ async function seed() {
         image:    seededProducts[2].image[0]?.url || "",
         product:  seededProducts[2]._id,
         price:    unitPrice(seededProducts[2]),
+        category: seededProducts[2].category,
       },
     ];
     const items2Total = items2.reduce((s, i) => s + i.price * i.quantity, 0);
