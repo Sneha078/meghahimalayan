@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
 
 function SignupPage() {
-  const { signup, loginWithGoogle } = useAuth()
+  const { user, loading: authLoading, signup, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/'
@@ -162,6 +162,15 @@ function SignupPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Already signed in? Point them at their account instead of the form.
+  // Auth context is loading the first time it mounts, so wait before
+  // deciding — otherwise a logged-out visitor gets bounced incorrectly.
+  if (authLoading) return null
+
+  if (user) {
+    return <Navigate to="/account" replace />
   }
 
   return (

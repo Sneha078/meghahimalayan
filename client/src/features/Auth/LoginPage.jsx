@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
 
 function LoginPage() {
-  const { login, loginWithGoogle } = useAuth()
+  const { user, loading: authLoading, login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/'
@@ -105,6 +105,15 @@ function LoginPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Already signed in? There's nothing to log in for — send them away so
+  // the form never flashes. Wait for auth to resolve first to avoid
+  // bouncing logged-out users on a slow network.
+  if (authLoading) return null
+
+  if (user) {
+    return <Navigate to="/account" replace />
   }
 
   return (
