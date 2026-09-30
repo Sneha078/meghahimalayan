@@ -24,7 +24,7 @@ function CoinBadge({ scrolled }) {
 
   return (
     <div
-      style={{ position: "relative" }}
+      style={{ position: "relative", flexShrink: 0 }}
       onMouseLeave={() => setOpen(false)}
     >
       {/* Coin badge */}
@@ -32,7 +32,7 @@ function CoinBadge({ scrolled }) {
         to="/rewards"
         onClick={() => setOpen((v) => !v)}
         onMouseEnter={() => setOpen(true)}
-        className={`flex items-center justify-center rounded-full border transition-all duration-300 h-7 px-2 gap-1 lg:w-auto lg:h-auto lg:gap-1.5 lg:px-3 lg:py-[5px] ${
+        className={`flex items-center justify-center rounded-full border transition-all duration-300 h-7 px-1.5 gap-1 lg:w-auto lg:h-8 lg:gap-1.5 lg:px-3 ${
           scrolled
             ? "bg-gray-100 border-gray-200 text-[#0d1a2a]"
             : "bg-white/20 border-white/30 text-white"
