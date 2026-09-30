@@ -14,6 +14,11 @@ const STATUS_COLORS = {
 
 const STATUSES = ['All', 'Pending', 'Approved', 'Item Received', 'Completed', 'Rejected', 'Cancelled', 'Expired']
 
+// Matches the server's default page size (getPagination in
+// returnController.js), sent explicitly so the page count and the
+// backend's stay in step if that default ever changes.
+const PAGE_SIZE = 10
+
 const getEvidence = (ret) => {
   const images = [
     ...(ret.images ?? []),
@@ -23,23 +28,45 @@ const getEvidence = (ret) => {
 }
 
 function AdminReturns() {
-  const [returns, setReturns] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [filter, setFilter] = useState('All')
-  const [search, setSearch] = useState('')
+  const [returns, setReturns]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(null)
+  const [filter, setFilter]       = useState('All')
+  const [search, setSearch]       = useState('')
+  const [page, setPage]           = useState(1)
+  const [total, setTotal]         = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
     setLoading(true)
-    const params = {}
+    setError(null)
+
+    const params = { page, limit: PAGE_SIZE }
     if (filter !== 'All') params.status = filter
     if (search.trim()) params.search = search.trim()
 
     getAllReturns(params)
-      .then((data) => setReturns(data.returns ?? []))
+      .then((data) => {
+        setReturns(data.returns ?? [])
+        // Trust the server's totals over returns.length — the latter is
+        // just the current page and would under-report the real count.
+        setTotal(data.total ?? (data.returns ?? []).length)
+        setTotalPages(data.totalPages ?? 1)
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [filter, search])
+  }, [filter, search, page])
+
+  /*
+   * Clamp the page when the result set shrinks underneath it — e.g. the
+   * last page holds 2 rows and a narrower filter leaves only 1 page. Only
+   * fires when the page is genuinely out of range, so it can't loop.
+   */
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [totalPages, page])
 
   return (
     <div style={{ padding: '32px' }}>
@@ -50,7 +77,7 @@ function AdminReturns() {
           Returns
         </h1>
         <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-          {returns.length} return{returns.length !== 1 ? 's' : ''}{filter !== 'All' ? ` · ${filter}` : ''}
+          {total} return{total !== 1 ? 's' : ''}{filter !== 'All' ? ` · ${filter}` : ''}
         </p>
       </div>
 
@@ -63,7 +90,12 @@ function AdminReturns() {
           {STATUSES.map((s) => (
             <button
               key={s}
-              onClick={() => setFilter(s)}
+              onClick={() => {
+                setFilter(s)
+                // A narrower filter can leave fewer pages than the one
+                // currently shown, so start from the top.
+                setPage(1)
+              }}
               style={{
                 padding: '6px 16px', borderRadius: '20px',
                 fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer',
@@ -84,7 +116,10 @@ function AdminReturns() {
           type="text"
           placeholder="Search return #..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
           style={{
             padding: '8px 14px', borderRadius: '8px',
             border: '1px solid #e2e8f0', fontSize: '0.85rem',
@@ -225,6 +260,46 @@ function AdminReturns() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Pagination — same control markup as AdminUsers.jsx */}
+      {!loading && totalPages > 1 && (
+        <div style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          gap: '16px', marginTop: '20px', flexWrap: 'wrap',
+        }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page <= 1 ? '#f1f5f9' : '#ffffff',
+              color: page <= 1 ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600',
+              cursor: page <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            ← Prev
+          </button>
+
+          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+              backgroundColor: page >= totalPages ? '#f1f5f9' : '#ffffff',
+              color: page >= totalPages ? '#cbd5e1' : '#0f172a',
+              fontSize: '0.82rem', fontWeight: '600',
+              cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

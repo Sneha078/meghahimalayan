@@ -11,6 +11,7 @@ import User from "../models/userModel.js";
 import HandleError from "../utils/handleError.js";
 import handleAsyncError from "../middleware/handleAsyncError.js";
 import { resolvePrice } from "../shared/pricing.js";
+import { restoreStock, releaseCouponUsage } from "../utils/stockUtils.js";
 
 import {
   sendOrderConfirmationEmail,
@@ -388,55 +389,6 @@ const addStatusHistory = (order, status, changedBy = null, note = '') => {
     changedBy,
     note: note.trim().slice(0, 500),
   });
-};
-
-
-// Restores stock for one order item — variant stock (and the product's
-// flat stock, kept in sync) when the item had a variant, otherwise just
-// the flat stock. Used by both customer cancellation and admin
-// cancellation, so the two paths can't drift apart.
-const restoreStockForItem = async (item, session) => {
-  if (item.variant?.variantId) {
-    const updated = await Product.findOneAndUpdate(
-      {
-        _id: item.product,
-        "variants._id": item.variant.variantId,
-      },
-      {
-        $inc: {
-          "variants.$[v].stock": item.quantity,
-          stock: item.quantity,
-        },
-      },
-      {
-        arrayFilters: [{ "v._id": item.variant.variantId }],
-        new: true,
-        session,
-      }
-    );
-
-    if (!updated) {
-      throw new HandleError(
-        `Unable to restore stock for "${item.name}"`,
-        500
-      );
-    }
-
-    return;
-  }
-
-  const product = await Product.findOneAndUpdate(
-    { _id: item.product },
-    { $inc: { stock: item.quantity } },
-    { new: true, session }
-  );
-
-  if (!product) {
-    throw new HandleError(
-      `Unable to restore stock for "${item.name}"`,
-      500
-    );
-  }
 };
 
 
@@ -1516,37 +1468,20 @@ export const cancelMyOrder =
             // RESTORE STOCK
             // ─────────────────────────
 
-            for (const item of order.orderItems) {
-              await restoreStockForItem(item, session);
-            }
+            await restoreStock(
+              order.orderItems,
+              session
+            );
 
             // ─────────────────────────
             // RELEASE COUPON
             // ─────────────────────────
 
-            if (order.couponCode) {
-              await Coupon.findOneAndUpdate(
-                {
-                  code:
-                    order.couponCode,
-
-                  usedCount: {
-                    $gt: 0,
-                  },
-                },
-                {
-                  $inc: {
-                    usedCount: -1,
-                  },
-                  $pull: {
-                    usedBy: order.user,
-                  },
-                },
-                {
-                  session,
-                }
-              );
-            }
+            await releaseCouponUsage(
+              order.couponCode,
+              session,
+              order.user
+            );
 
             // ─────────────────────────
             // CANCEL ORDER
@@ -1920,41 +1855,17 @@ export const updateOrderStatus =
               status === "Cancelled"
             ) {
               // Restore stock.
-              for (
-                const item of
-                  order.orderItems
-              ) {
-                await restoreStockForItem(item, session);
-              }
+              await restoreStock(
+                order.orderItems,
+                session
+              );
 
               // Release coupon usage.
-              if (
-                order.couponCode
-              ) {
-                await Coupon.findOneAndUpdate(
-                  {
-                    code:
-                      order.couponCode,
-
-                    usedCount: {
-                      $gt: 0,
-                    },
-                  },
-
-                  {
-                    $inc: {
-                      usedCount: -1,
-                    },
-                    $pull: {
-                      usedBy: order.user,
-                    },
-                  },
-
-                  {
-                    session,
-                  }
-                );
-              }
+              await releaseCouponUsage(
+                order.couponCode,
+                session,
+                order.user
+              );
 
               order.orderStatus =
                 "Cancelled";

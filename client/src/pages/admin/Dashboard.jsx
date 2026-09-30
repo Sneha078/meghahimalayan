@@ -312,7 +312,7 @@ function Dashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f8fafc' }}>
-                      {['Order #', 'Customer', 'Amount', 'Status', 'Date'].map((h) => (
+                      {['Order #', 'Customer', 'Amount', 'Status', 'Date', ''].map((h) => (
                         <th key={h} style={{
                           padding: '12px 16px', textAlign: 'left',
                           fontSize: '0.75rem', fontWeight: '700',
@@ -328,7 +328,17 @@ function Dashboard() {
                     {stats.recentOrders.map((order) => (
                       <tr key={order._id} style={{ borderTop: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '14px 16px', fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>
-                          #{order.orderNumber}
+                          <Link
+                            to={`/admin/orders/${order._id}`}
+                            style={{
+                              color: '#0f172a',
+                              textDecoration: 'none',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                          >
+                            #{order.orderNumber}
+                          </Link>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>
                           {order.shippingInfo?.name ?? '—'}
@@ -343,6 +353,22 @@ function Dashboard() {
                           {new Date(order.createdAt).toLocaleDateString('en-US', {
                             month: 'short', day: 'numeric', year: 'numeric',
                           })}
+                        </td>
+                        {/*
+                          Matches the "View →" affordance already used in the
+                          AdminOrders table, so the two admin order tables
+                          behave identically.
+                        */}
+                        <td style={{ padding: '14px 16px' }}>
+                          <Link
+                            to={`/admin/orders/${order._id}`}
+                            style={{
+                              fontSize: '0.8rem', fontWeight: '600',
+                              color: '#2563eb', textDecoration: 'none',
+                            }}
+                          >
+                            View →
+                          </Link>
                         </td>
                       </tr>
                     ))}
