@@ -20,6 +20,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# ── Local runtime logs ───────────────────────────────────────
+*.log
+server.log
+ai.log
+dev.log
+
 # ── OS / editor junk ──────────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -519,7 +519,7 @@ function Navbar() {
             className={`flex items-center shrink-0 ${
               isHome
                 ? "gap-[clamp(4px,1.6vw,18px)] mr-4"
-                : "gap-8px mr-2 sm:gap-3 sm:mr-4 lg:gap-5"
+                : "gap-[8px] mr-2 sm:gap-3 sm:mr-4 lg:gap-5"
             }`}
           >
 
@@ -612,8 +612,6 @@ function Navbar() {
                   gap: "8px",
                   textDecoration: "none",
                   color: scrolled ? "#0d1a2a" : "#ffffff",
-                  width: isHome ? "36px" : "36px",
-                  height: isHome ? "24px" : "22px",
                   flexShrink: 0,
                   lineHeight: 0,
                 }}
@@ -658,7 +656,7 @@ function Navbar() {
               <Link
                 to="/login"
                 className={`flex items-center justify-center ${
-                  isHome ? "w-26px h-26px" : "w-22px h-22px"
+                  isHome ? "w-[26px] h-[26px]" : "w-[22px] h-[22px]"
                 } ${
                   scrolled ? "text-[#0d1a2a]" : "text-white"
                 }`}

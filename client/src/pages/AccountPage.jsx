@@ -5,6 +5,7 @@ import { getRecentlyViewedIds } from "../utils/recentlyViewed";
 import { getProductById } from "../api/productClient";
 import ProfileEditModal from "../components/ProfileEditModal";
 import BusinessSettingsModal from "../components/BusinessSettingsModal";
+import ProductCarousel from "../components/ProductCarousel";
 
 const QUICK_LINKS = [
   { to: "/orders", label: "My Orders" },
@@ -327,42 +328,7 @@ function AccountPage() {
           {loadingRecent ? (
             <p style={{ fontSize: "0.85rem", color: "#6b6862" }}>Loading…</p>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "14px" }}>
-              {recentProducts.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`/product/${product.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <div style={{ width: "100%", aspectRatio: "1", backgroundColor: "#f4f0eb", borderRadius: "8px", overflow: "hidden", marginBottom: "8px" }}>
-                    {product.image?.[0]?.url ? (
-                      <img src={product.image[0].url} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain",
-                        display:"block",
-                        padding:"12px",
-                        boxSizing: "border-box"
-                       }} />
-                    ):(
-                      <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent:"center",
-                        color: "#999",
-                        fontSize: "0.8rem",
-                      }}> 
-                      No image
-                      </div>
-              
-                    )}
-                  </div>
-                  <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#0d1a2a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {product.name}
-                  </p>
-                </Link>
-              ))}
-            </div>
+            <ProductCarousel products={recentProducts} />
           )}
         </div>
       )}
