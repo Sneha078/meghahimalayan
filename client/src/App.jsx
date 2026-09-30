@@ -27,6 +27,7 @@ import AdminOrderDetail from './pages/admin/AdminOrderDetail'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminProductForm from './pages/admin/AdminProductForm'
 import AdminUsers from './pages/admin/AdminUsers'
+import AdminUserDetail from './pages/admin/AdminUserDetail'
 import AdminCoupons from './pages/admin/AdminCoupons'
 import AdminMessages from './pages/admin/AdminMessages'
 import AdminReturns from './pages/admin/AdminReturns'
@@ -130,6 +131,11 @@ function App() {
 <Route path="/admin/users" element={
   <AdminRoute>
     <AdminLayout><AdminUsers /></AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/users/:id" element={
+  <AdminRoute>
+    <AdminLayout><AdminUserDetail /></AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/coupons" element={

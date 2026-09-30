@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getUsers, updateUserRole, deleteUser } from '../../api/adminClient'
 
 function AdminUsers() {
@@ -142,9 +143,24 @@ function AdminUsers() {
                         }}>
                           {user.name?.charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#0f172a' }}>
+                        {/*
+                          Name links to the detail view, which is where the
+                          full profile (addresses, sign-up method, last
+                          login) lives — this table only carries a summary.
+                        */}
+                        <Link
+                          to={`/admin/users/${user._id}`}
+                          style={{
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            color: '#0f172a',
+                            textDecoration: 'none',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                        >
                           {user.name}
-                        </span>
+                        </Link>
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '0.85rem', color: '#475569' }}>

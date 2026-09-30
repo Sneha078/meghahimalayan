@@ -67,12 +67,45 @@ function OrderFailed() {
         Delivery instead.
       </p>
 
-      <div style={{ display: "flex", gap: "16px" }}>
+      {/*
+        Wraps on narrow screens — three full-width-ish buttons in a single
+        non-wrapping row would overflow on mobile.
+      */}
+      <div
+        style={{
+          display: "flex",
+          gap: "16px",
+          flexWrap: "wrap",
+          justifyContent: "center",
+        }}
+      >
+        {/*
+          The gateway never confirmed, so the order was never created and
+          the cart was deliberately left intact (see Checkout.jsx) — the
+          items are still there to review before trying again.
+        */}
         <Link
-          to="/checkout"
+          to="/cart"
           style={{
             backgroundColor: "var(--color-navy)",
             color: "var(--color-taupe)",
+            padding: "13px 32px",
+            fontSize: "0.82rem",
+            fontWeight: "700",
+            letterSpacing: "0.12em",
+            textDecoration: "none",
+            borderRadius: "8px",
+          }}
+        >
+          BACK TO CART
+        </Link>
+
+        <Link
+          to="/checkout"
+          style={{
+            backgroundColor: "transparent",
+            border: "1px solid var(--color-navy)",
+            color: "var(--color-navy)",
             padding: "13px 32px",
             fontSize: "0.82rem",
             fontWeight: "700",

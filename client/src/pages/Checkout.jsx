@@ -14,6 +14,23 @@ import PointsRedeemBox from "./PointsRedeemBox";
 
 const STEPS = ["Delivery", "Payment", "Review"];
 
+/*
+ * Format rules for the delivery form.
+ *
+ * These deliberately mirror validateShippingInfo() in orderController.js
+ * so the customer is told what is wrong before the round-trip, instead of
+ * filling three steps and then getting a raw 400 back from the server.
+ * The server remains authoritative — this is UX, not security.
+ */
+const NEPAL_PHONE_RE = /^(?:\+977)?9[678]\d{8}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PINCODE_RE = /^\d{5}$/;
+
+// The server strips spaces and dashes before testing the phone, so
+// "98-1234-5678" and "+977 9812345678" are both accepted.
+const normalizePhone = (value) => value.trim().replace(/\s|-/g, "");
+
+
 function Checkout() {
   const { cartItems, subtotal, discount, couponCode, clearCart, pointsUsed, pointsDiscount, setPointsRedemption, } = useCart();
   const { user, loading: authLoading } = useAuth();
@@ -76,32 +93,50 @@ function Checkout() {
   const validateStep1 = () => {
     const newErrors = {};
 
-    if (!form.fullName.trim()) {
+    const fullName = form.fullName.trim();
+    if (!fullName) {
       newErrors.fullName = "Full name is required";
+    } else if (fullName.length > 100) {
+      newErrors.fullName = "Full name cannot exceed 100 characters";
     }
 
     if (!form.phone.trim()) {
       newErrors.phone = "Phone number is required";
+    } else if (!NEPAL_PHONE_RE.test(normalizePhone(form.phone))) {
+      newErrors.phone =
+        "Enter a valid Nepal phone number (e.g. 98XXXXXXXX)";
     }
 
-    if (!form.email.trim()) {
+    const email = form.email.trim();
+    if (!email) {
       newErrors.email = "Email is required";
+    } else if (!EMAIL_RE.test(email)) {
+      newErrors.email = "Enter a valid email address";
     }
 
-    if (!form.address.trim()) {
+    const address = form.address.trim();
+    if (!address) {
       newErrors.address = "Address is required";
+    } else if (address.length > 300) {
+      newErrors.address = "Address cannot exceed 300 characters";
     }
 
-    if (!form.city.trim()) {
+    const city = form.city.trim();
+    if (!city) {
       newErrors.city = "City is required";
+    } else if (city.length > 100) {
+      newErrors.city = "City cannot exceed 100 characters";
     }
 
     if (!form.province.trim()) {
       newErrors.province = "Province is required";
     }
 
-    if (!form.pincode.trim()) {
+    const pincode = form.pincode.trim();
+    if (!pincode) {
       newErrors.pincode = "Postal/pin code is required";
+    } else if (!PINCODE_RE.test(pincode)) {
+      newErrors.pincode = "Enter a valid 5-digit pin code";
     }
 
     setErrors(newErrors);
@@ -470,6 +505,8 @@ function Checkout() {
                     value={form.phone}
                     onChange={handleChange}
                     placeholder="98XXXXXXXX"
+                    inputMode="tel"
+                    autoComplete="tel"
                     style={inputStyle(errors.phone)}
                   />
 
@@ -488,6 +525,7 @@ function Checkout() {
                     value={form.email}
                     onChange={handleChange}
                     placeholder="input your email id"
+                    autoComplete="email"
                     style={inputStyle(errors.email)}
                   />
 
@@ -569,6 +607,9 @@ function Checkout() {
                     value={form.pincode}
                     onChange={handleChange}
                     placeholder="e.g. 33700"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={5}
                     style={inputStyle(errors.pincode)}
                   />
 
