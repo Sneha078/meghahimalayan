@@ -760,9 +760,16 @@ function Orders() {
                               gap: '14px',
                             }}
                           >
-                            {/* Product image */}
+                            {/* Product image — links to the product page.
+                                Order items snapshot the product as
+                                `item.product` (an ObjectId ref), not
+                                `item._id`, which is the line-item id. */}
 
-                            <div
+                            <Link
+                              to={`/product/${item.product}`}
+                              aria-label={
+                                item.name
+                              }
                               style={{
                                 width:
                                   '52px',
@@ -776,6 +783,8 @@ function Orders() {
                                   'hidden',
                                 flexShrink:
                                   0,
+                                display:
+                                  'block',
                               }}
                             >
                               {item.image ? (
@@ -821,7 +830,7 @@ function Orders() {
                                         : "📦"}
                                 </div>
                               )}
-                            </div>
+                            </Link>
 
                             {/* Product details */}
 
@@ -831,8 +840,11 @@ function Orders() {
                                 minWidth: 0,
                               }}
                             >
-                              <p
+                              <Link
+                                to={`/product/${item.product}`}
                                 style={{
+                                  display:
+                                    'block',
                                   fontSize:
                                     '0.88rem',
                                   fontWeight:
@@ -847,10 +859,22 @@ function Orders() {
                                     'hidden',
                                   textOverflow:
                                     'ellipsis',
+                                  textDecoration:
+                                    'none',
+                                  transition:
+                                    'color 0.2s ease',
                                 }}
+                                onMouseEnter={(e) =>
+                                  e.currentTarget.style.color =
+                                    'var(--color-taupe)'
+                                }
+                                onMouseLeave={(e) =>
+                                  e.currentTarget.style.color =
+                                    'var(--color-navy)'
+                                }
                               >
                                 {item.name}
-                              </p>
+                              </Link>
 
                               <p
                                 style={{

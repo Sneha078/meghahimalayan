@@ -42,7 +42,7 @@ export function WishlistProvider({ children }){
         try{
             await addToWishlist(productId)
         } catch {
-            setWishlist((prev) => prev.filter((item) => (item._id ?? item.id!== productId)))
+            setWishlist((prev) => prev.filter((item) => (item._id ?? item.id) !== productId))
         }
     }
     return true

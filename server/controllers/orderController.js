@@ -43,6 +43,33 @@ export const generateOrderNumber = () => {
 };
 
 
+// Reads the idempotency key from the request. The header is the standard
+// location; the body field is accepted as a fallback so clients that
+// can't set custom headers (or older ones already sending it in the
+// payload) are covered too. Returns null when absent/blank — order
+// creation still works without one, it just isn't replay-protected.
+const readIdempotencyKey = (req) => {
+  const raw =
+    req.get("Idempotency-Key") ||
+    req.body?.idempotencyKey;
+
+  if (typeof raw !== "string") return null;
+
+  const key = raw.trim();
+
+  if (!key) return null;
+
+  if (key.length > 100) {
+    throw new HandleError(
+      "Idempotency key is too long",
+      400
+    );
+  }
+
+  return key;
+};
+
+
 // Gets the actual selling price from the database product.
 // Frontend price is NEVER trusted.
 // Uses shared pricing function for consistency with cart controller
@@ -612,6 +639,40 @@ export const createNewOrder =
         pointsToRedeem,
       } = req.body;
 
+      const idempotencyKey =
+        readIdempotencyKey(req);
+
+      /*
+       * Idempotency fast path.
+       *
+       * If this exact checkout attempt already produced an order, return
+       * that order as-is instead of creating a second one. This is what
+       * stops a double-tap / back-button / client-retry from deducting
+       * stock twice and burning the coupon's usage twice.
+       *
+       * The unique (user, idempotencyKey) index in orderModel.js is the
+       * actual guarantee — this lookup is only a fast path. A genuinely
+       * concurrent double-submit can still pass this check, and is caught
+       * by the duplicate-key handler below.
+       */
+      if (idempotencyKey) {
+        const existingOrder =
+          await Order.findOne({
+            user: req.user._id,
+            idempotencyKey,
+          });
+
+        if (existingOrder) {
+          return res.status(200).json({
+            success: true,
+            duplicate: true,
+            message:
+              "Order already placed for this request",
+            order: existingOrder,
+          });
+        }
+      }
+
       // Validate before starting transaction.
       validateShippingInfo(
         shippingInfo
@@ -1088,6 +1149,8 @@ export const createNewOrder =
                 orderNumber:
                   generateOrderNumber(),
 
+                idempotencyKey,
+
                 shippingInfo: {
                   name:
                     shippingInfo.name.trim(),
@@ -1239,6 +1302,42 @@ export const createNewOrder =
           success: true,
           order: createdOrder,
         });
+      } catch (err) {
+        /*
+         * Concurrent duplicate submit.
+         *
+         * Two requests with the same key can both pass the fast-path
+         * lookup above before either commits. The unique index settles it:
+         * the loser gets a 11000 duplicate-key error and its transaction is
+         * already aborted, so no stock or coupon change survives. Return
+         * the winner's order so the client's retry still succeeds.
+         *
+         * Requires an idempotency key to be set — without one there's no
+         * index entry, so a 11000 here means something genuinely wrong.
+         */
+        const isDuplicateKey =
+          err?.code === 11000 ||
+          err?.code === 11001;
+
+        if (idempotencyKey && isDuplicateKey) {
+          const existingOrder =
+            await Order.findOne({
+              user: req.user._id,
+              idempotencyKey,
+            });
+
+          if (existingOrder) {
+            return res.status(200).json({
+              success: true,
+              duplicate: true,
+              message:
+                "Order already placed for this request",
+              order: existingOrder,
+            });
+          }
+        }
+
+        throw err;
       } finally {
         await session.endSession();
       }

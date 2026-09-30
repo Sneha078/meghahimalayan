@@ -124,6 +124,19 @@ function Checkout() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderError, setOrderError] = useState("");
 
+  /*
+   * Identifies this one checkout attempt.
+   *
+   * Held in state (not regenerated per call) so that if the request times
+   * out and the customer presses "Place Order" again, the server sees the
+   * same key and returns the original order rather than charging them
+   * twice. Once an order actually comes back we clear it, so the next
+   * order in this session gets a fresh key.
+   */
+  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+    crypto.randomUUID()
+  );
+
   // paymentInfo.method sent on order creation. Gateway payments stay
   // "Pending" until the backend's verify step confirms them; COD is also
   // "Pending" until delivery, unchanged from before.
@@ -166,9 +179,13 @@ function Checkout() {
 
     try {
       const orderData = buildOrderData();
-      const orderRes = await createOrder(orderData);
+      const orderRes = await createOrder(orderData, idempotencyKey);
       const orderId =
         orderRes?.order?._id ?? orderRes?.order?.id ?? orderRes?._id;
+
+      // The order now exists server-side. A new attempt (e.g. they shop
+      // again) must not reuse this key, or it would replay the old order.
+      setIdempotencyKey(crypto.randomUUID());
 
       if (paymentMethod === "cod") {
         clearCart();

@@ -55,11 +55,12 @@ function SocialBtn({ href, label, children }) {
 }
 
 // Small helper link for tel:/mailto: rows (inherits the row's colour, highlights on hover)
-function ContactLink({ href, children }) {
+function ContactLink({ href, onClick, children }) {
   const [hovered, setHovered] = useState(false)
   return (
     <a
       href={href}
+      onClick={onClick}
       style={{
         color: hovered ? 'var(--color-taupe)' : 'inherit',
         textDecoration: 'none',
@@ -106,6 +107,20 @@ function Footer() {
   }
 
   const email = businessSettings?.email || 'mail@megahimalaya.com'
+  const ccEmail = 'opticalhousehimalaya@gmail.com'
+  // Opens the visitor's mail app with both addresses filled in (To + CC)
+  const mailtoHref = `mailto:${email}?cc=${ccEmail}`
+  const gmailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&cc=${ccEmail}`
+
+  // Phones: let the native mail app handle the mailto link.
+  // Desktop: most browsers have no mail app set up, so mailto does nothing — open Gmail compose instead.
+  const handleEmailClick = (e) => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (!isMobile) {
+      e.preventDefault()
+      window.open(gmailHref, '_blank', 'noopener,noreferrer')
+    }
+  }
 
   return (
     <footer style={{ backgroundColor: 'var(--color-navy)', color: 'rgba(255,255,255,0.5)' }}>
@@ -200,11 +215,14 @@ function Footer() {
               </div>
 
               {/* Email */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                <span style={{ color: 'var(--color-taupe)', flexShrink: 0, width: '16px', display: 'flex', justifyContent: 'center', marginTop: '1px' }}>
                   <Mail size={15} strokeWidth={2} />
                 </span>
-                <ContactLink href={`mailto:${email}`}>{email}</ContactLink>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <ContactLink href={mailtoHref} onClick={handleEmailClick}>{email}</ContactLink>
+                  <ContactLink href={mailtoHref} onClick={handleEmailClick}>{ccEmail}</ContactLink>
+                </div>
               </div>
 
               {/* Weekday hours */}
@@ -237,7 +255,7 @@ function Footer() {
 
             {/* Social buttons */}
             <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1.5rem' }}>
-              <SocialBtn href="https://facebook.com" label="Facebook">
+              <SocialBtn href="https://www.facebook.com/himalayaopticalhouse" label="Facebook">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>

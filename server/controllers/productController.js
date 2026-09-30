@@ -529,6 +529,19 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     }
   }
 
+  // Cross-field price validation: check here in the controller where we
+  // have access to both the incoming values AND the existing product,
+  // since Mongoose validators can't reliably access sibling fields during
+  // findByIdAndUpdate (this.price is undefined in that context).
+  const incomingPrice = updateData.price !== undefined ? Number(updateData.price) : product.price;
+  const incomingDiscount = updateData.discountPrice !== undefined ? updateData.discountPrice : product.discountPrice;
+
+  if (incomingDiscount !== null && incomingDiscount !== undefined) {
+    if (Number(incomingDiscount) >= Number(incomingPrice)) {
+      return next(new HandleError("Discount price must be lower than regular price", 400));
+    }
+  }
+
   // Re-marking a product as a new arrival → it becomes eligible for the
   // "New Arrivals" marketing email again (the previous notification is reset).
   if (req.body.isNewArrival === true) {

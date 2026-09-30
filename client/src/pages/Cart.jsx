@@ -236,15 +236,27 @@ function Cart() {
 
     {/* Product Info */}
     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-      {/* Image */}
-      <div style={{
-        width: '80px',
-        height: '80px',
-        borderRadius: '10px',
-        backgroundColor: '#f3f4f6',
-        flexShrink: 0,
-        overflow: 'hidden',
-      }}>
+      {/*
+        Image — links through to the product page.
+
+        The route needs the PRODUCT id, not the cart line id: for guest
+        lines carrying a prescription or a variant, `item.id` is a
+        composite (`${productId}_${timestamp}`) that resolves to nothing.
+        Hence `item.productId`.
+      */}
+      <Link
+        to={`/product/${item.productId ?? item._id}`}
+        aria-label={item.name}
+        style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '10px',
+          backgroundColor: '#f3f4f6',
+          flexShrink: 0,
+          overflow: 'hidden',
+          display: 'block',
+        }}
+      >
         {item.image?.[0]?.url ? (
           <img
             src={item.image[0].url}
@@ -260,7 +272,7 @@ function Cart() {
             {item.category === 'watches' ? '⌚' : item.category === 'perfumes' ? '🧴' : item.category === 'contact-lenses' ? '👁️' : '👓'}
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Name & Brand */}
       <div>
@@ -274,16 +286,28 @@ function Cart() {
         }}>
           {item.brand}
         </p>
-        <h3 style={{
-          fontFamily: 'var(--font-serif)',
-          fontSize: '0.95rem',
-          fontWeight: '600',
-          color: 'var(--color-navy)',
-          lineHeight: '1.3',
-          marginBottom: item.prescription ? '6px' : '0',
-        }}>
+        {/*
+          Name — same target as the image above. `textDecoration: 'none'`
+          plus an explicit color keeps the link from turning blue/purple.
+        */}
+        <Link
+          to={`/product/${item.productId ?? item._id}`}
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--color-navy)',
+            lineHeight: '1.3',
+            marginBottom: item.prescription ? '6px' : '0',
+            textDecoration: 'none',
+            display: 'inline-block',
+            transition: 'color 0.2s ease',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-taupe)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-navy)'}
+        >
           {item.name}
-        </h3>
+        </Link>
 
         {/* Prescription Details Chip */}
         {item.prescription && (

@@ -105,11 +105,17 @@ export async function deleteReview(productId, reviewId) {
 }
 
 // POST /api/v1/order/new
-export async function createOrder(orderData) {
+// `idempotencyKey` makes a retried "Place Order" safe: the server returns
+// the original order instead of creating a second one (which would deduct
+// stock twice and burn the coupon twice).
+export async function createOrder(orderData, idempotencyKey) {
   const res = await fetch(`${API_URL}/order/new`, {
     method: 'POST',
     credentials: 'include',         // sends the auth cookie
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
     body: JSON.stringify(orderData),
   })
   if (!res.ok) {

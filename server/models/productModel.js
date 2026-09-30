@@ -250,8 +250,12 @@ const productSchema = new mongoose.Schema(
       min: [0, "Discount price cannot be negative"],
       validate: {
         validator: function(value) {
-          // Discount price must be lower than regular price
-          if (value !== null && value !== undefined) {
+          // Only validate when both discountPrice and price are present
+          // on the same document. During findByIdAndUpdate, `this` is the
+          // query context and this.price is undefined — skip the check
+          // here and rely on the pre-save hook to enforce the invariant
+          // when a full save occurs.
+          if (value !== null && value !== undefined && this.price !== undefined && this.price !== null) {
             return value < this.price;
           }
           return true;

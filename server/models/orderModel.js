@@ -512,6 +512,26 @@ const orderSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Client-supplied key identifying one checkout attempt.
+    //
+    // A transaction protects a SINGLE request from partial failure, but it
+    // does not stop the SAME order being created twice when the customer
+    // double-taps "Place Order", the browser retries, or they hit back and
+    // resubmit. Those are separate transactions, so stock would be deducted
+    // twice and the coupon's usedCount incremented twice.
+    //
+    // createNewOrder() looks this up first: if an order already exists for
+    // (user, idempotencyKey) it returns that order instead of creating a
+    // second one. The unique index below is the real enforcement — the
+    // lookup is only a fast path, and a concurrent double-submit still hits
+    // the duplicate-key error and is resolved by the catch in the controller.
+    idempotencyKey: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: null,
+    },
+
     // ─────────────────────────────────────────────────────────────────────────
     // SOFT DELETE
     // ─────────────────────────────────────────────────────────────────────────
@@ -571,6 +591,20 @@ orderSchema.index({
   orderStatus: 1,
   createdAt: -1,
 });
+
+// Idempotency: one order per (user, idempotencyKey).
+// Sparse so orders created without a key (reward redemption, admin
+// tooling, older records) are all exempt and never collide with each
+// other — a plain unique index would treat every null as a duplicate.
+orderSchema.index(
+  { user: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      idempotencyKey: { $type: "string" },
+    },
+  }
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. MODEL

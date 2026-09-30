@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useRewards } from "../hooks/useRewards";
 import {
   getCatalog,
@@ -16,6 +17,22 @@ const HISTORY_TABS = [
 
 function RewardsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
+
+  // Rewards are per-account: an anonymous visitor has no balance and no
+  // history, so the page would render "0 Coins" / "No activity here yet"
+  // instead of telling them they need to log in. Redirect instead, and
+  // remember where they were headed so login can send them back.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate("/login", {
+        state: { from: location.pathname },
+        replace: true,
+      });
+    }
+  }, [user, authLoading, navigate, location]);
 
   const {
     balance,
@@ -43,6 +60,8 @@ function RewardsPage() {
   // ============================================================
 
   useEffect(() => {
+    if (!user) return;
+
     getCatalog()
       .then((data) => {
         console.log("REWARDS CATALOG:", data);
@@ -63,13 +82,15 @@ function RewardsPage() {
       .finally(() => {
         setCatalogLoading(false);
       });
-  }, []);
+  }, [user]);
 
   // ============================================================
   // LOAD REWARD HISTORY
   // ============================================================
 
   useEffect(() => {
+    if (!user) return;
+
     setHistoryLoading(true);
 
     getHistory(historyTab)
@@ -83,7 +104,7 @@ function RewardsPage() {
       .finally(() => {
         setHistoryLoading(false);
       });
-  }, [historyTab]);
+  }, [historyTab, user]);
 
   // ============================================================
   // REDEEM
@@ -168,6 +189,13 @@ function RewardsPage() {
   // ============================================================
   // RENDER
   // ============================================================
+
+  // Wait for the session to resolve before rendering anything, otherwise
+  // a logged-out visitor briefly sees a "0 Coins" balance on the way
+  // out. Same pattern as AdminRoute.jsx.
+  if (authLoading) return null;
+
+  if (!user) return null;
 
   return (
     <section
