@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 
 /**
@@ -51,6 +52,7 @@ function SearchResultRow({ product, isHighlighted = false, onSelect }) {
           <img
             src={thumbnail}
             alt={product.name}
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         )}
@@ -93,4 +95,5 @@ function SearchResultRow({ product, isHighlighted = false, onSelect }) {
   )
 }
 
-export default SearchResultRow
+// Memoize to prevent unnecessary re-renders when parent state changes
+export default memo(SearchResultRow)

@@ -15,22 +15,23 @@ import {
   verifyUserAuth,
   roleBasedAccess,
 } from "../middleware/userAuth.js";
+import { cacheMiddleware, clearCacheMiddleware } from "../middleware/cache.js";
 
 const router = express.Router();
 
-// Public product APIs
-router.get("/products", getAllProducts);
-router.get("/filters", getFilterOptions);
-router.get("/product/:id", getSingleProduct); // :id = ObjectId OR slug
-router.get("/reviews", getProductReviews); // ?id=<productId>
+// Public product APIs - with caching
+router.get("/products", cacheMiddleware('product'), getAllProducts);
+router.get("/filters", cacheMiddleware('category', 600), getFilterOptions); // Cache filters for 10 minutes
+router.get("/product/:id", cacheMiddleware('product'), getSingleProduct); // :id = ObjectId OR slug
+router.get("/reviews", cacheMiddleware('product', 180), getProductReviews); // Cache reviews for 3 minutes
 
-// Authenticated routes
-router.put("/review", verifyUserAuth, createOrUpdateReview);
+// Authenticated routes - clear cache after modifications
+router.put("/review", verifyUserAuth, clearCacheMiddleware('product'), createOrUpdateReview);
 
 // Users can delete their own review;
 // admins can delete any review
 // DELETE /api/v1/reviews?productId=<id>&id=<reviewId>
-router.delete("/reviews", verifyUserAuth, deleteReview);
+router.delete("/reviews", verifyUserAuth, clearCacheMiddleware('product'), deleteReview);
 
 //Admin and Intern produts management routes
 router.get(
@@ -44,6 +45,7 @@ router.post(
   "/admin/product/create",
   verifyUserAuth,
   roleBasedAccess("admin", "intern"),
+  clearCacheMiddleware('product'),
   createProduct
 );
 
@@ -52,11 +54,13 @@ router
   .put(
     verifyUserAuth,
     roleBasedAccess("admin", "intern"),
+    clearCacheMiddleware('product'),
     updateProduct
   )
   .delete(
     verifyUserAuth,
     roleBasedAccess("admin", "intern"),
+    clearCacheMiddleware('product'),
     deleteProduct
   );
 

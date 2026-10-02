@@ -24,24 +24,26 @@ function CoinBadge({ scrolled }) {
 
   return (
     <div
-      style={{ position: "relative", flexShrink: 0 }}
+      className="relative shrink-0 grow-0 w-fit"
       onMouseLeave={() => setOpen(false)}
     >
-      {/* Coin badge */}
+           {/* Coin badge */}
       <Link
         to="/rewards"
         onClick={() => setOpen((v) => !v)}
         onMouseEnter={() => setOpen(true)}
-        className={`flex items-center justify-center rounded-full border transition-all duration-300 h-7 px-1.5 gap-1 lg:w-auto lg:h-8 lg:gap-1.5 lg:px-3 ${
-          scrolled
-            ? "bg-gray-100 border-gray-200 text-[#0d1a2a]"
-            : "bg-white/20 border-white/30 text-white"
-        }`}
+        className="flex items-center justify-center rounded-full transition-all duration-300 h-7 px-2 gap-1 lg:h-8 lg:gap-1.5 lg:px-3"
         style={{
-          fontSize: "0.75rem",
-          fontWeight: 600,
+          fontSize: "0.8rem",
+          fontWeight: 700,
           cursor: "pointer",
           whiteSpace: "nowrap",
+          color: "#0d1a2a",
+          backgroundColor: scrolled ? "#f3f4f6" : "#ffffff",
+          border: scrolled
+            ? "1px solid #e5e7eb"
+            : "1px solid rgba(255,255,255,0.9)",
+          boxShadow: scrolled ? "none" : "0 1px 4px rgba(0,0,0,0.25)",
         }}
       >
         🪙 <span>{balance.toLocaleString()}</span>

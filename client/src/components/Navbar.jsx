@@ -380,7 +380,7 @@ function Navbar() {
 
           {/* Center: Search bar (desktop only) */}
           <div
-            className="hidden lg:flex items-center flex-1 max-w-md relative"
+            className="hidden lg:flex items-center flex-1 max-w-xl relative"
             ref={searchContainerRef}
             style={{
               marginLeft: "20px",
@@ -441,8 +441,8 @@ function Navbar() {
                 onKeyDown={handleKeyDown}
                 className={`bg-transparent text-sm outline-none w-full ${
                   scrolled
-                    ? "text-[#0d1a2a] placeholder-gray-400"
-                    : "text-white"
+                    ? "text-#0d1a2a placeholder-gray-400"
+                    : " placeholder-white/50"
                 }`}
                 style={{ minWidth: 0 }}
               />
@@ -516,10 +516,10 @@ function Navbar() {
 
           {/* Right: Icons */}
           <div
-            className={`flex items-center shrink-0 ${
+            className={`nav-right-icons flex items-center shrink-0 ${
               isHome
-                ? "gap-[clamp(4px,1.6vw,18px)] mr-4"
-                : "gap-[8px] mr-2 sm:gap-3 sm:mr-4 lg:gap-5"
+                ? "gap-2 mr-4"
+                : "gap-2 mr-2 sm:gap-2.5 sm:mr-4 lg:gap-3"
             }`}
           >
 
@@ -637,28 +637,15 @@ function Navbar() {
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
 
-                <span
-                  className="hidden lg:inline"
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: "600",
-                    color: scrolled ? "#0d1a2a" : "#ffffff",
-                    maxWidth: "80px",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {user.name?.split(" ")[0]}
-                </span>
+                
               </Link>
             ) : (
               <Link
                 to="/login"
                 className={`flex items-center justify-center ${
-                  isHome ? "w-[26px] h-[26px]" : "w-[22px] h-[22px]"
+                  isHome ? "w-26px h-26px" : "w-22px h-22px"
                 } ${
-                  scrolled ? "text-[#0d1a2a]" : "text-white"
+                  scrolled ? "text-#0d1a2a" : "text-white"
                 }`}
                 aria-label="Account"
               >
@@ -680,7 +667,9 @@ function Navbar() {
             )}
 
             {/* Coin Balance */}
-            <CoinBadge scrolled={scrolled} />
+           <div className="shrink-0 ml-0">
+<CoinBadge scrolled={scrolled} />
+           </div>
 
             {/* Cart */}
             <Link
@@ -842,7 +831,7 @@ function Navbar() {
                   setSearchValue(e.target.value)
                 }
                 onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent text-sm outline-none text-(--color-navy) placeholder-gray-400"
+                className="flex-1 bg-transparent text-sm outline-none 'placeholder-gray-400' placeholder-gray-400"
                 style={{
                   minWidth: 0,
                 }}

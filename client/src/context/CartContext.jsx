@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 
 import { useAuth } from "./AuthContext";
@@ -21,7 +22,6 @@ import {
 const CartContext = createContext();
 
 const GUEST_CART_KEY = "guest_cart";
-const POINTS_REDEMPTION_KEY = "cart_points_redemption";
 
 function normalizeCartItem(item) {
   const product = item.product ?? {};
@@ -80,97 +80,13 @@ function mergeGuestIntoBackend(guestItems) {
   return Array.from(seen.values());
 }
 
-/**
- * Points redemption is kept in CartContext so Cart and Checkout
- * share the exact same selection.
- */
-function loadPointsRedemption() {
-  try {
-    const raw = localStorage.getItem(POINTS_REDEMPTION_KEY);
-
-    if (!raw) {
-      return {
-        pointsUsed: 0,
-        pointsDiscount: 0,
-      };
-    }
-
-    const parsed = JSON.parse(raw);
-
-    return {
-      pointsUsed: Number(parsed.pointsUsed) || 0,
-      pointsDiscount: Number(parsed.pointsDiscount) || 0,
-    };
-  } catch {
-    return {
-      pointsUsed: 0,
-      pointsDiscount: 0,
-    };
-  }
-}
-
-function savePointsRedemption(pointsUsed, pointsDiscount) {
-  localStorage.setItem(
-    POINTS_REDEMPTION_KEY,
-    JSON.stringify({
-      pointsUsed: Number(pointsUsed) || 0,
-      pointsDiscount: Number(pointsDiscount) || 0,
-    })
-  );
-}
-
-function removeSavedPointsRedemption() {
-  localStorage.removeItem(POINTS_REDEMPTION_KEY);
-}
-
 export function CartProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
 
   const [cartItems, setCartItems] = useState([]);
-
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
-
-  /*
-   * Shared points state
-   *
-   * Cart and Checkout both use these values.
-   */
-  const savedPoints = loadPointsRedemption();
-
-  const [pointsUsed, setPointsUsedState] = useState(
-    savedPoints.pointsUsed
-  );
-
-  const [pointsDiscount, setPointsDiscountState] = useState(
-    savedPoints.pointsDiscount
-  );
-
   const [loading, setLoading] = useState(false);
-
-  /**
-   * Update points redemption.
-   *
-   * This is the function Cart / PointsRedeemBox should call.
-   */
-  const setPointsRedemption = useCallback((points, pointsDisc) => {
-    const safePoints = Number(points) || 0;
-    const safeDiscount = Number(pointsDisc) || 0;
-
-    setPointsUsedState(safePoints);
-    setPointsDiscountState(safeDiscount);
-
-    savePointsRedemption(safePoints, safeDiscount);
-  }, []);
-
-  /**
-   * Clear points redemption.
-   */
-  const clearPointsRedemption = useCallback(() => {
-    setPointsUsedState(0);
-    setPointsDiscountState(0);
-    removeSavedPointsRedemption();
-  }, []);
 
   /**
    * Pull the full cart from the backend and reflect it in state.
@@ -248,14 +164,6 @@ export function CartProvider({ children }) {
 
       setCouponCode("");
       setDiscount(0);
-
-      /*
-       * Points are only available for logged-in users.
-       * Clear them when there is no authenticated user.
-       */
-      setPointsUsedState(0);
-      setPointsDiscountState(0);
-      clearPointsRedemption();
 
       setLoading(false);
     }
@@ -474,13 +382,6 @@ export function CartProvider({ children }) {
 
       localStorage.removeItem(GUEST_CART_KEY);
     }
-
-    /*
-     * Points should not survive after the cart is cleared.
-     */
-    setPointsUsedState(0);
-    setPointsDiscountState(0);
-    clearPointsRedemption();
   }, [user, syncCart]);
 
   // --------------------------------------------------
@@ -516,64 +417,57 @@ export function CartProvider({ children }) {
   );
 
   // --------------------------------------------------
-  // Computed values
+  // Computed values (memoized to prevent unnecessary re-renders)
   // --------------------------------------------------
 
-  const subtotal = cartItems.reduce(
-    (sum, item) =>
-      sum + item.price * item.quantity,
-    0
+  const subtotal = useMemo(() => 
+    cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cartItems]
   );
 
-  const totalItems = cartItems.reduce(
-    (sum, item) =>
-      sum + item.quantity,
-    0
+  const totalItems = useMemo(() => 
+    cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems]
   );
 
-  const discounted = Math.max(
-    0,
-    subtotal - discount
+  const discounted = useMemo(() => 
+    Math.max(0, subtotal - discount),
+    [subtotal, discount]
   );
 
-  const totalPrice = Math.max(
-    0,
-    discounted - pointsDiscount
-  );
+  // Memoize provider value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    cartItems,
+    addItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    subtotal,
+    totalItems,
+    couponCode,
+    discount,
+    discounted,
+    applyCoupon,
+    removeCoupon,
+    loading,
+  }), [
+    cartItems,
+    addItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    subtotal,
+    totalItems,
+    couponCode,
+    discount,
+    discounted,
+    applyCoupon,
+    removeCoupon,
+    loading,
+  ]);
 
   return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-
-        addItem,
-        updateQuantity,
-        removeItem,
-        clearCart,
-
-        subtotal,
-        totalItems,
-
-        couponCode,
-        discount,
-
-        /*
-         * Shared points values
-         */
-        pointsUsed,
-        pointsDiscount,
-        setPointsRedemption,
-        clearPointsRedemption,
-
-        discounted,
-        totalPrice,
-
-        applyCoupon,
-        removeCoupon,
-
-        loading,
-      }}
-    >
+    <CartContext.Provider value={contextValue}>
       {children}
     </CartContext.Provider>
   );

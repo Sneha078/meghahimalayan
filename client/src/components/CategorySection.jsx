@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { getFilterOptions } from '../api/productClient'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 
 const categories = [
   {
@@ -159,6 +159,9 @@ function CategoryCard({ cat, count }) {
   )
 }
 
+// Memoize CategoryCard to prevent unnecessary re-renders
+const MemoizedCategoryCard = memo(CategoryCard)
+
 
 function CategorySection() {
   // categoryCounts: { eyeglasses: 12, watches: 8, ... } — null until loaded,
@@ -212,7 +215,7 @@ function CategorySection() {
         gap: '24px',
       }}>
         {categories.map(cat => (
-          <CategoryCard
+          <MemoizedCategoryCard
             key={cat.id}
             cat={cat}
             count={categoryCounts ? (categoryCounts[cat.categoryKey] ?? 0) : null}

@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { getAdminProducts, deleteProduct } from '../../api/adminClient'
 import { getFilterOptions } from '../../api/productClient'
 
 function AdminProducts() {
+  const location = useLocation()
   const [products, setProducts]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -14,18 +15,31 @@ function AdminProducts() {
   const [page, setPage]           = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [productCount, setProductCount] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Force refresh when navigating back from edit/create form
+  useEffect(() => {
+    if (location.state?.refresh) {
+      setRefreshKey(prev => prev + 1)
+    }
+  }, [location.state])
 
   useEffect(() => {
     setLoading(true)
+    setError(null)
     getAdminProducts(page, 15, { category: filter })
       .then((data) => {
         setProducts(data.products ?? [])
         setTotalPages(data.totalPages ?? 1)
         setProductCount(data.productCount ?? (data.products ?? []).length)
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        console.error('Error fetching products:', err)
+        setError(err.message)
+        setProducts([])
+      })
       .finally(() => setLoading(false))
-  }, [page, filter])
+  }, [page, filter, refreshKey])
 
   const handleFilter = (c) => {
     setFilter(c)
@@ -50,22 +64,30 @@ function AdminProducts() {
     }
   }
 
+  const [categories, setCategories] = useState(['All', 'contact-lenses', 'eyeglasses', 'watches', 'perfumes'])
+
   useEffect(() => {
     getFilterOptions()
       .then((data) => {
-        if (data.categories?.length) setCategories(['All', ...data.categories])
+        if (data.categories?.length) {
+          setCategories(['All', ...data.categories])
+        }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load categories:', err)
+      })
   }, [])
 
-  const [categories, setCategories] = useState(['All', 'eyeglasses', 'watches', 'perfumes', 'contact-lenses'])
-
-  // Category filtering happens server-side (so pagination + count stay
-  // correct); this leaves only the name/brand search to filter locally.
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.brand.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = products.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.brand.toLowerCase().includes(search.toLowerCase())
+    const matchesCategory =
+      filter === 'All' ||
+      p.category?.toLowerCase() === filter.toLowerCase() ||
+      (filter === 'contact-lenses' && p.category === 'contact-lenses')
+    return matchesSearch && matchesCategory
+  })
 
   return (
     <div style={{ padding: '32px' }}>
@@ -82,16 +104,33 @@ function AdminProducts() {
             {productCount} total products
           </p>
         </div>
-        <Link
-          to="/admin/products/new"
-          style={{
-            padding: '10px 20px', borderRadius: '8px',
-            backgroundColor: 'var(--color-navy)', color: '#ffffff',
-            textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600',
-          }}
-        >
-          + Add Product
-        </Link>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <Link
+            to="/admin/products/new"
+            style={{
+              padding: '10px 20px', borderRadius: '8px',
+              backgroundColor: 'var(--color-navy)', color: '#ffffff',
+              textDecoration: 'none', fontSize: '0.85rem', fontWeight: '600',
+            }}
+          >
+            + Add Product
+          </Link>
+          <button
+            onClick={() => setRefreshKey(prev => prev + 1)}
+            disabled={loading}
+            style={{
+              padding: '10px 20px', borderRadius: '8px',
+              backgroundColor: loading ? '#e2e8f0' : '#f1f5f9',
+              color: loading ? '#94a3b8' : '#0f172a',
+              border: '1px solid #cbd5e1',
+              fontSize: '0.85rem', fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+            title="Refresh product list"
+          >
+            {loading ? '⟳ Refreshing...' : '⟳ Refresh'}
+          </button>
+        </div>
       </div>
 
       
@@ -122,7 +161,11 @@ function AdminProducts() {
                 textTransform: 'capitalize',
               }}
             >
-              {c === 'contact-lenses' ? 'Contact Lenses' : c}
+              {c === 'contact-lenses' ? 'Contact Lenses' : 
+               c === 'eyeglasses' ? 'Eyeglasses' :
+               c === 'watches' ? 'Watches' :
+               c === 'perfumes' ? 'Perfumes' :
+               c}
             </button>
           ))}
         </div>
@@ -183,7 +226,7 @@ function AdminProducts() {
                         }}>
                           {product.image?.[0]?.url ? (
                             <img
-                              src={product.image[0].url} alt={product.name}
+                              src={`${product.image[0].url}?t=${Date.now()}`} alt={product.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                           ) : (

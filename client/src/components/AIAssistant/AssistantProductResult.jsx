@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 
 function AssistantProductResult({ product }) {
@@ -39,6 +40,7 @@ function AssistantProductResult({ product }) {
           <img
             src={product.image_url}
             alt={product.name || 'Product'}
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
               e.currentTarget.style.display = 'none'
@@ -100,4 +102,4 @@ function AssistantProductResult({ product }) {
   )
 }
 
-export default AssistantProductResult
+export default memo(AssistantProductResult)

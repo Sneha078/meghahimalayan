@@ -1,4 +1,6 @@
 // src/api/productClient.js
+import { cachedFetch, CacheConfig } from './cachedClient.js';
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
 
 async function handleResponse(res) {
@@ -26,200 +28,130 @@ export function fileToBase64(file) {
   });
 }
 
+// Use cached fetch for product listings (can be cached longer)
 export async function getProducts(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const url = `${API_URL}/products${query ? `?${query}` : ""}`;
-  const res = await fetch(url);
-  const data = await handleResponse(res);
+  const endpoint = `/products${query ? `?${query}` : ""}`;
+  
+  const data = await cachedFetch(endpoint, {}, CacheConfig.PRODUCTS);
   const products = (data.products ?? data).map(normalizeProduct)
+  
   return {
     products,
-    // NOTE: this key was previously "ProductCount" (capital P), which never
-    // matched data.productCount from the backend — productCount was silently
-    // always falling back to products.length (the capped page size).
     productCount: data.productCount ?? products.length,
     totalPages: data.totalPages ?? 1,
     currentPage: data.currentPage ?? 1,
   }
 }
 
+// Use cached fetch for individual products
 export async function getProductById(id) {
-  const res = await fetch(`${API_URL}/product/${id}`);
-  const data = await handleResponse(res);
+  const data = await cachedFetch(`/product/${id}`, {}, CacheConfig.PRODUCT_DETAILS);
   return normalizeProduct(data.product ?? data);
 }
 
-// GET /api/v1/filters
-// GET /api/v1/filters?category=eyeglasses  → brand/subcategory/gender scoped to that category
+// Use cached fetch for filter options (rarely change)
 export async function getFilterOptions(params = {}) {
   const query = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_URL}/filters${query ? `?${query}` : ""}`);
-  return handleResponse(res);
+  const endpoint = `/filters${query ? `?${query}` : ""}`;
+  return cachedFetch(endpoint, {}, CacheConfig.FILTERS);
 }
 
-/**
- * Fetch all reviews for a product.
- */
+// Use cached fetch for reviews (change infrequently)
 export async function getProductReviews(productId) {
-  const res = await fetch(`${API_URL}/reviews?id=${productId}`);
-  const data = await handleResponse(res);
+  const data = await cachedFetch(`/reviews?id=${productId}`, {}, CacheConfig.REVIEWS);
   return data.reviews ?? [];
 }
 
-/**
- * Submit (create or update) a review. Requires auth cookie.
- */
+// No cache for review submission (mutation)
 export async function submitReview({ productId, rating, comment, images = [], videos = [] }) {
   const imageBase64 = await Promise.all(images.map(fileToBase64))
   const videoBase64 = await Promise.all(videos.map(fileToBase64))
   
-  const res = await fetch(`${API_URL}/review`, {
+  return cachedFetch('/review', {
     method: 'PUT',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ productId, rating, comment, images: imageBase64, videos: videoBase64 }),
-  });
-  return handleResponse(res);
+  }, CacheConfig.NO_CACHE);
 }
 
-// DELETE /api/v1/reviews?productId=<productId>&id=<reviewId>
-// One review per user per product, but the backend still keys the delete
-// off the review's own _id (not just productId) — it looks it up inside
-// product.reviews via product.reviews.id(req.query.id). Both params are
-// required or the backend 400s.
-// Ownership is enforced server-side (user can only delete their own review;
-// admins can delete any), so this is safe to call directly.
+// No cache for review deletion (mutation)
 export async function deleteReview(productId, reviewId) {
-  const res = await fetch(
-    `${API_URL}/reviews?productId=${productId}&id=${reviewId}`,
-    {
-      method: 'DELETE',
-      credentials: 'include',
-    }
-  )
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to delete review')
-  }
-  return res.json()
+  return cachedFetch(
+    `/reviews?productId=${productId}&id=${reviewId}`,
+    { method: 'DELETE' },
+    CacheConfig.NO_CACHE
+  );
 }
 
-// POST /api/v1/order/new
-// `idempotencyKey` makes a retried "Place Order" safe: the server returns
-// the original order instead of creating a second one (which would deduct
-// stock twice and burn the coupon twice).
+// No cache for order creation (mutation)
 export async function createOrder(orderData, idempotencyKey) {
-  const res = await fetch(`${API_URL}/order/new`, {
-    method: 'POST',
-    credentials: 'include',         // sends the auth cookie
-    headers: {
-      'Content-Type': 'application/json',
-      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
-    },
-    body: JSON.stringify(orderData),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    const err = new Error(data.message || 'Failed to place order')
-    err.status = res.status
-    throw err
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+  };
+
+  try {
+    return await cachedFetch('/order/new', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(orderData),
+    }, CacheConfig.NO_CACHE);
+  } catch (error) {
+    const err = new Error(error.message || 'Failed to place order');
+    err.status = error.status || 500;
+    throw err;
   }
-  return res.json()
 }
 
+// Short cache for user orders (semi-dynamic)
 export async function getMyOrders() {
-  const res = await fetch(`${API_URL}/orders/me`, {
-    credentials: 'include',
-  })
-  if(!res.ok){
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to fetch orders')
-  }
-  return res.json()
+  return cachedFetch('/orders/me', {}, CacheConfig.ORDERS);
 }
 
-// GET /api/v1/order/:id  (single order for the logged-in user)
+// Short cache for individual orders
 export async function getMySingleOrder(orderId) {
-  const res = await fetch(`${API_URL}/order/${orderId}`, {
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to fetch order')
-  }
-  return res.json()
+  return cachedFetch(`/order/${orderId}`, {}, CacheConfig.ORDERS);
 }
 
-// PUT /api/v1/order/:id/cancel
+// No cache for order cancellation (mutation)
 export async function cancelOrder(orderId) {
-  const res = await fetch(`${API_URL}/order/${orderId}/cancel`, {
+  return cachedFetch(`/order/${orderId}/cancel`, {
     method: 'PUT',
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to cancel order')
-  }
-  return res.json()
+  }, CacheConfig.NO_CACHE);
 }
 
-// GET /api/v1/wishlist
+// Short cache for wishlist (user-specific)
 export async function getWishlist() {
-  const res = await fetch(`${API_URL}/wishlist`, {
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to fetch wishlist')
-  }
-  return res.json()  // returns { success, wishlist: [...products] }
+  return cachedFetch('/wishlist', {}, CacheConfig.ORDERS);
 }
 
+// No cache for wishlist mutations
 export async function addToWishlist(productId) {
-  const res = await fetch(`${API_URL}/wishlist`, {
+  return cachedFetch('/wishlist', {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ productId }),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to add to wishlist')
-  }
-  return res.json()
+  }, CacheConfig.NO_CACHE);
 }
 
 export async function removeFromWishlist(productId) {
-  const res = await fetch(`${API_URL}/wishlist/${productId}`, {
+  return cachedFetch(`/wishlist/${productId}`, {
     method: 'DELETE',
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to remove from wishlist')
-  }
-  return res.json()
+  }, CacheConfig.NO_CACHE);
 }
 
-// POST /api/v1/returns
+// No cache for return submissions (mutation)
 export async function submitReturnRequest(payload) {
   console.log('Submitting return request:', payload)
   
   try {
-    const res = await fetch(`${API_URL}/returns`, {
+    const data = await cachedFetch('/returns', {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    })
+    }, CacheConfig.NO_CACHE);
     
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      console.error('Return request failed:', data)
-      throw new Error(data.message || `Request failed: ${res.status} ${res.statusText}`)
-    }
-    
-    const data = await res.json()
     console.log('Return request success:', data)
     return data
   } catch (error) {
@@ -228,20 +160,19 @@ export async function submitReturnRequest(payload) {
   }
 }
 
-// POST /api/v1/returns/upload-images
+// No cache for file uploads (always fresh)
 export async function uploadReturnImages(files) {
   if (!files || files.length === 0) {
     return []
   }
   
   const formData = new FormData()
-  
-  // Ensure files are properly appended
   Array.from(files).forEach((file, index) => {
     console.log(`Uploading file ${index}:`, file.name, file.type, file.size)
     formData.append('images', file)
   })
 
+  // Use regular fetch for FormData uploads
   try {
     const res = await fetch(`${API_URL}/returns/upload-images`, {
       method: 'POST',
@@ -256,41 +187,29 @@ export async function uploadReturnImages(files) {
     
     const data = await res.json()
     console.log('Upload response:', data)
-    return data.images // [{ url, public_id }, ...]
+    return data.images
   } catch (error) {
     console.error('Image upload error:', error)
     throw error
   }
 }
 
-// GET /api/v1/returns/me — customer's own return requests
+// Short cache for user returns
 export async function getMyReturns(params = {}) {
   const query = new URLSearchParams(params).toString()
-  const res = await fetch(`${API_URL}/returns/me${query ? `?${query}` : ''}`, {
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to fetch returns')
-  }
-  return res.json()
+  const endpoint = `/returns/me${query ? `?${query}` : ''}`
+  return cachedFetch(endpoint, {}, CacheConfig.ORDERS);
 }
 
-// PUT /api/v1/returns/:id/cancel — cancel a pending return request
+// No cache for return cancellation (mutation)
 export async function cancelReturn(returnId) {
-  const res = await fetch(`${API_URL}/returns/${returnId}/cancel`, {
+  return cachedFetch(`/returns/${returnId}/cancel`, {
     method: 'PUT',
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.message || 'Failed to cancel return')
-  }
-  return res.json()
+  }, CacheConfig.NO_CACHE);
 }
 
-// GET /api/v1/invoice/order/:id/invoice — returns a PDF blob
-export async function downloadInvoice(orderId){
+// No cache for invoice downloads (always fresh)
+export async function downloadInvoice(orderId) {
   const res = await fetch(`${API_URL}/invoice/order/${orderId}/invoice`, {
     credentials: 'include',
   })
@@ -301,9 +220,8 @@ export async function downloadInvoice(orderId){
   return res.blob()
 }
 
-// Get /api/v1/coupons/public - no auth required
-export async function getPublicCoupons(){
-  const res = await fetch(`${API_URL}/coupons/public`)
-  const data = await handleResponse(res)
-  return data.coupons ?? []
+// Medium cache for public coupons (change occasionally)
+export async function getPublicCoupons() {
+  const data = await cachedFetch('/coupons/public', {}, CacheConfig.FILTERS);
+  return data.coupons ?? [];
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProducts } from '../hooks/useProducts'
 import { getFilterOptions } from '../api/productClient'
@@ -49,7 +49,8 @@ function Shop() {
     setDiscount(searchParams.get('discount') === 'true')
   }, [searchParams])
 
-  const query = {
+  // Memoize query object to prevent unnecessary API re-fetches
+  const query = useMemo(() => ({
     ...(category                         && { category }),
     ...(gender                           && { gender }),
     ...(selectedBrands.length > 0        && { brand: selectedBrands.join(',') }),
@@ -60,13 +61,14 @@ function Shop() {
     ...(sortBy !== 'featured'            && { sort: sortBy }),
     limit: 24,
     page,
-  }
+  }), [category, gender, selectedBrands, selectedSubcategories, priceRange, discount, sortBy, page])
 
   const { products, productCount, totalPages, loading, error } = useProducts(query)
 
   const resetPage = useCallback(() => setPage(1), [])
 
-  const handleCategory = (val) => {
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleCategory = useCallback((val) => {
     setCategory(val)
     // Brand/gender/subcategory picks from previous category may not exist in new one — clear them
     setSelectedBrands([])
@@ -80,27 +82,38 @@ function Shop() {
       else next.delete('category')
       return next
     })
-  }
+  }, [resetPage, setSearchParams])
 
-  const handleGender = (val) => { setGender(val); resetPage() }
-  const handleSort   = (val) => { setSortBy(val); resetPage() }
-  const handlePrice  = (range) => { setPriceRange(range); resetPage() }
+  const handleGender = useCallback((val) => { 
+    setGender(val); 
+    resetPage() 
+  }, [resetPage])
+  
+  const handleSort = useCallback((val) => { 
+    setSortBy(val); 
+    resetPage() 
+  }, [resetPage])
+  
+  const handlePrice = useCallback((range) => { 
+    setPriceRange(range); 
+    resetPage() 
+  }, [resetPage])
 
-  const toggleBrand = (brand) => {
+  const toggleBrand = useCallback((brand) => {
     setSelectedBrands((prev) =>
       prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
     )
     resetPage()
-  }
+  }, [resetPage])
 
-  const toggleSubcategory = (sub) => {
+  const toggleSubcategory = useCallback((sub) => {
     setSelectedSubcategories((prev) =>
       prev.includes(sub) ? prev.filter((s) => s !== sub) : [...prev, sub]
     )
     resetPage()
-  }
+  }, [resetPage])
 
-  const toggleDiscount = () => {
+  const toggleDiscount = useCallback(() => {
     const next = !discount
     setDiscount(next)
     resetPage()
@@ -110,9 +123,9 @@ function Shop() {
       else p.delete('discount')
       return p
     })
-  }
+  }, [discount, resetPage, setSearchParams])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setCategory('')
     setGender('')
     setSelectedBrands([])
@@ -123,23 +136,26 @@ function Shop() {
     setPage(1)
     setFilterDrawerOpen(false)
     setSearchParams({})
-  }
+  }, [setSearchParams])
 
-  const activeFilterCount =
+  // Memoize expensive computations
+  const activeFilterCount = useMemo(() =>
     (category ? 1 : 0) +
     (gender ? 1 : 0) +
     selectedBrands.length +
     selectedSubcategories.length +
     (priceRange.min > 0 || priceRange.max ? 1 : 0) +
-    (discount ? 1 : 0)
+    (discount ? 1 : 0),
+    [category, gender, selectedBrands.length, selectedSubcategories.length, priceRange, discount]
+  )
 
-  const formatCategoryLabel = (cat) => {
+  const formatCategoryLabel = useCallback((cat) => {
     if (!cat) return 'All Products'
     if (cat.toLowerCase() === 'contact-lenses') return 'Contact Lenses'
     return cat.charAt(0).toUpperCase() + cat.slice(1).replace('-', ' ')
-  }
+  }, [])
 
-  const categoryTabs = [
+  const categoryTabs = useMemo(() => [
     { value: '', label: 'All Products' },
     ...( filterOpts.categories.length > 0
       ? filterOpts.categories.map((c) => ({ value: c, label: formatCategoryLabel(c) }))
@@ -150,11 +166,14 @@ function Shop() {
           { value: 'contact-lenses', label: 'Contact Lenses' },
         ]
     ),
-  ]
+  ], [filterOpts.categories, formatCategoryLabel])
 
-  const brandList = filterOpts.brands.length > 0
-    ? filterOpts.brands
-    : ['Ray-Ban', 'Gucci', 'Prada', 'Oakley', 'Titan', 'Fastrack', 'Casio', 'Seiko', 'Citizen', 'Tissot']
+  const brandList = useMemo(() => 
+    filterOpts.brands.length > 0
+      ? filterOpts.brands
+      : ['Ray-Ban', 'Gucci', 'Prada', 'Oakley', 'Titan', 'Fastrack', 'Casio', 'Seiko', 'Citizen', 'Tissot'],
+    [filterOpts.brands]
+  )
 
   const genderOptions = [
     { value: '', label: 'All' },

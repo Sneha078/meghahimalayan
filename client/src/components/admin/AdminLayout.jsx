@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: '/admin/orders',     label: 'Orders'      },
   { path: '/admin/returns',    label: 'Returns'     },
   { path: '/admin/products',   label: 'Products'    },
+  { path: '/admin/media',      label: 'Media Library' },
   { path: '/admin/users',      label: 'Users'       },
   { path: '/admin/coupons',    label: 'Coupons'     },
   { path: '/admin/messages',   label: 'Messages'    },
@@ -52,9 +53,10 @@ function AdminLayoutInner({ children }) {
 
   
 
-  // Interns only manage products — show just the Products menu
+  // Interns manage products and the media library — hide everything else
+  const INTERN_PATHS = ['/admin/products', '/admin/media']
   const visibleNav = user?.role === 'intern'
-    ? NAV_ITEMS.filter((item) => item.path.startsWith('/admin/products'))
+    ? NAV_ITEMS.filter((item) => INTERN_PATHS.some((p) => item.path.startsWith(p)))
     : NAV_ITEMS
 
   return (

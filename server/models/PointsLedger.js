@@ -97,13 +97,7 @@ pointsLedgerSchema.index(
 // Mirror index for the clawback side: at most one "redeem" entry per
 // review too, so clawbackReviewPoints() in pointsService.js is safe to
 // call more than once for the same review without double-reversing it.
-pointsLedgerSchema.index(
-  { review: 1, type: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { type: "redeem", review: { $ne: null } },
-  }
-);
+
 
 // Same idea again: at most one points-clawback per Return document, so a
 // refund that's somehow processed twice (or retried) never claws back

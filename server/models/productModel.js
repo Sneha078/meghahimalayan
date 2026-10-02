@@ -255,8 +255,8 @@ const productSchema = new mongoose.Schema(
           // query context and this.price is undefined — skip the check
           // here and rely on the pre-save hook to enforce the invariant
           // when a full save occurs.
-          if (value !== null && value !== undefined && this.price !== undefined && this.price !== null) {
-            return value < this.price;
+          if (value !== null && value !== undefined && value > 0 && this.price !== undefined && this.price !== null && this.price > 0) {
+            return Number(value) < Number(this.price);
           }
           return true;
         },
@@ -525,6 +525,7 @@ productSchema.index({
   description: "text",
 });
 
+// Single field indexes
 productSchema.index({ category: 1 });
 productSchema.index({ brand: 1 });
 productSchema.index({ price: 1 });
@@ -533,6 +534,32 @@ productSchema.index({ ratings: -1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ isBestSeller: 1 });
 productSchema.index({ isNewArrival: 1, newArrivalNotified: 1 });
+
+// Compound indexes for common filter combinations
+// Category + brand (most common filter combination)
+productSchema.index({ category: 1, brand: 1 });
+
+// Category + price range (category filtering with price sort)
+productSchema.index({ category: 1, sellingPrice: 1 });
+
+// Category + gender (common in eyeglasses/watches)
+productSchema.index({ category: 1, gender: 1 });
+
+// Category + subcategory (filtering within category)
+productSchema.index({ category: 1, subcategory: 1 });
+
+// Featured/bestseller with category (homepage/category featured items)
+productSchema.index({ category: 1, isFeatured: 1 });
+productSchema.index({ category: 1, isBestSeller: 1 });
+
+// Price range queries (min/max filtering)
+productSchema.index({ sellingPrice: 1, category: 1 });
+
+// Stock availability queries
+productSchema.index({ category: 1, stock: 1 });
+
+// New arrivals by category
+productSchema.index({ category: 1, isNewArrival: 1, createdAt: -1 });
 
 const Product = mongoose.model("Product", productSchema);
 

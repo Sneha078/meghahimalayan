@@ -127,12 +127,3 @@ function getVariantPriceRange(variantPricing) {
     showFromPrice
   };
 }
-
-/**
- * Legacy compatibility function - supports old priceDelta field during transition
- * This function should be removed after migration is complete
- */
-export function resolveProductPricingLegacy(product) {
-  console.warn('resolveProductPricingLegacy is deprecated. Update to use new price fields.');
-  return resolveProductPricing(product);
-}

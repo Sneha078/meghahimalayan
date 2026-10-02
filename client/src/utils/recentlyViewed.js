@@ -24,3 +24,12 @@ export function getRecentlyViewedIds() {
     return [];
   }
 }
+
+export function removeRecentlyViewedId(productId) {
+  if (!productId) return;
+  try {
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const updated = existing.filter((id) => id !== productId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  } catch {}
+}

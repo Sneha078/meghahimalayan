@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { clearUserCache } from '../api/cachedClient'
 
 import {
   fetchCurrentUser,
@@ -25,6 +26,8 @@ export function AuthProvider({ children }) {
   const login = async ({ email, password }) => {
     const data = await loginUser({ email, password })
     setUser(data.user)
+    // Clear cache to prevent data leakage between users
+    clearUserCache()
     return data
   }
 
@@ -44,6 +47,8 @@ export function AuthProvider({ children }) {
     })
 
     setUser(data.user)
+    // Clear cache for new user
+    clearUserCache()
     return data
   }
 
@@ -56,6 +61,8 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     await logoutUser()
     setUser(null)
+    // Clear all cached data on logout
+    clearUserCache()
   }
 
   // Google login
@@ -69,6 +76,8 @@ export function AuthProvider({ children }) {
     })
 
     setUser(data.user)
+    // Clear cache to prevent data leakage between users
+    clearUserCache()
     return data
   }
 

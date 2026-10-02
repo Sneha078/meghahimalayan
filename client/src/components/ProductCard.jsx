@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, memo, useCallback } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
@@ -14,15 +14,28 @@ function ProductCard({ product }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = useCallback((e) => {
     if (e) { e.stopPropagation(); e.preventDefault() }
     addItem(product)
     setAdded(true)
     setTouchActive(false)
     setTimeout(() => setAdded(false), 2000)
-  }
+  }, [addItem, product])
+
+  const handleWishlistToggle = useCallback(async (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!user) { 
+      navigate('/login', { state: { from: location.pathname } })
+      return 
+    }
+    await toggleWishlist(product)
+  }, [user, navigate, location.pathname, toggleWishlist, product])
 
   const imageUrl = product.image_url ?? product.image?.[0]?.url ?? null
+  
+  // Add cache-busting parameter to force fresh image loads
+  const imageUrlWithCache = imageUrl ? `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${product.updatedAt || Date.now()}` : null
   
   // Use server-calculated pricing with "From" logic for variants
   let displayPrice = product.finalPrice ?? product.discountPrice ?? product.price
@@ -90,8 +103,9 @@ function ProductCard({ product }) {
           >
             {imageUrl ? (
               <img
-                src={imageUrl}
+                src={imageUrlWithCache}
                 alt={product.name}
+                loading="lazy"
                 style={{
                   width: '100%',
                   height: '100%',
@@ -158,12 +172,7 @@ function ProductCard({ product }) {
 
           {/* Wishlist */}
           <button
-            onClick={async (e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              if (!user) { navigate('/login', { state: { from: location.pathname } }); return }
-              await toggleWishlist(product)
-            }}
+            onClick={handleWishlistToggle}
             style={{
               position: 'absolute',
               top: '10px',
@@ -287,4 +296,6 @@ function ProductCard({ product }) {
   )
 }
 
-export default ProductCard
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render if product data actually changes
+export default memo(ProductCard)

@@ -63,7 +63,10 @@ export const getRewardsCatalog = handleAsyncError(async (req, res) => {
   const filter = { pointsCost: { $gte: 200 } };
   if (req.query.maxPoints) filter.pointsCost.$lte = Number(req.query.maxPoints);
 
-  const rewards = await Product.find(filter).sort({ pointsCost: 1 });
+  const rewards = await Product.find(filter)
+    .select('name slug brand image price discountPrice pointsCost category stock')
+    .sort({ pointsCost: 1 })
+    .lean();
 
   const tiers = {};
   for (const product of rewards) {

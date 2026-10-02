@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext'
 import { WishlistProvider } from './context/WishlistContext'
 import { RewardsProvider } from './context/RewardsContext'
 import { BusinessSettingsProvider } from './context/BusinessSettingsContext'
+import { PointsRedemptionProvider } from './context/PointsRedemptionContext'
 
 import './index.css'
 import App from './App.jsx'
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')).render(
             <RewardsProvider>
               <WishlistProvider>
                 <CartProvider>
-                  <App />
+                  <PointsRedemptionProvider>
+                    <App />
+                  </PointsRedemptionProvider>
                 </CartProvider>
               </WishlistProvider>
             </RewardsProvider>

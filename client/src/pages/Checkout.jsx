@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { usePointsRedemption } from "../context/PointsRedemptionContext";
 import { useAuth } from "../context/AuthContext";
 import { createOrder } from "../api/productClient";
 import {
@@ -32,7 +33,8 @@ const normalizePhone = (value) => value.trim().replace(/\s|-/g, "");
 
 
 function Checkout() {
-  const { cartItems, subtotal, discount, couponCode, clearCart, pointsUsed, pointsDiscount, setPointsRedemption, } = useCart();
+  const { cartItems, subtotal, discount, couponCode, clearCart } = useCart();
+  const { pointsUsed, pointsDiscount, setPointsRedemption } = usePointsRedemption();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

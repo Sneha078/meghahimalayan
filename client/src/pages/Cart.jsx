@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { usePointsRedemption } from '../context/PointsRedemptionContext'
 import { useAuth } from '../context/AuthContext'
 import PointsRedeemBox from './PointsRedeemBox'
 import { getPublicCoupons } from '../api/productClient'
@@ -9,10 +10,14 @@ function Cart() {
   const {
     cartItems, updateQuantity, removeItem, subtotal,
     couponCode, discount, applyCoupon, removeCoupon,
-    //shared points state
-    pointsUsed, 
-    pointsDiscount, setPointsRedemption,
   } = useCart()
+  
+  const { 
+    pointsUsed, 
+    pointsDiscount, 
+    setPointsRedemption,
+  } = usePointsRedemption()
+  
   const { user } = useAuth()
 
   const [couponInput, setCouponInput] = useState('')

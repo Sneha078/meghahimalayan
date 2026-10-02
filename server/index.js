@@ -1,6 +1,7 @@
 import "dotenv/config";                        // must be first — loads .env before anything else
 import { createServer } from "http";
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
@@ -28,6 +29,10 @@ import rewardRoutes from "./routes/rewards.routes.js"
 import paymentRoutes from "./routes/paymentRoutes.js"
 import notificationRoutes from "./routes/notificationRoutes.js";
 import businessSettingsRoutes from "./routes/businessSettingsRoutes.js";
+import MediaLibraryRoutes from "./routes/MediaLibraryRoutes.js";
+
+// Performance monitoring
+import { performanceLogger, memoryMonitor } from "./middleware/performance.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV VALIDATION
@@ -55,13 +60,31 @@ app.use(
   })
 );
 
+// ── Response compression ──────────────────────────────────────────────────────
+// Compress responses to reduce bandwidth usage
+app.use(compression({
+  filter: (req, res) => {
+    // Don't compress responses with this request header
+    if (req.headers['x-no-compression']) {
+      return false
+    }
+    // Use compression filter function
+    return compression.filter(req, res)
+  },
+  level: 6, // Good balance between compression ratio and CPU usage
+  threshold: 1024, // Only compress responses larger than 1KB
+}));
+
+// ── ETag support for better caching ──────────────────────────────────────────
+app.set('etag', 'strong'); // Generate strong ETags
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 app.use(
   cors({
     origin:      process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,   // required for httpOnly cookie auth
     methods:     ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization","Idempotency-Key"],
   })
 );
 
@@ -72,6 +95,12 @@ app.use(express.urlencoded({ extended: true, limit: "40mb" }));
 
 // ── Cookie parser ─────────────────────────────────────────────────────────────
 app.use(cookieParser());
+
+// ── Performance monitoring ───────────────────────────────────────────────────
+app.use(performanceLogger);
+if (process.env.NODE_ENV === 'development') {
+  app.use(memoryMonitor);
+}
 
 // ── HTTP request logger (development only) ────────────────────────────────────
 if (process.env.NODE_ENV === "development") {
@@ -158,7 +187,7 @@ app.use("/api/v1", notificationRoutes);
 app.use("/api/v1", rewardRoutes)
 app.use("/api/v1",paymentRoutes)
 app.use("/api/v1", businessSettingsRoutes)
-
+app.use("/api/v1", MediaLibraryRoutes)
 // ─────────────────────────────────────────────────────────────────────────────
 // 404 — catch-all for unmatched routes
 // ─────────────────────────────────────────────────────────────────────────────

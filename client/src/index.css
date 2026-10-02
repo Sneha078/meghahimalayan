@@ -4,6 +4,11 @@
 @import 'swiper/css/navigation';
 @import "tailwindcss";
 
+@media (min-width: 1024px) {
+  .nav-right-icons {
+    margin-right: 40px;
+  }
+}
 
 @theme {
   --font-heading: 'Playfair Display', Georgia, serif;
@@ -343,4 +348,42 @@ input, select, textarea {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+/* Spinner animation for lazy loading */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* Loading animations */
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Improved focus indicators */
+*:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

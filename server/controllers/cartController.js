@@ -11,9 +11,9 @@ import { resolvePrice } from "../shared/pricing.js";
 const isValidObjectId = (id) =>
   mongoose.Types.ObjectId.isValid(id);
 
-//determine products actual Selling Price
-// variant is optional — when supplied, its priceDelta is added on top of
-// the product's own effective price (same rule used on the product page).
+// Determine product's actual selling price
+// Variant is optional — when supplied, its price REPLACES the product price
+// (not added). Uses resolvePrice() from shared/pricing.js for consistency.
 const getEffectivePrice = (product, variant = null) => {
   const pricing = resolvePrice(product, variant);
   return pricing.finalPrice;
@@ -185,7 +185,9 @@ const refreshCart = async (cart) => {
 
   const products = await Product.find({
     _id: { $in: productIds },
-  });
+  })
+  .select('name slug brand price discountPrice sellingPrice stock category variants isOutOfStock')
+  .lean();
 
   const productMap = new Map(
     products.map((product) => [

@@ -26,8 +26,8 @@ const attachPricingInfo = (product) => {
   };
 };
 
-// Product lookup by ObjectId or slug
-const findProduct = async (id) => {
+// Product lookup by ObjectId or slug - returns query for chaining
+const findProduct = (id) => {
   const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
   return isObjectId ? Product.findById(id) : Product.findOne({ slug: id });
 };
@@ -104,7 +104,12 @@ export const getAllProducts = handleAsyncError(async (req, res, next) => {
 
   //pagination to give limited products for current page
   api.pagination(resultsPerPage);
-  const products = await api.query;
+
+  // Select only fields needed for product listing to reduce response size
+  // Excludes heavy fields like reviews, description, and category-specific attributes
+  const products = await api.query
+    .select('name slug brand image category subcategory gender color variants price discountPrice sellingPrice stock isFeatured isBestSeller isNewArrival ratings numOfReviews createdAt')
+    .lean(); // Use lean() for better performance since we don't need Mongoose document methods
 
   // Attach pricing information to all products
   const productsWithPricing = products.map(product => attachPricingInfo(product));
@@ -124,7 +129,11 @@ export const getAllProducts = handleAsyncError(async (req, res, next) => {
 // getSingleProduct using product ID or slug
 // GET /api/v1/product/:id
 export const getSingleProduct = handleAsyncError(async (req, res, next) => {
-  const product = await findProduct(req.params.id);
+  // Select all fields except the heavy user field and some admin-only fields
+  // Include reviews for product detail page but exclude sensitive admin data
+  const product = await findProduct(req.params.id)
+    .select('-user -newArrivalNotified')
+    .lean();
 
   if (!product) {
     return next(new HandleError("Product not found", 404));
@@ -206,8 +215,10 @@ export const getProductReviews = handleAsyncError(async (req, res, next) => {
     );
   }
 
-  //find product
-  const product = await Product.findById(req.query.id);
+  //find product - only need the reviews field
+  const product = await Product.findById(req.query.id)
+    .select('reviews')
+    .lean();
 
   if (!product) {
     return next(new HandleError("Product not found", 404));
@@ -345,12 +356,13 @@ export const getAdminProducts = handleAsyncError(
     // endpoint keeps the original "return all products" behavior so
     // callers like the product edit form (which finds by _id in the
     // full list) keep working.
-    const resultsPerPage = Math.min(Number(req.query.limit) || 0, 100);
+    const resultsPerPage = req.query.limit !== undefined ? Math.min(Number(req.query.limit) || 15, 100) : 0;
 
     // Server-side filters: ?category=eyeglasses and/or ?keyword=...
     const filter = {};
     if (req.query.category && req.query.category !== "All") {
-      filter.category = req.query.category;
+      const escapedCat = req.query.category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.category = { $regex: `^${escapedCat}$`, $options: "i" };
     }
     if (req.query.keyword) {
       const regex = { $regex: req.query.keyword, $options: "i" };
@@ -371,7 +383,8 @@ export const getAdminProducts = handleAsyncError(
       const products = await Product.find(filter)
         .sort("-createdAt")
         .skip((currentPage - 1) * resultsPerPage)
-        .limit(resultsPerPage);
+        .limit(resultsPerPage)
+        .lean();
 
       res.status(200).json({
         success: true,
@@ -384,7 +397,9 @@ export const getAdminProducts = handleAsyncError(
       return;
     }
 
-    const products = await Product.find(filter).sort("-createdAt");
+    const products = await Product.find(filter)
+      .sort("-createdAt")
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -529,15 +544,19 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
     }
   }
 
-  // Cross-field price validation: check here in the controller where we
-  // have access to both the incoming values AND the existing product,
-  // since Mongoose validators can't reliably access sibling fields during
-  // findByIdAndUpdate (this.price is undefined in that context).
-  const incomingPrice = updateData.price !== undefined ? Number(updateData.price) : product.price;
-  const incomingDiscount = updateData.discountPrice !== undefined ? updateData.discountPrice : product.discountPrice;
+  // Cross-field price validation
+  const incomingPrice = Number(updateData.price !== undefined ? updateData.price : product.price);
+  const rawDiscount = updateData.discountPrice !== undefined ? updateData.discountPrice : product.discountPrice;
+  const incomingDiscount = (rawDiscount !== null && rawDiscount !== undefined && rawDiscount !== "" && Number(rawDiscount) > 0)
+    ? Number(rawDiscount)
+    : null;
 
-  if (incomingDiscount !== null && incomingDiscount !== undefined) {
-    if (Number(incomingDiscount) >= Number(incomingPrice)) {
+  if (updateData.discountPrice !== undefined && (rawDiscount === null || rawDiscount === "" || Number(rawDiscount) <= 0)) {
+    updateData.discountPrice = null;
+  }
+
+  if (incomingDiscount !== null && !isNaN(incomingDiscount)) {
+    if (!isNaN(incomingPrice) && incomingPrice > 0 && incomingDiscount >= incomingPrice) {
       return next(new HandleError("Discount price must be lower than regular price", 400));
     }
   }
@@ -586,7 +605,8 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
       uploadedImages = await uploadImages(rawNewImages);
     }
 
-    req.body.image = [...keptImages, ...uploadedImages];
+    // Write processed image list into updateData so findByIdAndUpdate persists it
+    updateData.image = [...keptImages, ...uploadedImages];
   } else {
     // Neither field present at all — leave images untouched.
     delete req.body.image;
@@ -594,17 +614,15 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
 
   delete req.body.existingImages; // not a schema field, don't pass through
 
-  // Handle variants with image preservation
+  // Handle variants with image preservation (single pass)
   if (req.body.variants !== undefined) {
     const updatedVariants = await Promise.all(
       req.body.variants.map(async (variant) => {
-        // For existing variants, preserve images unless explicitly changed
         const existingVariant = product.variants.find(v => v._id && v._id.toString() === variant._id);
         
         let finalImages = [];
         
         if (existingVariant) {
-          // Keep existing images that weren't explicitly removed
           const keepList = Array.isArray(variant.existingImages) 
             ? variant.existingImages 
             : existingVariant.images;
@@ -621,12 +639,10 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
             (img) => !img.public_id || keepIds.has(img.public_id)
           );
 
-          // Destroy removed images
           if (toDestroy.length > 0) {
             await destroyMedia(toDestroy, "image");
           }
 
-          // Upload new images
           let uploadedImages = [];
           if (Array.isArray(variant.images) && variant.images.length > 0) {
             uploadedImages = await uploadMedia(variant.images, "image", "products/variants");
@@ -634,13 +650,11 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
 
           finalImages = [...keptImages, ...uploadedImages];
         } else {
-          // New variant - just upload the images
           finalImages = Array.isArray(variant.images) && variant.images.length > 0
             ? await uploadMedia(variant.images, "image", "products/variants")
             : [];
         }
 
-        // Remove the raw images and existingImages from the variant data
         const { images: _, existingImages: __, ...variantData } = variant;
         
         return {
@@ -653,71 +667,8 @@ export const updateProduct = handleAsyncError(async (req, res, next) => {
       })
     );
     
-    req.body.variants = updatedVariants;
-  }
-
-  delete req.body.existingImages; // not a schema field, don't pass through
-
-  // Handle variants with image preservation
-  if (req.body.variants !== undefined) {
-    const updatedVariants = await Promise.all(
-      req.body.variants.map(async (variant) => {
-        // For existing variants, preserve images unless explicitly changed
-        const existingVariant = product.variants.find(v => v._id && v._id.toString() === variant._id);
-        
-        let finalImages = [];
-        
-        if (existingVariant) {
-          // Keep existing images that weren't explicitly removed
-          const keepList = Array.isArray(variant.existingImages) 
-            ? variant.existingImages 
-            : existingVariant.images;
-          
-          const keepIds = new Set(
-            keepList.map((img) => img.public_id).filter(Boolean)
-          );
-
-          const toDestroy = existingVariant.images.filter(
-            (img) => img.public_id && !keepIds.has(img.public_id)
-          );
-
-          const keptImages = existingVariant.images.filter(
-            (img) => !img.public_id || keepIds.has(img.public_id)
-          );
-
-          // Destroy removed images
-          if (toDestroy.length > 0) {
-            await destroyMedia(toDestroy, "image");
-          }
-
-          // Upload new images
-          let uploadedImages = [];
-          if (Array.isArray(variant.images) && variant.images.length > 0) {
-            uploadedImages = await uploadMedia(variant.images, "image", "products/variants");
-          }
-
-          finalImages = [...keptImages, ...uploadedImages];
-        } else {
-          // New variant - just upload the images
-          finalImages = Array.isArray(variant.images) && variant.images.length > 0
-            ? await uploadMedia(variant.images, "image", "products/variants")
-            : [];
-        }
-
-        // Remove the raw images and existingImages from the variant data
-        const { images: _, existingImages: __, ...variantData } = variant;
-        
-        return {
-          ...variantData,
-          images: finalImages,
-          stock: Number(variantData.stock) || 0,
-          price: variantData.price ? Number(variantData.price) : null,
-          discountPrice: variantData.discountPrice ? Number(variantData.discountPrice) : null,
-        };
-      })
-    );
-    
-    req.body.variants = updatedVariants;
+    // Write processed variants into updateData so findByIdAndUpdate persists them
+    updateData.variants = updatedVariants;
   }
 
   //update product in mongodb

@@ -78,6 +78,9 @@ function SplitVideoSection() {
               loop
               playsInline
               preload={isActive ? 'auto' : 'metadata'}
+              onError={(e) => {
+                // Silently handle dev-server byte-range streaming info
+              }}
               style={{
                 position: 'absolute',
                 inset: 0,

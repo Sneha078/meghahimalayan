@@ -364,9 +364,15 @@ const removeExistingImage = (publicId) => {
     setError(null)
 
     try {
+      console.log('🔍 Debug - Images to upload:', images.length)
+      console.log('🔍 Debug - Existing images to keep:', existingImages.length)
+      console.log('🔍 Debug - Existing images:', existingImages)
+      
       const imageBase64 = await Promise.all(
         images.map(toBase64)
       )
+      
+      console.log('🔍 Debug - Base64 images created:', imageBase64.length)
 
       const variantsPayload = await Promise.all(
         variants.map(async (v) => ({
@@ -384,31 +390,46 @@ const removeExistingImage = (publicId) => {
         }))
       )
 
+      const parsedPrice = Number(form.price) || 0
+      const parsedDiscount = (form.discountPrice && Number(form.discountPrice) > 0)
+        ? Number(form.discountPrice)
+        : null
+
+      if (parsedDiscount !== null && parsedDiscount >= parsedPrice) {
+        setError('Discount price must be lower than regular price')
+        setSubmitting(false)
+        return
+      }
+
       const payload = {
         ...form,
 
-        price: Number(form.price),
+        price: parsedPrice,
 
-        discountPrice: form.discountPrice
-          ? Number(form.discountPrice)
-          : null,
+        discountPrice: parsedDiscount,
 
-        stock: Number(form.stock),
+        stock: Number(form.stock) || 0,
 
-        pointsCost: Number(form.pointsCost),
+        pointsCost: Number(form.pointsCost) || 0,
 
         image: imageBase64,           // new photos to add (may be empty)
         ...(isEdit && { existingImages }), // only send existingImages when editing
         ...(variantsPayload.length > 0 && { variants: variantsPayload }),
       }
 
+      console.log('📤 Payload being sent:')
+      console.log('  - New images:', imageBase64.length)
+      console.log('  - Existing images to keep:', existingImages.length)
+      console.log('  - Existing image details:', existingImages)
+
       if (isEdit) {
-        await updateProduct(id, payload)
+        const result = await updateProduct(id, payload)
+        console.log('✅ Update result:', result)
       } else {
         await createProduct(payload)
       }
 
-      navigate('/admin/products')
+      navigate('/admin/products', { state: { refresh: true } })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -996,14 +1017,14 @@ const removeExistingImage = (publicId) => {
         <Section title="Product Images">
   {existingImages.length > 0 && (
     <>
-      <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '10px' }}>
-        Current photos — click × to remove one.
+      <p style={{ fontSize: '0.85rem', color: '#dc2626', marginBottom: '10px', fontWeight: '600' }}>
+        ⚠️ Current photos — <strong>click × to remove</strong> before uploading replacements!
       </p>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
         {existingImages.map((img) => (
           <div key={img.public_id} style={{ position: 'relative' }}>
             <img
-              src={img.url} alt="Product"
+              src={`${img.url}?t=${Date.now()}`} alt="Product"
               style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
             <button
@@ -1012,11 +1033,13 @@ const removeExistingImage = (publicId) => {
               aria-label="Remove image"
               style={{
                 position: 'absolute', top: '-6px', right: '-6px',
-                width: '20px', height: '20px', borderRadius: '50%',
+                width: '24px', height: '24px', borderRadius: '50%',
                 backgroundColor: '#dc2626', color: '#fff', border: 'none',
-                fontSize: '0.7rem', lineHeight: 1, cursor: 'pointer',
+                fontSize: '1rem', lineHeight: 1, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 'bold',
               }}
+              title="Click to remove this image"
             >
               ×
             </button>
@@ -1084,8 +1107,11 @@ const removeExistingImage = (publicId) => {
     </div>
   )}
 
-  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '8px' }}>
-    New photos are added alongside your current ones - nothing is replaced unless you remove it above.
+  <p style={{ fontSize: '0.8rem', color: '#475569', marginTop: '10px', padding: '12px', backgroundColor: '#f1f5f9', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+    <strong>💡 How images work:</strong><br/>
+    • To <strong>replace</strong> an image: First click × on the old image above, then choose your new file<br/>
+    • To <strong>add more</strong> images: Keep old images and just choose additional files<br/>
+    • New images are only saved when you click the Submit button below
   </p>
 </Section>
 

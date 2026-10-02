@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getRecentlyViewedIds } from "../utils/recentlyViewed";
+import { getRecentlyViewedIds, removeRecentlyViewedId } from "../utils/recentlyViewed";
 import { getProductById } from "../api/productClient";
 import ProfileEditModal from "../components/ProfileEditModal";
 import BusinessSettingsModal from "../components/BusinessSettingsModal";
@@ -50,13 +50,14 @@ function AccountPage() {
 
     Promise.all(
       ids.map((id) =>
-        getProductById(id).catch((err)=>{
-          console.error(`Failed to load recently viewed product ${id}:`, err)
-         return null})
+        getProductById(id).catch((err) => {
+          // Remove stale/deleted product IDs from localStorage
+          removeRecentlyViewedId(id);
+          return null;
+        })
       )
     )
       .then((results) => {
-
         setRecentProducts(results.filter(Boolean))
       })
       .finally(() => setLoadingRecent(false));

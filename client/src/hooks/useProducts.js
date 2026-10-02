@@ -1,5 +1,5 @@
 // src/hooks/useProducts.js
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getProducts } from "../api/productClient";
 
 /**
@@ -13,6 +13,22 @@ export function useProducts(params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Memoize the params to prevent unnecessary API calls
+  // Only changes when the actual values change, not when a new object is created
+  const memoizedParams = useMemo(() => params, [
+    params.category,
+    params.gender, 
+    params.brand,
+    params.subcategory,
+    params.minPrice,
+    params.maxPrice,
+    params.discount,
+    params.sort,
+    params.limit,
+    params.page,
+    params.keyword
+  ]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -20,7 +36,7 @@ export function useProducts(params = {}) {
       setLoading(true);
       setError(null);
       try {
-        const data = await getProducts(params);
+        const data = await getProducts(memoizedParams);
         if (!cancelled) {
           setProducts(data.products || [])
           setProductCount(data.productCount ?? 0)
@@ -36,8 +52,7 @@ export function useProducts(params = {}) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(params)]);
+  }, [memoizedParams]);
 
   return { products, productCount, totalPages, loading, error };
 }

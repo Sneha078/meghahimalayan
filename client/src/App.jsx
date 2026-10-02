@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -20,19 +20,6 @@ import Orders from './pages/Orders'
 import Wishlist from './pages/Wishlist'
 import AdminRoute from './components/admin/AdminRoute'
 import AdminLayout from './components/admin/AdminLayout'
-import Dashboard from './pages/admin/Dashboard'
-import Analytics from './pages/admin/Analytics'
-import AdminOrders from './pages/admin/AdminOrders'
-import AdminOrderDetail from './pages/admin/AdminOrderDetail'
-import AdminProducts from './pages/admin/AdminProducts'
-import AdminProductForm from './pages/admin/AdminProductForm'
-import AdminUsers from './pages/admin/AdminUsers'
-import AdminUserDetail from './pages/admin/AdminUserDetail'
-import AdminCoupons from './pages/admin/AdminCoupons'
-import AdminMessages from './pages/admin/AdminMessages'
-import AdminReturns from './pages/admin/AdminReturns'
-import AdminReturnDetail from './pages/admin/AdminReturnDetail'
-import AdminNotifications from './pages/admin/AdminNotifications'
 import Shipping from './pages/Shipping'
 import Returns from './pages/Returns'
 import ReturnRequest from './pages/ReturnRequest'
@@ -45,6 +32,26 @@ import OrderFailed from './pages/OrderFailed'
 import HowToChooseEyewear from './pages/HowToChooseEyewear'
 import NotFound from "./pages/NotFound";
 
+// Error handling and loading components
+import ErrorBoundary from './components/ErrorBoundary'
+import { AdminLoadingFallback, PageLoadingFallback } from './components/LoadingFallback'
+
+
+// Lazy load admin components to reduce main bundle size
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
+const Analytics = lazy(() => import('./pages/admin/Analytics'))
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'))
+const AdminOrderDetail = lazy(() => import('./pages/admin/AdminOrderDetail'))
+const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'))
+const AdminProductForm = lazy(() => import('./pages/admin/AdminProductForm'))
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'))
+const AdminUserDetail = lazy(() => import('./pages/admin/AdminUserDetail'))
+const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'))
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
+const AdminReturns = lazy(() => import('./pages/admin/AdminReturns'))
+const AdminReturnDetail = lazy(() => import('./pages/admin/AdminReturnDetail'))
+const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
+import AdminMediaLibrary from './pages/admin/AdminMediaLibrary'
 
 
 function ScrollToTop() {
@@ -69,98 +76,212 @@ function ScrollToTop() {
   return null
 }
 
+// Loading component for lazy-loaded admin pages
+function AdminPageLoader() {
+  return <AdminLoadingFallback />
+}
+
 
 function App() {
   return (
-    <div style={{ overflowX: 'clip', width: '100%' }}>
-      <ScrollToTop />
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/cart"  element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
-         <Route path="/order-confirmation" element={<OrderConfirmation />} />
-         <Route path="/login" element={<LoginPage />} />
-         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/password/reset/:token" element={<ResetPasswordPage />} />
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path='/account' element={<AccountPage />} />
-        <Route path="/rewards" element={<RewardsPage></RewardsPage>} />
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-      
+    <ErrorBoundary 
+      message="The application encountered an unexpected error. Please try refreshing the page."
+      fallback={(error, retry) => (
+        <PageLoadingFallback 
+          message={`Application Error: ${error?.message || 'Something went wrong'}`}
+          showSpinner={false}
+        />
+      )}
+    >
+      <div style={{ overflowX: 'clip', width: '100%' }}>
+        <ScrollToTop />
+        
+        <ErrorBoundary message="Navigation failed to load properly.">
+          <Navbar />
+        </ErrorBoundary>
+        
+        <ErrorBoundary message="Page content failed to load.">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/cart"  element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+             <Route path="/order-confirmation" element={<OrderConfirmation />} />
+             <Route path="/login" element={<LoginPage />} />
+             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/password/reset/:token" element={<ResetPasswordPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path='/account' element={<AccountPage />} />
+            <Route path="/rewards" element={<RewardsPage></RewardsPage>} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+          
 <Route path="/admin/dashboard" element={
   <AdminRoute>
-    <AdminLayout><Dashboard /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Dashboard failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <Dashboard />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/analytics" element={
   <AdminRoute>
-    <AdminLayout><Analytics /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Analytics page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <Analytics />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/orders" element={
   <AdminRoute>
-    <AdminLayout><AdminOrders /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Orders page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminOrders />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/orders/:id" element={
   <AdminRoute>
-    <AdminLayout><AdminOrderDetail /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Order details failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminOrderDetail />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/products" element={
   <AdminRoute roles={['admin', 'intern']}>
-    <AdminLayout><AdminProducts /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Products page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminProducts />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/products/new" element={
   <AdminRoute roles={['admin', 'intern']}>
-    <AdminLayout><AdminProductForm /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Product form failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminProductForm />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/products/:id/edit" element={
   <AdminRoute roles={['admin', 'intern']}>
-    <AdminLayout><AdminProductForm /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Product edit form failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminProductForm />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/users" element={
   <AdminRoute>
-    <AdminLayout><AdminUsers /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Users page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminUsers />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
+  </AdminRoute>
+} />
+<Route path="/admin/media" element={
+  <AdminRoute roles={['admin', 'intern']}>
+    <AdminLayout>
+      <ErrorBoundary message="Media Library failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminMediaLibrary />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/users/:id" element={
   <AdminRoute>
-    <AdminLayout><AdminUserDetail /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="User details failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminUserDetail />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/coupons" element={
   <AdminRoute>
-    <AdminLayout><AdminCoupons /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Coupons page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminCoupons />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/messages" element={
   <AdminRoute>
-    <AdminLayout><AdminMessages /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Messages page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminMessages />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/returns" element={
   <AdminRoute>
-    <AdminLayout><AdminReturns /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Returns page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminReturns />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/returns/:id" element={
   <AdminRoute>
-    <AdminLayout><AdminReturnDetail /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Return details failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminReturnDetail />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 <Route path="/admin/notifications" element={
   <AdminRoute>
-    <AdminLayout><AdminNotifications /></AdminLayout>
+    <AdminLayout>
+      <ErrorBoundary message="Notifications page failed to load.">
+        <Suspense fallback={<AdminPageLoader />}>
+          <AdminNotifications />
+        </Suspense>
+      </ErrorBoundary>
+    </AdminLayout>
   </AdminRoute>
 } />
 
@@ -175,9 +296,15 @@ function App() {
 <Route path ='/order-failed' element={<OrderFailed />} />  
 <Route path='/how-to-choose-eyewear' element={<HowToChooseEyewear />} />
 <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Footer />
-    </div>
+
+          </Routes>
+        </ErrorBoundary>
+        
+        <ErrorBoundary message="Footer failed to load properly.">
+          <Footer />
+        </ErrorBoundary>
+      </div>
+    </ErrorBoundary>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { getProductById, getProductReviews, submitReview, deleteReview } from '../api/productClient'
 import { useCart } from '../context/CartContext'
@@ -115,7 +115,7 @@ function ProductDetail() {
           setRxMode('plano')
         }
       })
-    .catch((err) => { if (!cancelled) setError(err.message) })
+      .catch((err) => { if (!cancelled) setError(err.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     // Fetch reviews in parallel — non-blocking
@@ -127,6 +127,104 @@ function ProductDetail() {
 
     return () => { cancelled = true }
   }, [id])
+
+  // ── Derived values ───────────────────────────────────────────────────────────
+  // IMPORTANT: everything in this block contains hooks, so it must stay ABOVE
+  // the early returns (loading / error). Every line is null-safe because
+  // `product` is null until the fetch finishes.
+  const hasVariants = product?.hasVariants || false
+  const activeVariant =
+    hasVariants && product?.variants ? product.variants[selectedVariantIdx] : null
+
+  const rawMainImages = useMemo(() => {
+    const img = product?.image
+    return Array.isArray(img) ? img : img ? [img] : []
+  }, [product?.image])
+
+  const rawVariantImages = useMemo(
+    () => (Array.isArray(activeVariant?.images) ? activeVariant.images : []),
+    [activeVariant?.images]
+  )
+
+  const normalizeImg = useCallback((img) => {
+    if (!img) return null
+    if (typeof img === 'string') return { url: img, public_id: '' }
+    if (img.url) return img
+    return null
+  }, [])
+
+  const variantImgObjs = useMemo(
+    () => rawVariantImages.map(normalizeImg).filter(Boolean),
+    [rawVariantImages, normalizeImg]
+  )
+
+  const mainImgObjs = useMemo(
+    () => rawMainImages.map(normalizeImg).filter(Boolean),
+    [rawMainImages, normalizeImg]
+  )
+
+  // Active variant photos first, followed by main product photos (deduplicated by URL)
+  const combinedImgObjs = useMemo(() => {
+    const combined = [...variantImgObjs]
+    mainImgObjs.forEach((mImg) => {
+      if (!combined.some((cImg) => cImg.url === mImg.url)) combined.push(mImg)
+    })
+    return combined
+  }, [variantImgObjs, mainImgObjs])
+
+  const images = useMemo(
+    () => (combinedImgObjs.length > 0 ? combinedImgObjs : mainImgObjs),
+    [combinedImgObjs, mainImgObjs]
+  )
+
+  // Pricing and stock: server-calculated, plain expressions (cheap, no hooks needed)
+  const sellingPrice =
+    activeVariant?.finalPrice ?? product?.finalPrice ?? product?.discountPrice ?? product?.price
+  const originalPrice = activeVariant?.price ?? product?.price
+  const discount = activeVariant?.savePct ?? product?.savePct ?? null
+  const stockCount = hasVariants ? (activeVariant?.stock ?? 0) : product?.stock
+  const outOfStock = hasVariants ? stockCount <= 0 : product?.isOutOfStock
+
+  // Product specs based on category
+  const specs = useMemo(() => {
+    if (!product) return []
+    switch (product.category) {
+      case 'watches':
+        return [
+          { label: 'Watch Type',       value: product.watchType },
+          { label: 'Dial Color',       value: product.dialColor },
+          { label: 'Strap Material',   value: product.strapMaterial },
+          { label: 'Case Size',        value: product.caseSize },
+          { label: 'Movement',         value: product.movementType },
+          { label: 'Water Resistance', value: product.waterResistance },
+        ]
+      case 'eyeglasses':
+        return [
+          { label: 'Frame Shape',    value: product.frameShape },
+          { label: 'Frame Material', value: product.frameMaterial },
+          { label: 'Frame Color',    value: product.frameColor },
+          { label: 'Lens Type',      value: product.lensType },
+        ]
+      case 'perfumes':
+        return [
+          { label: 'Fragrance Family', value: product.fragranceFamily },
+          { label: 'Fragrance Type',   value: product.fragranceType },
+          { label: 'Volume',           value: product.volume },
+        ]
+      case 'contact-lenses':
+        return [
+          { label: 'Base Curve (BC)',      value: product.baseCurve },
+          { label: 'Diameter (DIA)',       value: product.diameter },
+          { label: 'Water Content',        value: product.waterContent },
+          { label: 'Replacement Schedule', value: product.replacementSchedule },
+          { label: 'Pack Size',            value: product.packSize },
+          { label: 'Lens Type',            value: product.lensType },
+          { label: 'Prescription Status',  value: 'Power Optional — Plano (0.00) or Custom Prescription' },
+        ]
+      default:
+        return []
+    }
+  }, [product])
 
   // ── Review media handlers (validated) ───────────────────────────────────────
   const handleImageChange = (e) => {
@@ -269,7 +367,7 @@ function ProductDetail() {
   const validateAndBuildPrescription = () => {
     if (!isLensOrRx) return null
 
-    if ( rxMode === 'custom') {
+    if (rxMode === 'custom') {
       const right = rxForm.rightEye
       const left = sameEyes ? rxForm.rightEye : rxForm.leftEye
 
@@ -337,6 +435,7 @@ function ProductDetail() {
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────────
+  // No hooks may appear below this line.
   if (loading) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -371,91 +470,14 @@ function ProductDetail() {
     )
   }
 
-  // ── Derived values ───────────────────────────────────────────────────────────
-  // Use server-calculated pricing - no client-side calculation needed  
-  const hasVariants = product.hasVariants || false
-  const activeVariant = hasVariants && product.variants ? product.variants[selectedVariantIdx] : null
-
-  const rawMainImages = Array.isArray(product.image)
-    ? product.image
-    : product.image
-    ? [product.image]
-    : []
-
-  const rawVariantImages = Array.isArray(activeVariant?.images)
-    ? activeVariant.images
-    : []
-
-  const normalizeImg = (img) => {
-    if (!img) return null
-    if (typeof img === 'string') return { url: img, public_id: '' }
-    if (img.url) return img
-    return null
-  }
-
-  const variantImgObjs = rawVariantImages.map(normalizeImg).filter(Boolean)
-  const mainImgObjs = rawMainImages.map(normalizeImg).filter(Boolean)
-
-  // Put active variant photos first, followed by main product photos (deduplicated by URL)
-  const combinedImgObjs = [...variantImgObjs]
-  mainImgObjs.forEach((mImg) => {
-    if (!combinedImgObjs.some((cImg) => cImg.url === mImg.url)) {
-      combinedImgObjs.push(mImg)
-    }
-  })
-
-  const images = combinedImgObjs.length > 0 ? combinedImgObjs : mainImgObjs
-  
-  // Get pricing from server-calculated values
-  const sellingPrice = activeVariant?.finalPrice ?? product.finalPrice ?? product.discountPrice ?? product.price
-  const originalPrice = activeVariant?.price ?? product.price
-  const discount = activeVariant?.savePct ?? product.savePct ?? null
-  
-  const stockCount = hasVariants ? (activeVariant?.stock ?? 0) : product.stock
-  const outOfStock = hasVariants ? stockCount <= 0 : product.isOutOfStock
-
-  const rating      = product.ratings ?? 0
+  // Plain values (no hooks), safe to compute after the early returns
+  const rating = product.ratings ?? 0
   const reviewCount = product.numOfReviews ?? 0
-  const isNew        = product.isNewArrival ?? false
+  const isNew = product.isNewArrival ?? false
   const isBestseller = product.isBestSeller ?? false
 
   // Current user's id, for matching against a review's owner (r.user).
   const currentUserId = user?._id ?? user?.id ?? null
-
-  // Watch / eyeglasses / perfume / contact lens specific spec fields
-  const specs = product.category === 'watches'
-    ? [
-        { label: 'Watch Type',       value: product.watchType },
-        { label: 'Dial Color',       value: product.dialColor },
-        { label: 'Strap Material',   value: product.strapMaterial },
-        { label: 'Case Size',        value: product.caseSize },
-        { label: 'Movement',         value: product.movementType },
-        { label: 'Water Resistance', value: product.waterResistance },
-      ]
-    : product.category === 'eyeglasses'
-    ? [
-        { label: 'Frame Shape',    value: product.frameShape },
-        { label: 'Frame Material', value: product.frameMaterial },
-        { label: 'Frame Color',    value: product.frameColor },
-        { label: 'Lens Type',      value: product.lensType },
-      ]
-    : product.category === 'perfumes'
-    ? [
-        { label: 'Fragrance Family', value: product.fragranceFamily },
-        { label: 'Fragrance Type',   value: product.fragranceType },
-        { label: 'Volume',           value: product.volume },
-      ]
-    : product.category === 'contact-lenses'
-    ? [
-        { label: 'Base Curve (BC)',        value: product.baseCurve },
-        { label: 'Diameter (DIA)',         value: product.diameter },
-        { label: 'Water Content',          value: product.waterContent },
-        { label: 'Replacement Schedule',   value: product.replacementSchedule },
-        { label: 'Pack Size',              value: product.packSize },
-        { label: 'Lens Type',              value: product.lensType },
-        { label: 'Prescription Status',    value: 'Power Optional — Plano (0.00) or Custom Prescription' },
-      ]
-    : []
 
   return (
     <div style={{ backgroundColor: 'var(--color-sbg)', minHeight: '100vh' }}>
@@ -503,8 +525,8 @@ function ProductDetail() {
 
         {/* ── Left: Image gallery ──────────────────────────────────────────── */}
         <div>
-          <ProductImageGallery 
-            images={images} 
+          <ProductImageGallery
+            images={images}
             productName={product.name}
             badges={
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -580,9 +602,9 @@ function ProductDetail() {
             )}
           </div>
 
-          {/* Stock status */}
+          {/* Stock status (uses variant-aware outOfStock / stockCount) */}
           <div style={{ marginBottom: '24px' }}>
-            {product.isOutOfStock ? (
+            {outOfStock ? (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 fontSize: '0.82rem', fontWeight: '600', color: '#e74c3c',
@@ -596,7 +618,7 @@ function ProductDetail() {
                 fontSize: '0.82rem', fontWeight: '600', color: '#16a34a',
               }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block' }} />
-                In Stock {product.stock <= 5 && product.stock > 0 && `· Only ${product.stock} left`}
+                In Stock {stockCount <= 5 && stockCount > 0 && `· Only ${stockCount} left`}
               </span>
             )}
           </div>
@@ -742,7 +764,7 @@ function ProductDetail() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  
+
                   <h3 style={{
                     fontSize: '0.9rem',
                     fontWeight: '700',
@@ -782,46 +804,45 @@ function ProductDetail() {
               </div>
 
               {/* Power mode selector: Plano is the default; Custom Power is optional. */}
-              
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setRxMode('plano'); setRxError('') }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '8px',
-                      border: `1.5px solid ${rxMode === 'plano' ? 'var(--color-navy)' : 'var(--color-border)'}`,
-                      backgroundColor: rxMode === 'plano' ? 'var(--color-navy)' : '#f8fafc',
-                      color: rxMode === 'plano' ? 'var(--color-taupe)' : '#334155',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                     Plano (Zero Power / Makeup)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRxMode('custom'); setRxError('') }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '8px',
-                      border: `1.5px solid ${rxMode === 'custom' ? 'var(--color-navy)' : 'var(--color-border)'}`,
-                      backgroundColor: rxMode === 'custom' ? 'var(--color-navy)' : '#f8fafc',
-                      color: rxMode === 'custom' ? 'var(--color-taupe)' : '#334155',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                   Custom Power Prescription
-                  </button>
-                </div>
-              
+
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setRxMode('plano'); setRxError('') }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${rxMode === 'plano' ? 'var(--color-navy)' : 'var(--color-border)'}`,
+                    backgroundColor: rxMode === 'plano' ? 'var(--color-navy)' : '#f8fafc',
+                    color: rxMode === 'plano' ? 'var(--color-taupe)' : '#334155',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Plano (Zero Power / Makeup)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRxMode('custom'); setRxError('') }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${rxMode === 'custom' ? 'var(--color-navy)' : 'var(--color-border)'}`,
+                    backgroundColor: rxMode === 'custom' ? 'var(--color-navy)' : '#f8fafc',
+                    color: rxMode === 'custom' ? 'var(--color-taupe)' : '#334155',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Custom Power Prescription
+                </button>
+              </div>
 
               {/* Power Selection Form — only shown when the customer chooses Custom Power */}
               {rxMode === 'custom' && (
@@ -1094,135 +1115,135 @@ function ProductDetail() {
                       String(reviewOwnerId) === String(currentUserId)
 
                     return (
-                    <div key={r._id} style={{
-                      backgroundColor: 'var(--color-white)',
-                      borderRadius: '12px',
-                      border: '1px solid var(--color-border)',
-                      padding: '20px 24px',
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <div>
-                          <p style={{ fontWeight: '600', color: 'var(--color-navy)', fontSize: '0.9rem', marginBottom: '4px' }}>
-                            {r.name}
-                          </p>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map((star) => (
-                              <svg key={star} width="12" height="12" viewBox="0 0 24 24"
-                                fill={star <= r.rating ? '#C9A84C' : 'none'}
-                                stroke="#C9A84C" strokeWidth="2"
-                              >
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            ))}
+                      <div key={r._id} style={{
+                        backgroundColor: 'var(--color-white)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--color-border)',
+                        padding: '20px 24px',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                          <div>
+                            <p style={{ fontWeight: '600', color: 'var(--color-navy)', fontSize: '0.9rem', marginBottom: '4px' }}>
+                              {r.name}
+                            </p>
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <svg key={star} width="12" height="12" viewBox="0 0 24 24"
+                                  fill={star <= r.rating ? '#C9A84C' : 'none'}
+                                  stroke="#C9A84C" strokeWidth="2"
+                                >
+                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
+                              {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </span>
+
+                            {isOwnReview && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {/* Edit */}
+                                <button
+                                  onClick={() => handleEditReview(r)}
+                                  aria-label="Edit review"
+                                  title="Edit review"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--color-muted)',
+                                    transition: 'background-color 0.15s ease, color 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--color-sbg)'
+                                    e.currentTarget.style.color = 'var(--color-navy)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent'
+                                    e.currentTarget.style.color = 'var(--color-muted)'
+                                  }}
+                                >
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+
+                                {/* Delete */}
+                                <button
+                                  onClick={() => handleDeleteReview(r._id)}
+                                  disabled={deletingReview}
+                                  aria-label="Delete review"
+                                  title="Delete review"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: deletingReview ? 'not-allowed' : 'pointer',
+                                    padding: '4px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: deletingReview ? '#d1a3a3' : 'var(--color-error)',
+                                    transition: 'background-color 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!deletingReview) e.currentTarget.style.backgroundColor = '#fef2f2'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent'
+                                  }}
+                                >
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6" />
+                                    <path d="M14 11v6" />
+                                    <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
+                        <p style={{ fontSize: '0.88rem', color: 'var(--color-muted)', lineHeight: '1.6' }}>
+                          {r.comment}
+                        </p>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
-                            {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                          </span>
+                        {r.images?.length > 0 && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                            {r.images.map((img) => (
+                              <img
+                                key={img.public_id}
+                                src={img.url}
+                                alt="Customer review"
+                                style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+                              />
+                            ))}
+                          </div>
+                        )}
 
-                          {isOwnReview && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              {/* Edit */}
-                              <button
-                                onClick={() => handleEditReview(r)}
-                                aria-label="Edit review"
-                                title="Edit review"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '4px',
-                                  borderRadius: '6px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'var(--color-muted)',
-                                  transition: 'background-color 0.15s ease, color 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'var(--color-sbg)'
-                                  e.currentTarget.style.color = 'var(--color-navy)'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent'
-                                  e.currentTarget.style.color = 'var(--color-muted)'
-                                }}
-                              >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                              </button>
-
-                              {/* Delete */}
-                              <button
-                                onClick={() => handleDeleteReview(r._id)}
-                                disabled={deletingReview}
-                                aria-label="Delete review"
-                                title="Delete review"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: deletingReview ? 'not-allowed' : 'pointer',
-                                  padding: '4px',
-                                  borderRadius: '6px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: deletingReview ? '#d1a3a3' : 'var(--color-error)',
-                                  transition: 'background-color 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (!deletingReview) e.currentTarget.style.backgroundColor = '#fef2f2'
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = 'transparent'
-                                }}
-                              >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                  <path d="M10 11v6" />
-                                  <path d="M14 11v6" />
-                                  <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        {r.videos?.length > 0 && (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                            {r.videos.map((vid) => (
+                              <video
+                                key={vid.public_id}
+                                src={vid.url}
+                                controls
+                                style={{ width: '160px', height: '90px', borderRadius: '8px', border: '1px solid var(--color-border)' }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.88rem', color: 'var(--color-muted)', lineHeight: '1.6' }}>
-                        {r.comment}
-                      </p>
-
-                      {r.images?.length > 0 && (
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-                          {r.images.map((img) => (
-                            <img
-                              key={img.public_id}
-                              src={img.url}
-                              alt="Customer review"
-                              style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--color-border)' }}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {r.videos?.length > 0 && (
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
-                          {r.videos.map((vid) => (
-                            <video
-                              key={vid.public_id}
-                              src={vid.url}
-                              controls
-                              style={{ width: '160px', height: '90px', borderRadius: '8px', border: '1px solid var(--color-border)' }}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
                     )
                   })}
                 </div>
@@ -1280,7 +1301,7 @@ function ProductDetail() {
                     Your Rating
                   </label>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    {[1,2,3,4,5].map((star) => (
+                    {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
@@ -1336,7 +1357,7 @@ function ProductDetail() {
                     gap: '12px',
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
-                    padding: '8px 8px 8px 8px',
+                    padding: '8px',
                     backgroundColor: 'var(--color-white)',
                   }}>
                     <button
@@ -1399,7 +1420,7 @@ function ProductDetail() {
                     gap: '12px',
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
-                    padding: '8px 8px 8px 8px',
+                    padding: '8px',
                     backgroundColor: 'var(--color-white)',
                   }}>
                     <button
