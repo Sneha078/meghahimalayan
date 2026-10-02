@@ -83,9 +83,20 @@ pointsLedgerSchema.index(
   }
 );
 
-// Same idea, for review-reward entries: at most one "earn" per review,
-// ever — this is what makes awardReviewPoints() in pointsService.js safe
-// to call even if something retries it.
+// Same idea for review entries, covering BOTH sides of the clawback: at
+// most one "earn" per review (so awardReviewPoints() is safe to call more
+// than once for the same review) and at most one "redeem" per review (so
+// clawbackReviewPoints() can never double-reverse one).
+//
+// This has to be a single index, not two. MongoDB forbids two indexes that
+// share a key pattern but differ in options, so declaring { review, type }
+// once per partialFilterExpression makes the second one fail with
+// IndexOptionsConflict — which is what Mongoose was warning about on boot.
+// Uniqueness on the compound key already covers both cases: (review, "earn")
+// and (review, "redeem") are distinct keys, so each is allowed exactly once.
+//
+// Scoped to entries that actually carry a review, since every ledger row
+// without one shares the key (null, type) and would otherwise collide.
 pointsLedgerSchema.index(
   { review: 1, type: 1 },
   {
