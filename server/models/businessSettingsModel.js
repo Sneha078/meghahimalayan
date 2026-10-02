@@ -134,8 +134,11 @@ const businessSettingsSchema = new mongoose.Schema(
   }
 );
 
-// Only allow one business settings record
-businessSettingsSchema.index({ _id: 1 }, { unique: true });
+// No explicit index needed: MongoDB already creates a unique index on
+// `_id` for every collection, so declaring `index({ _id: 1 }, { unique:
+// true })` here was a no-op that only emitted a startup warning. Note it
+// also never enforced the single-record assumption — callers rely on
+// `findOne()` returning the one row (see businessSettingsController.js).
 
 const BusinessSettings = mongoose.model("BusinessSettings", businessSettingsSchema);
 
