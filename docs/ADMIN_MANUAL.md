@@ -2,30 +2,38 @@
 
 > **System Version:** 2.0 (Eyewear, Lifestyle & Optical Platform)  
 > **Currency:** Nepalese Rupee (NPR / Rs.)  
-> **Target Audience:** Store Administrators, Inventory Managers, Fulfillment & Optical Interns, Customer Support Staff
+> **Target Audience:** Store Administrators, Inventory Managers, Fulfillment & Optical Interns, Technical Operators
 
 ---
 
 ## 📑 Table of Contents
 1. [System Architecture & Role-Based Access Control](#1-system-architecture--role-based-access-control)
-2. [Admin Dashboard & Real-Time Monitoring](#2-admin-dashboard--real-time-monitoring)
-3. [Product Catalog & Variant Management](#3-product-catalog--variant-management)
-4. [Optical Prescription & Order Fulfillment Workflow](#4-optical-prescription--order-fulfillment-workflow)
-5. [Returns, Physical Inspections & Refund Disbursals](#5-returns-physical-inspections--refund-disbursals)
-6. [Promotional Coupons & Marketing Campaigns](#6-promotional-coupons--marketing-campaigns)
-7. [Customer Rewards & Points Ledger](#7-customer-rewards--points-ledger)
-8. [Media Library & Asset Management (Cloudinary)](#8-media-library--asset-management-cloudinary)
-9. [Customer CRM & Staff Role Assignment](#9-customer-crm--staff-role-assignment)
-10. [Inquiry Messages & Live Socket Notifications](#10-inquiry-messages--live-socket-notifications)
-11. [Sales Analytics & Business Intelligence](#11-sales-analytics--business-intelligence)
-12. [Standard Operating Procedures (SOPs) & Checklists](#12-standard-operating-procedures-sops--checklists)
-13. [Troubleshooting & Frequently Asked Questions](#13-troubleshooting--frequently-asked-questions)
+2. [How Admin Routes Work (Frontend & Backend Routing Architecture)](#2-how-admin-routes-work-frontend--backend-routing-architecture)
+   - [2.1 Frontend Route Protection (`AdminRoute.jsx`)](#21-frontend-route-protection-adminroutejsx)
+   - [2.2 Role-Based Sidebar Navigation (`AdminLayout.jsx`)](#22-role-based-sidebar-navigation-adminlayoutjsx)
+   - [2.3 Code-Splitting, Lazy Loading & Error Boundaries](#23-code-splitting-lazy-loading--error-boundaries)
+   - [2.4 Frontend Route Inventory](#24-frontend-route-inventory)
+   - [2.5 Backend Authentication Pipeline (`verifyUserAuth` & `roleBasedAccess`)](#25-backend-authentication-pipeline-verifyuserauth--rolebasedaccess)
+   - [2.6 Backend Admin API Route Inventory](#26-backend-admin-api-route-inventory)
+   - [2.7 End-to-End Admin Request Flowchart](#27-end-to-end-admin-request-flowchart)
+3. [Admin Dashboard & Real-Time Monitoring](#3-admin-dashboard--real-time-monitoring)
+4. [Product Catalog & Variant Management](#4-product-catalog--variant-management)
+5. [Optical Prescription & Order Fulfillment Workflow](#5-optical-prescription--order-fulfillment-workflow)
+6. [Returns, Physical Inspections & Refund Disbursals](#6-returns-physical-inspections--refund-disbursals)
+7. [Promotional Coupons & Marketing Campaigns](#7-promotional-coupons--marketing-campaigns)
+8. [Customer Rewards & Points Ledger](#8-customer-rewards--points-ledger)
+9. [Media Library & Asset Management (Cloudinary)](#9-media-library--asset-management-cloudinary)
+10. [Customer CRM & Staff Role Assignment](#10-customer-crm--staff-role-assignment)
+11. [Inquiry Messages & Live Socket Notifications](#11-inquiry-messages--live-socket-notifications)
+12. [Sales Analytics & Business Intelligence](#12-sales-analytics--business-intelligence)
+13. [Standard Operating Procedures (SOPs) & Checklists](#13-standard-operating-procedures-sops--checklists)
+14. [Troubleshooting & Frequently Asked Questions](#14-troubleshooting--frequently-asked-questions)
 
 ---
 
 ## 1. System Architecture & Role-Based Access Control
 
-The platform enforces strict role-based separation of concerns to safeguard financial data and customer privacy while allowing operational staff to manage catalog inventory.
+The platform enforces strict role-based separation of concerns to safeguard financial metrics and customer data while granting operational staff catalog access.
 
 ### Role Hierarchy & Permissions Matrix
 
@@ -41,11 +49,174 @@ The platform enforces strict role-based separation of concerns to safeguard fina
 | **Customer Contact Messages** | ✅ Full Access | ❌ Restricted | ✉️ Submit Inquiries |
 | **Points Ledger Audits** | ✅ Full Access | ❌ Restricted | 🎁 Earn & Redeem |
 
-> 🔒 **Security Notice:** The system automatically restricts navigation items and API routes based on role. Users with the `intern` role can only see **Products** and **Media Library** in their navigation bar.
+---
+
+## 2. How Admin Routes Work (Frontend & Backend Routing Architecture)
+
+Understanding how routes function is essential for security, debugging, and daily navigation. The system protects admin routes using a **defense-in-depth model**: client-side route guards prevent unauthorized UI rendering, while server-side middleware prevents unauthorized data access.
+
+### 2.1 Frontend Route Protection (`AdminRoute.jsx`)
+All admin URL paths in [`client/src/App.jsx`](file:///c:/meghahimalayan/client/src/App.jsx) are wrapped by the [`<AdminRoute>`](file:///c:/meghahimalayan/client/src/components/admin/AdminRoute.jsx) higher-order component.
+
+```jsx
+function AdminRoute({ children, roles = ['admin'] }) {
+  const { user, loading } = useAuth()
+
+  if (loading) return null
+
+  // 1. Unauthenticated users are redirected to the admin login portal
+  if (!user) return <Navigate to="/admin/login" replace />
+
+  // 2. Role-check: Verify if user's role is in the allowed roles array
+  if (!roles.includes(user.role)) {
+    // If an Intern attempts to open an admin-only page (e.g., /admin/orders or /admin/analytics),
+    // they are automatically rerouted to their authorized area: /admin/products
+    return user.role === 'intern'
+      ? <Navigate to="/admin/products" replace />
+      : <Navigate to="/admin/login" replace />
+  }
+
+  return children
+}
+```
+
+#### Routing Rules:
+1. **Unauthenticated Visitor:** If a user navigates directly to `/admin/dashboard` without a valid session, they are redirected to `/admin/login`.
+2. **Standard Customer (`user`):** If a logged-in shopper navigates to any `/admin/*` route, they are rejected and redirected to `/admin/login`.
+3. **Intern (`intern`):** Interns are permitted on routes with `roles={['admin', 'intern']}` (`/admin/products`, `/admin/products/new`, `/admin/products/:id/edit`, and `/admin/media`). If an intern manually types `/admin/analytics` or `/admin/orders` in the browser address bar, they are automatically rerouted to `/admin/products`.
+4. **Super Admin (`admin`):** Granted access to all admin routes.
 
 ---
 
-## 2. Admin Dashboard & Real-Time Monitoring
+### 2.2 Role-Based Sidebar Navigation (`AdminLayout.jsx`)
+In [`client/src/components/admin/AdminLayout.jsx`](file:///c:/meghahimalayan/client/src/components/admin/AdminLayout.jsx), the sidebar dynamically adapts its navigation links based on `user.role`:
+
+```javascript
+const INTERN_PATHS = ['/admin/products', '/admin/media']
+
+const visibleNav = user?.role === 'intern'
+  ? NAV_ITEMS.filter((item) => INTERN_PATHS.some((p) => item.path.startsWith(p)))
+  : NAV_ITEMS
+```
+- **For Admins:** Displays all 10 navigation tabs: *Dashboard, Analytics, Orders, Returns, Products, Media Library, Users, Coupons, Messages, and Notifications*.
+- **For Interns:** The navigation bar displays **only** *Products* and *Media Library*. All financial, order, and customer menus are hidden from the layout.
+- **Responsive Layout:** On desktop (screen width $\ge 768\text{px}$), the sidebar can be toggled between expanded ($240\text{px}$) and collapsed icon mode ($64\text{px}$). On mobile devices ($< 768\text{px}$), it renders as an off-canvas drawer with a dark backdrop overlay.
+
+---
+
+### 2.3 Code-Splitting, Lazy Loading & Error Boundaries
+To keep page load speeds fast for regular shoppers on mobile networks, all admin pages are decoupled from the main bundle:
+- **`React.lazy()` Code-Splitting:** Components like `Dashboard`, `Analytics`, `AdminOrders`, and `AdminProductForm` are only downloaded when an admin user navigates to an admin route.
+- **`<Suspense fallback={<AdminPageLoader />}>`:** Renders an admin loader spinner during bundle transitions.
+- **`<ErrorBoundary>`:** Every admin route is wrapped in an isolated error boundary. If a network failure occurs on one admin screen, it displays a retry banner without crashing the entire administration layout.
+
+---
+
+### 2.4 Frontend Route Inventory
+
+| URL Path | Permitted Roles | Component | Description |
+| :--- | :---: | :--- | :--- |
+| `/admin/login` | Public / Guest | `AdminLoginPage` | Dedicated login form for store management |
+| `/admin/dashboard` | `admin` | `Dashboard` | Real-time KPI counters & live orders |
+| `/admin/analytics` | `admin` | `Analytics` | Sales graphs, AOV, and top customers |
+| `/admin/orders` | `admin` | `AdminOrders` | Order management and status filtering |
+| `/admin/orders/:id` | `admin` | `AdminOrderDetail` | Prescription review, status update, deletion |
+| `/admin/products` | `admin`, `intern` | `AdminProducts` | Catalog inventory table & stock search |
+| `/admin/products/new` | `admin`, `intern` | `AdminProductForm` | New product creation with variants |
+| `/admin/products/:id/edit` | `admin`, `intern` | `AdminProductForm` | Product edit, pricing, and variant updates |
+| `/admin/media` | `admin`, `intern` | `AdminMediaLibrary` | Cloudinary asset & folder manager |
+| `/admin/users` | `admin` | `AdminUsers` | Customer list & registration dates |
+| `/admin/users/:id` | `admin` | `AdminUserDetail` | Customer profile & role modification |
+| `/admin/coupons` | `admin` | `AdminCoupons` | Promotional code discount manager |
+| `/admin/messages` | `admin` | `AdminMessages` | Customer contact form inquiries |
+| `/admin/returns` | `admin` | `AdminReturns` | Return requests management |
+| `/admin/returns/:id` | `admin` | `AdminReturnDetail` | Inspection report & refund disbursal |
+| `/admin/notifications` | `admin` | `AdminNotifications`| Notification center with mark-all-read |
+
+---
+
+### 2.5 Backend Authentication Pipeline (`verifyUserAuth` & `roleBasedAccess`)
+On the Express server, every administrative API route is protected by a two-stage security pipeline in [`server/middleware/userAuth.js`](file:///c:/meghahimalayan/server/middleware/userAuth.js):
+
+```javascript
+router.get("/admin/orders", verifyUserAuth, roleBasedAccess("admin"), getAllOrders);
+router.post("/admin/product/create", verifyUserAuth, roleBasedAccess("admin", "intern"), createProduct);
+```
+
+#### Pipeline Stages:
+1. **Stage 1: `verifyUserAuth`**
+   - Extracts the JWT from the secure `httpOnly` cookie (`token`).
+   - Verifies cryptographic signature using `process.env.JWT_SECRET_KEY`.
+   - Fetches the user record from MongoDB (`User.findById(decoded.id)`).
+   - Validates that `user.isDeleted === false` and `user.isActive === true`.
+   - Checks if the user changed their password after the token was issued (`user.isPasswordChangedAfter(decoded.iat)`). If true, the token is invalidated immediately.
+   - Attaches the authenticated user to `req.user`.
+2. **Stage 2: `roleBasedAccess(...roles)`**
+   - Inspects `req.user.role`.
+   - If `roles.includes(req.user.role)` is false, halts execution immediately and returns `HTTP 403 Forbidden`:  
+     `{ success: false, message: "Role 'intern' is not permitted to access this resource" }`.
+3. **Cookie Configuration (`credentials: 'include'`):**
+   - In [`client/src/api/adminClient.js`](file:///c:/meghahimalayan/client/src/api/adminClient.js), every fetch request specifies `{ credentials: 'include' }` to ensure the session cookie is transmitted securely with API calls.
+
+---
+
+### 2.6 Backend Admin API Route Inventory
+
+| API Endpoint | Method | Middleware Guard | Action / Controller |
+| :--- | :---: | :--- | :--- |
+| `/api/v1/admin/dashboard` | `GET` | `verifyUserAuth`, `admin` | Returns aggregated metrics & recent orders |
+| `/api/v1/admin/analytics` | `GET` | `verifyUserAuth`, `admin` | Returns revenue charts, sales by category |
+| `/api/v1/admin/customers/top` | `GET` | `verifyUserAuth`, `admin` | Returns top VIP customers by spend |
+| `/api/v1/admin/orders` | `GET` | `verifyUserAuth`, `admin` | Paginated orders with status filtering |
+| `/api/v1/admin/order/:id` | `GET` | `verifyUserAuth`, `admin` | Order details with prescription snapshot |
+| `/api/v1/admin/order/:id` | `PUT` | `verifyUserAuth`, `admin` | Update status (`Confirmed`, `Shipped`, etc.) |
+| `/api/v1/admin/order/:id` | `DELETE`| `verifyUserAuth`, `admin` | Permanently deletes an order record |
+| `/api/v1/admin/order/:id/invoice`| `GET` | `verifyUserAuth`, `admin` | Generates and streams PDF tax invoice |
+| `/api/v1/admin/products` | `GET` | `verifyUserAuth`, `admin`, `intern` | Catalog list with stock and filter query |
+| `/api/v1/admin/product/create` | `POST` | `verifyUserAuth`, `admin`, `intern` | Creates new product with variants |
+| `/api/v1/admin/product/:id` | `PUT` | `verifyUserAuth`, `admin`, `intern` | Updates product specifications and stock |
+| `/api/v1/admin/product/:id` | `DELETE`| `verifyUserAuth`, `admin`, `intern` | Deletes product listing |
+| `/api/v1/admin/media/folders` | `GET` / `POST` / `DELETE` | `verifyUserAuth`, `admin`, `intern` | Manages Cloudinary directory tree |
+| `/api/v1/admin/media/assets` | `GET` / `POST` / `DELETE` | `verifyUserAuth`, `admin`, `intern` | Uploads, deletes, or moves images |
+| `/api/v1/admin/users` | `GET` | `verifyUserAuth`, `admin` | List registered customers |
+| `/api/v1/admin/user/:id` | `GET` / `PUT` / `DELETE` | `verifyUserAuth`, `admin` | Update user roles or delete accounts |
+| `/api/v1/admin/coupons` | `GET` / `POST` | `verifyUserAuth`, `admin` | List and create discount promo codes |
+| `/api/v1/admin/coupon/:id` | `PUT` / `DELETE` | `verifyUserAuth`, `admin` | Edit discount caps or delete coupon |
+| `/api/v1/admin/messages` | `GET` | `verifyUserAuth`, `admin` | View contact form submissions |
+| `/api/v1/admin/message/:id` | `PUT` / `DELETE` | `verifyUserAuth`, `admin` | Update inquiry status or delete message |
+| `/api/v1/admin/returns` | `GET` | `verifyUserAuth`, `admin` | List customer return and exchange tickets |
+| `/api/v1/admin/return/:id` | `GET` / `PUT` | `verifyUserAuth`, `admin` | Inspect return condition & disburse refund |
+| `/api/v1/admin/notifications` | `GET` / `PUT` | `verifyUserAuth`, `admin` | Retrieve and acknowledge notifications |
+
+---
+
+### 2.7 End-to-End Admin Request Flowchart
+
+```mermaid
+flowchart TD
+    User["Admin / Staff clicks Admin URL"] --> BrowserCheck{"Is user logged in?"}
+    
+    BrowserCheck -- No --> RedirectLogin["Redirect to /admin/login"]
+    BrowserCheck -- Yes --> RoleCheck{"Check user.role"}
+    
+    RoleCheck -- Intern on Admin Page --> RedirectIntern["Redirect to /admin/products"]
+    RoleCheck -- Authorized --> RenderUI["Load Lazy Component inside AdminLayout"]
+    
+    RenderUI --> APIRequest["Fetch API: /api/v1/admin/... (credentials: 'include')"]
+    APIRequest --> VerifyAuth{"verifyUserAuth Middleware"}
+    
+    VerifyAuth -- Invalid/Missing Cookie --> Res401["HTTP 401 Unauthorized"]
+    VerifyAuth -- Valid Cookie --> VerifyRole{"roleBasedAccess(allowedRoles)"}
+    
+    VerifyRole -- Role not permitted --> Res403["HTTP 403 Forbidden"]
+    VerifyRole -- Role permitted --> Controller["Execute Controller & MongoDB Query"]
+    
+    Controller --> JSONResponse["Return JSON Response to Frontend"]
+```
+
+---
+
+## 3. Admin Dashboard & Real-Time Monitoring
 
 **Route:** `/admin/dashboard`
 
@@ -61,7 +232,7 @@ The dashboard functions as the real-time operational cockpit for daily store per
 
 ---
 
-## 3. Product Catalog & Variant Management
+## 4. Product Catalog & Variant Management
 
 **Routes:** List: `/admin/products` | New: `/admin/products/new` | Edit: `/admin/products/:id/edit`
 
@@ -125,7 +296,7 @@ For products with multiple colorways:
 
 ---
 
-## 4. Optical Prescription & Order Fulfillment Workflow
+## 5. Optical Prescription & Order Fulfillment Workflow
 
 **Routes:** List: `/admin/orders` | Details: `/admin/orders/:id`
 
@@ -158,15 +329,11 @@ When opening an order containing eyeglasses or prescriptive contact lenses, revi
 - **Direct Bank Transfer:** Review the uploaded payment receipt screenshot. Reconcile deposit amount against company bank balance before setting status to `Confirmed`.
 
 ### Invoice Generation
-Click **Download Invoice** to generate a PDF tax invoice containing:
-- Order number, creation date, and tracking code.
-- Customer details, shipping address, and phone number.
-- Itemized list with frame model, lens coatings, and optical prescription table.
-- Coupon deductions, reward points redeemed, shipping fees, and final net total.
+Click **Download Invoice** to generate a PDF tax invoice containing order number, customer shipping address, optical prescription snapshot, item breakdowns, discounts, and tax totals.
 
 ---
 
-## 5. Returns, Physical Inspections & Refund Disbursals
+## 6. Returns, Physical Inspections & Refund Disbursals
 
 **Routes:** List: `/admin/returns` | Details: `/admin/returns/:id`
 
@@ -205,7 +372,7 @@ Megha Himalayan provides a structured workflow for handling return requests, war
 
 ---
 
-## 6. Promotional Coupons & Marketing Campaigns
+## 7. Promotional Coupons & Marketing Campaigns
 
 **Route:** `/admin/coupons`
 
@@ -229,7 +396,7 @@ Create, monitor, and expire discount codes.
 
 ---
 
-## 7. Customer Rewards & Points Ledger
+## 8. Customer Rewards & Points Ledger
 
 The platform runs a loyalty program integrated into the MongoDB `PointsLedger`.
 
@@ -243,7 +410,7 @@ The platform runs a loyalty program integrated into the MongoDB `PointsLedger`.
 
 ---
 
-## 8. Media Library & Asset Management (Cloudinary)
+## 9. Media Library & Asset Management (Cloudinary)
 
 **Route:** `/admin/media`
 
@@ -258,7 +425,7 @@ A centralized visual asset manager for catalog imagery, campaign lookbooks, and 
 
 ---
 
-## 9. Customer CRM & Staff Role Assignment
+## 10. Customer CRM & Staff Role Assignment
 
 **Routes:** List: `/admin/users` | Detail: `/admin/users/:id`
 
@@ -269,7 +436,7 @@ A centralized visual asset manager for catalog imagery, campaign lookbooks, and 
 
 ---
 
-## 10. Inquiry Messages & Live Socket Notifications
+## 11. Inquiry Messages & Live Socket Notifications
 
 ### Contact Messages (`/admin/messages`)
 Manages inquiries submitted through the store's public `/contact` form.
@@ -288,7 +455,7 @@ Manages inquiries submitted through the store's public `/contact` form.
 
 ---
 
-## 11. Sales Analytics & Business Intelligence
+## 12. Sales Analytics & Business Intelligence
 
 **Route:** `/admin/analytics`
 
@@ -300,7 +467,7 @@ Comprehensive business intelligence reporting:
 
 ---
 
-## 12. Standard Operating Procedures (SOPs) & Checklists
+## 13. Standard Operating Procedures (SOPs) & Checklists
 
 ### SOP 1: Daily Morning Order Fulfillment Checklist
 - [ ] Open `/admin/dashboard` and review unread notifications.
@@ -325,7 +492,7 @@ Comprehensive business intelligence reporting:
 
 ---
 
-## 13. Troubleshooting & Frequently Asked Questions
+## 14. Troubleshooting & Frequently Asked Questions
 
 **Q: A customer entered Sphere power but forgot Pupillary Distance ($PD$). Can we process the lenses?**  
 *A:* No. Lenses edged without an accurate $PD$ will cause optical prism distortion, eye strain, and headaches. Place the order on hold, call or email the customer, and request their optical clinic $PD$ measurement.
