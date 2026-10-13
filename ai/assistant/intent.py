@@ -54,6 +54,7 @@ _WATCH_KEYWORDS = [
 _EYEGLASSES_KEYWORDS = [
     "glass", "glasses", "eyeglass", "eyeglasses", "spectacle",
     "spectacles", "frame", "frames", "rounded-frame", "squared frame", "round frame",
+    "sunglass", "sunglasses", "shades", "goggles", "eyewear",
 ]
 _PERFUME_KEYWORDS = [
     "perfume", "perfumes", "fragrance", "fragrances", "attar", "ittar",

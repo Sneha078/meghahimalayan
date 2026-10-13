@@ -43,28 +43,57 @@ _product_cache = _TTLCache(maxsize=500, ttl_seconds=30.0)
 
 
 def search_products(query: str, top_k: int = 5) -> list[dict[str, Any]]:
+    """
+    Search for products using semantic search, falling back to enhanced
+    keyword matching if semantic search fails.
+    """
     try:
         from semantic_search.engine import search_products as semantic_search
         return semantic_search(query, top_k=top_k)
     except Exception:
         logger.warning(
-            "Semantic search unavailable, falling back to substring search",
+            "Semantic search unavailable, falling back to keyword search",
             exc_info=True,
         )
         products = product_service.get_all_products()
-        query_words = re.findall(r"\w+", query.lower())
+        
+        # Normalize query and handle synonyms
+        query_lower = query.lower()
+        
+        # Map common synonyms
+        synonym_map = {
+            'sunglass': 'eyeglass',
+            'sunglasses': 'eyeglasses',
+            'shades': 'eyeglasses',
+            'goggles': 'eyeglasses',
+            'spectacle': 'eyeglass',
+            'specs': 'eyeglasses',
+        }
+        
+        # Replace synonyms in query
+        for synonym, canonical in synonym_map.items():
+            if synonym in query_lower:
+                query_lower = query_lower.replace(synonym, canonical)
+        
+        query_words = re.findall(r"\w+", query_lower)
         matches = []
+        
         for product in products:
             searchable = " ".join([
                 str(product.get("name", "")),
                 str(product.get("category", "")),
                 str(product.get("brand", "")),
                 str(product.get("description", "")),
+                str(product.get("subcategory", "")),
+                str(product.get("lensType", "")),
             ]).lower()
+            
+            # Check if any query word matches
             if any(re.search(rf"\b{re.escape(word)}\b", searchable) for word in query_words):
                 matches.append(product)
             if len(matches) >= top_k:
                 break
+        
         return matches
 
 
